@@ -19,11 +19,11 @@ export default function LoginPage() {
 
   // Handlers
   const handleForgotPassword = () => {
-    console.log("Forgot password pressed");
+    router.push("/(auth)/(flow)/forgot");
   };
 
   const handleSignUp = () => {
-    router.push("/(auth)/login");
+    router.push("/(auth)/(flow)/register");
   };
 
   return (
