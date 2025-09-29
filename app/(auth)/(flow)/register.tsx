@@ -1,7 +1,10 @@
 // app/(auth)/(flow)/register.tsx
+import authApi from "@/api/authApi";
+import Loading from "@/components/loading";
+import ErrorModal from "@/components/modal/error";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { Modal, StyleSheet, Text, View } from "react-native";
 import { Button, TextInput } from "react-native-paper";
 
 export const screenConfig = {
@@ -18,14 +21,53 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [retypePassword, setRetypePassword] = useState("");
   const [showRetypePassword, setShowRetypePassword] = useState(false);
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   //Handlers
-  const handleSignUp = () => {
-    router.push({
-      pathname: "/(auth)/(flow)/verify",
-      params: { purpose: "register" },
-    });
+  const handleSignUp = async () => {
+    // reset modal
+    setShowError(false);
+    setErrorMessage("");
+
+    if (
+      !username.trim() ||
+      !email.trim() ||
+      !password.trim() ||
+      !retypePassword.trim()
+    ) {
+      setErrorMessage("Please fill all fields");
+      setShowError(true);
+      return;
+    }
+
+    if (password !== retypePassword) {
+      setErrorMessage("Passwords do not match");
+      setShowError(true);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await authApi.register(username.trim(), email.trim(), password);
+      router.push({
+        pathname: "/(auth)/(flow)/verify",
+        params: {
+          purpose: "register",
+          email: email.trim(),
+          name: username.trim(),
+        },
+      });
+    } catch (e: any) {
+      setErrorMessage(e?.response?.data?.message || "Registration failed");
+      setShowError(true);
+    } finally {
+      setLoading(false);
+    }
   };
+
   return (
     <View className="gap-10">
       <Text className="text-[#90717E] font-PoppinsSemiBold text-[28px]">
@@ -94,6 +136,29 @@ export default function RegisterPage() {
       >
         Sign up
       </Button>
+      {loading && (
+        <Modal transparent visible statusBarTranslucent animationType="fade">
+          <View
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                backgroundColor: "rgba(0,0,0,0.3)",
+                justifyContent: "center",
+                alignItems: "center",
+              },
+            ]}
+          >
+            <Loading />
+          </View>
+        </Modal>
+      )}
+      <ErrorModal
+        visible={showError}
+        title="Register Failed"
+        message={errorMessage}
+        confirmText="Cancel"
+        onConfirm={() => setShowError(false)}
+      />
     </View>
   );
 }

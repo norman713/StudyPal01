@@ -1,11 +1,15 @@
-// app/(auth)/(flow)/_layout.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Slot, usePathname, useRouter } from "expo-router";
 import { useEffect } from "react";
-import { BackHandler, Dimensions, TouchableOpacity, View } from "react-native";
+import {
+  BackHandler,
+  Dimensions,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-// import static để Metro bundler biết
 import { screenConfig as registerConfig } from "./register";
 import { screenConfig as verifyConfig } from "./verify";
 
@@ -22,7 +26,6 @@ export default function FlowLayout() {
   const screenName = pathname.split("/").pop() || "";
   const { backEnabled = true } = screenConfigMap[screenName] || {};
 
-  // Block hardware back nếu backEnabled = false
   useEffect(() => {
     if (!backEnabled) {
       const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
@@ -30,13 +33,16 @@ export default function FlowLayout() {
     }
   }, [backEnabled]);
 
+  const topOffset = height * 0.15;
+
   return (
     <LinearGradient
       colors={["#90717E", "#8C8C8C"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      className="h-full"
+      className="h-full flex-1"
     >
+      {/* Back button area */}
       <View
         style={{
           height: 30,
@@ -52,15 +58,27 @@ export default function FlowLayout() {
         )}
       </View>
 
+      {/* Panel trắng làm nền (absolute), không chặn touch */}
+      <View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFillObject,
+          {
+            top: topOffset, // đẩy xuống 15% chiều cao
+            backgroundColor: "white",
+            borderTopLeftRadius: 40,
+            borderTopRightRadius: 40,
+          },
+        ]}
+      />
+
+      {/* Khu vực nội dung thực (full screen) + padding để “nằm trong” panel */}
       <View
         style={{
           flex: 1,
-          backgroundColor: "white",
-          borderTopLeftRadius: 40,
-          borderTopRightRadius: 40,
           paddingHorizontal: 48,
           paddingVertical: 40,
-          marginTop: height * 0.15,
+          marginTop: topOffset,
         }}
       >
         <Slot />

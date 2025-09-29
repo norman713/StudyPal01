@@ -1,8 +1,11 @@
-// app/(auth)/(flow)/register.tsx
+// app/(auth)/(flow)/verify.tsx
+import authApi from "@/api/authApi";
+import Loading from "@/components/loading";
+import ErrorModal from "@/components/modal/error";
 import SuccessModal from "@/components/modal/success";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Button, TextInput } from "react-native-paper";
 
 export const screenConfig = {
@@ -11,15 +14,19 @@ export const screenConfig = {
 
 export default function VerifyPage() {
   //Hooks
-  const { purpose } = useLocalSearchParams<{
+  const { purpose, email } = useLocalSearchParams<{
     purpose?: "register" | "reset";
+    email?: string;
   }>();
   const router = useRouter();
+
   //States
   const [code, setCode] = useState("");
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
-
   const [modalVisible, setModalVisible] = useState(false);
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   //Effects
   useEffect(() => {
@@ -39,18 +46,75 @@ export default function VerifyPage() {
       .padStart(2, "0")}`;
   };
 
-  // Handler
-  const handleSendCode = () => {
-    setModalVisible(true);
+  /**
+   * Handler
+   */
+  const handleSendCode = async () => {
+    const codeTrim = code.trim();
+    const emailTrim = (email || "").trim();
+
+    if (!codeTrim) {
+      setErrorMessage("Please enter the verification code");
+      setErrorVisible(true);
+      return;
+    }
+    if (!emailTrim) {
+      setErrorMessage("Missing email. Please try again.");
+      setErrorVisible(true);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (purpose === "register") {
+        await authApi.verifyRegister(emailTrim, codeTrim);
+      } else {
+        const res = await authApi.verifyReset(emailTrim, codeTrim);
+        if (!res.success) {
+          setErrorMessage(res.message || "Verification failed");
+          setErrorVisible(true);
+          return;
+        }
+      }
+      setModalVisible(true);
+    } catch (e: any) {
+      const apiMessage =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        e?.message ||
+        "Verification failed";
+      setErrorMessage(apiMessage);
+      setErrorVisible(true);
+    } finally {
+      setLoading(false);
+    }
   };
-  const handleResendCode = () => {
-    setTimeLeft(300);
+
+  const handleResendCode = async () => {
+    if (!email || !email.trim()) {
+      setErrorMessage("Missing email. Please try again.");
+      setErrorVisible(true);
+      return;
+    }
+    try {
+      await authApi.code(
+        purpose === "reset" ? "RESET_PASSWORD" : "REGISTER",
+        email.trim()
+      );
+      setTimeLeft(300);
+    } catch (e: any) {
+      setErrorMessage(e?.response?.data?.message || "Failed to resend code.");
+      setErrorVisible(true);
+    }
   };
+
   const handleConfirmModal = () => {
     setModalVisible(false);
-
     if (purpose === "reset") {
-      router.push("/(auth)/(flow)/reset");
+      router.push({
+        pathname: "/(auth)/(flow)/reset",
+        params: { email },
+      });
     } else {
       router.push("/(auth)/login");
     }
@@ -61,27 +125,29 @@ export default function VerifyPage() {
       <Text className="text-[#90717E] font-PoppinsSemiBold text-[28px]">
         Verification
       </Text>
-      {/* Text input */}
+
+      {/* Input */}
       <View className="gap-7">
         <TextInput
           label="Enter your verification code"
           mode="outlined"
           value={code}
           onChangeText={(code) => setCode(code)}
-          theme={{
-            roundness: 30,
-          }}
+          theme={{ roundness: 30 }}
         />
       </View>
-      {/* Info text + countdown */}
+
+      {/* Countdown */}
       <Text className="text-[#90717E] font-PoppinsRegular text-[14px]">
         Please enter the verification code we just sent to your email address.
         {"\n"}This code expires in{" "}
-        <Text className="font-PoppinsSemiBold text-[#90717E">
+        <Text className="font-PoppinsSemiBold text-[#90717E]">
           {formatTime(timeLeft)}
         </Text>
         .
       </Text>
+
+      {/* Verify Button */}
       <Button
         className="mt-6"
         mode="contained"
@@ -89,10 +155,12 @@ export default function VerifyPage() {
         labelStyle={{ fontSize: 16, fontFamily: "PoppinsRegular" }}
         theme={{ roundness: 100 }}
         onPress={handleSendCode}
+        loading={loading}
       >
         Send code
       </Button>
 
+      {/* Resend Link */}
       <View className="flex-row justify-center mt-4">
         <Text className="text-[16px] text-[#000000] font-PoppinsRegular">
           Didn’t receive a code?{" "}
@@ -115,6 +183,32 @@ export default function VerifyPage() {
         }
         confirmText="Confirm"
         onConfirm={handleConfirmModal}
+      />
+
+      {loading && (
+        <Modal transparent visible statusBarTranslucent animationType="fade">
+          <View
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                backgroundColor: "rgba(0,0,0,0.3)",
+                justifyContent: "center",
+                alignItems: "center",
+              },
+            ]}
+          >
+            <Loading />
+          </View>
+        </Modal>
+      )}
+
+      {/* Error Modal */}
+      <ErrorModal
+        visible={errorVisible}
+        title="Verification Failed"
+        message={errorMessage}
+        confirmText="Close"
+        onConfirm={() => setErrorVisible(false)}
       />
     </View>
   );
