@@ -10,7 +10,7 @@ import { Modal, StyleSheet, Text, View } from "react-native";
 import { Button, TextInput } from "react-native-paper";
 
 export const screenConfig = {
-  backEnabled: false,
+  backEnabled: true,
 };
 
 export default function ResetPage() {

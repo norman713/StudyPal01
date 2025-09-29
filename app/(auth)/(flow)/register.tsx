@@ -11,9 +11,11 @@ export const screenConfig = {
   backEnabled: true,
 };
 
+const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{3,}$/;
 export default function RegisterPage() {
   //Hooks
   const router = useRouter();
+
   //States
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -26,6 +28,10 @@ export default function RegisterPage() {
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  const openError = (msg: string) => {
+    setErrorMessage(msg);
+    setShowError(true);
+  };
   //Handlers
   const handleSignUp = async () => {
     // reset modal
@@ -46,6 +52,12 @@ export default function RegisterPage() {
     if (password !== retypePassword) {
       setErrorMessage("Passwords do not match");
       setShowError(true);
+      return;
+    }
+    if (!PASSWORD_RULE.test(password) || !PASSWORD_RULE.test(retypePassword)) {
+      openError(
+        "Password must be at least 3 characters long and contain both letters and numbers."
+      );
       return;
     }
 

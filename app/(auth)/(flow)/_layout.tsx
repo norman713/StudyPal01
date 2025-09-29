@@ -11,11 +11,13 @@ import {
 } from "react-native";
 
 import { screenConfig as registerConfig } from "./register";
+import { screenConfig as resetConfig } from "./reset";
 import { screenConfig as verifyConfig } from "./verify";
 
 const screenConfigMap: Record<string, { backEnabled: boolean }> = {
   register: registerConfig,
   verify: verifyConfig,
+  reset: resetConfig,
 };
 
 export default function FlowLayout() {
@@ -58,13 +60,12 @@ export default function FlowLayout() {
         )}
       </View>
 
-      {/* Panel trắng làm nền (absolute), không chặn touch */}
       <View
         pointerEvents="none"
         style={[
           StyleSheet.absoluteFillObject,
           {
-            top: topOffset, // đẩy xuống 15% chiều cao
+            top: topOffset,
             backgroundColor: "white",
             borderTopLeftRadius: 40,
             borderTopRightRadius: 40,

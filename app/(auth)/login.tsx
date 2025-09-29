@@ -3,9 +3,16 @@ import Loading from "@/components/loading";
 import { isValidEmail } from "@/utils/validator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import { useState } from "react";
-import { Image, Pressable, ScrollView, Text, View } from "react-native";
+import { useNavigation, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  BackHandler,
+  Image,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { Button, TextInput } from "react-native-paper";
 import ErrorModal from "../../components/modal/error";
 import "../../global.css";
@@ -15,7 +22,7 @@ export default function LoginPage() {
    */
   const imageSource = require("../../assets/images/Reading.png");
   const ggIcon = require("../../assets/images/GoogleIcon.png");
-
+  const navigation = useNavigation();
   //Hooks
   const router = useRouter();
 
@@ -34,6 +41,15 @@ export default function LoginPage() {
     email: "",
     password: "",
   });
+
+  useEffect(() => {
+    // disable gesture back (iOS)
+    navigation.setOptions({ gestureEnabled: false });
+
+    // disable hardware back (Android)
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
+    return () => sub.remove();
+  }, [navigation]);
 
   /**
    *  Handlers
@@ -89,8 +105,8 @@ export default function LoginPage() {
 
   return (
     <ScrollView
-      contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }}
-      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
+      // showsVerticalScrollIndicator={false}
     >
       <LinearGradient
         colors={["#90717E", "#8C8C8C"]}
@@ -99,7 +115,7 @@ export default function LoginPage() {
         className="bg-[#90717E]"
       >
         {/* Top section */}
-        <View className="h-[35%] justify-center px-14 ">
+        <View className="h-[30%] justify-center px-12 ">
           <Text className="text-white text-[51px] font-PoppinsSemiBold leading-[55px]">
             Hello !
           </Text>
@@ -109,7 +125,7 @@ export default function LoginPage() {
         </View>
 
         {/* Image section */}
-        <View className="absolute top-[25%] left-[45%] z-10">
+        <View className="absolute top-[20%] left-[45%] z-10">
           <Image
             source={imageSource}
             className="w-50 h-50"
@@ -118,7 +134,7 @@ export default function LoginPage() {
         </View>
 
         {/* Bottom section */}
-        <View className="bg-white  min-h-screen rounded-t-[50px] px-14 py-10 ">
+        <View className="bg-white  min-h-screen rounded-t-[50px] px-12 py-10 ">
           <Text className="text-[#90717E] font-PoppinsSemiBold text-[28px] mb-8">
             Login
           </Text>

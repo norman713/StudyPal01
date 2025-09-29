@@ -1,4 +1,3 @@
-// app/(auth)/(flow)/verify.tsx
 import authApi from "@/api/authApi";
 import Loading from "@/components/loading";
 import ErrorModal from "@/components/modal/error";
@@ -26,6 +25,7 @@ export default function VerifyPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [errorVisible, setErrorVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingResend, setLoadingResend] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   //Effects
@@ -46,6 +46,12 @@ export default function VerifyPage() {
       .padStart(2, "0")}`;
   };
 
+  // helper dùng chung
+  const openError = (msg: string) => {
+    setErrorMessage(msg);
+    setErrorVisible(true);
+  };
+
   /**
    * Handler
    */
@@ -53,28 +59,18 @@ export default function VerifyPage() {
     const codeTrim = code.trim();
     const emailTrim = (email || "").trim();
 
-    if (!codeTrim) {
-      setErrorMessage("Please enter the verification code");
-      setErrorVisible(true);
-      return;
-    }
-    if (!emailTrim) {
-      setErrorMessage("Missing email. Please try again.");
-      setErrorVisible(true);
-      return;
-    }
+    if (!codeTrim) return openError("Please enter the verification code");
+    if (!emailTrim) return openError("Missing email. Please try again.");
 
+    setErrorVisible(false);
     setLoading(true);
     try {
       if (purpose === "register") {
         await authApi.verifyRegister(emailTrim, codeTrim);
       } else {
         const res = await authApi.verifyReset(emailTrim, codeTrim);
-        if (!res.success) {
-          setErrorMessage(res.message || "Verification failed");
-          setErrorVisible(true);
-          return;
-        }
+        if (!res.success)
+          return openError(res.message || "Verification failed");
       }
       setModalVisible(true);
     } catch (e: any) {
@@ -83,28 +79,33 @@ export default function VerifyPage() {
         e?.response?.data?.error ||
         e?.message ||
         "Verification failed";
-      setErrorMessage(apiMessage);
-      setErrorVisible(true);
+      openError(apiMessage);
     } finally {
       setLoading(false);
     }
   };
 
   const handleResendCode = async () => {
-    if (!email || !email.trim()) {
-      setErrorMessage("Missing email. Please try again.");
-      setErrorVisible(true);
-      return;
-    }
+    const emailTrim = (email || "").trim();
+    if (!emailTrim) return openError("Missing email. Please try again.");
+
+    setErrorVisible(false);
+    setLoading(true);
     try {
       await authApi.code(
         purpose === "reset" ? "RESET_PASSWORD" : "REGISTER",
-        email.trim()
+        emailTrim
       );
       setTimeLeft(300);
     } catch (e: any) {
-      setErrorMessage(e?.response?.data?.message || "Failed to resend code.");
-      setErrorVisible(true);
+      const apiMessage =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        e?.message ||
+        "Failed to resend code.";
+      openError(apiMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -155,7 +156,6 @@ export default function VerifyPage() {
         labelStyle={{ fontSize: 16, fontFamily: "PoppinsRegular" }}
         theme={{ roundness: 100 }}
         onPress={handleSendCode}
-        loading={loading}
       >
         Send code
       </Button>
@@ -178,8 +178,8 @@ export default function VerifyPage() {
         title="Success!"
         message={
           purpose === "reset"
-            ? "Code is true. Now you can reset your password."
-            : "Code is true. Now you can log in to your account."
+            ? "Verification successful. You can now reset your password."
+            : "Verification successful. Your account is confirmed — you can now log in."
         }
         confirmText="Confirm"
         onConfirm={handleConfirmModal}
