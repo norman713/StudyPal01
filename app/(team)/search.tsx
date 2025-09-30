@@ -21,14 +21,14 @@ export default function Search() {
         onSelect={(k) => {
           switch (k) {
             case "inbox":
-              router.replace("/inbox");
+              router.push("/inbox");
               break;
             case "outbox":
-              router.replace("/outbox");
+              router.push("/outbox");
               break;
 
             default:
-              router.replace("/");
+              router.push("/");
           }
         }}
       />
