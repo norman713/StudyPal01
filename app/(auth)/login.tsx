@@ -2,6 +2,7 @@ import authApi from "@/api/authApi";
 import Loading from "@/components/loading";
 import { isValidEmail } from "@/utils/validator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Buffer } from "buffer";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -16,6 +17,28 @@ import {
 import { Button, TextInput } from "react-native-paper";
 import ErrorModal from "../../components/modal/error";
 import "../../global.css";
+
+// ===== Helper decode exp từ JWT (ms) =====
+function getJwtExpMs(token: string): number | null {
+  try {
+    const [, payloadB64] = token.split(".");
+    if (!payloadB64) return null;
+
+    const b64 = payloadB64.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), "=");
+
+    const json = JSON.parse(Buffer.from(padded, "base64").toString("utf8"));
+    return typeof json?.exp === "number" ? json.exp * 1000 : null; // exp(s) -> ms
+  } catch {
+    return null;
+  }
+}
+
+// Keys for với axios interceptor
+const ACCESS_KEY = "accessToken";
+const REFRESH_KEY = "refreshToken";
+const EXP_KEY = "accessExpiresAt";
+
 export default function LoginPage() {
   /**
    * Assets
@@ -73,7 +96,6 @@ export default function LoginPage() {
       setErrorMessage("Please fill in both email and password.");
       return;
     }
-
     if (!isValidEmail(email.trim())) {
       setShowError(true);
       setErrorMessage("Invalid email format.");
@@ -87,17 +109,26 @@ export default function LoginPage() {
         password.trim()
       );
 
-      await AsyncStorage.setItem("accessToken", accessToken);
-      await AsyncStorage.setItem("refreshToken", refreshToken);
+      // Tính expiresAt từ JWT (nếu có exp)
+      const expMs = getJwtExpMs(accessToken);
+
+      // Lưu token + expiresAt (đồng bộ với axios interceptor)
+      await AsyncStorage.setItem(ACCESS_KEY, accessToken);
+      await AsyncStorage.setItem(REFRESH_KEY, refreshToken);
+      if (expMs) {
+        await AsyncStorage.setItem(EXP_KEY, String(expMs));
+      } else {
+        await AsyncStorage.removeItem(EXP_KEY);
+      }
 
       setShowError(false);
       setErrorMessage("");
-      router.push("/(auth)/(flow)/reset");
+      router.push("/(team)/search");
     } catch (err: any) {
       const apiMessage =
         err?.response?.data?.message || "Email or password is incorrect.";
       setShowError(true);
-      setErrorMessage(apiMessage); // <-- update errorMessage for modal
+      setErrorMessage(apiMessage);
     } finally {
       setLoading(false);
     }
