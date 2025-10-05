@@ -1,14 +1,8 @@
 import { router } from "expo-router";
-import React from "react";
-import { View } from "react-native";
-import {
-  Avatar,
-  Card,
-  Divider,
-  IconButton,
-  List,
-  Text,
-} from "react-native-paper";
+import React, { useState } from "react";
+import { Dimensions, View } from "react-native";
+import { Avatar, Card, IconButton, List, Text } from "react-native-paper";
+import TeamQRSheet from "./components/bottomSheet";
 
 type Role = "member" | "admin" | "owner";
 
@@ -31,6 +25,17 @@ export default function TeamInfoScreen({
   const isAdmin = role === "admin";
   const canManage = isOwner || isAdmin;
 
+  //States
+  const [qrVisible, setQrVisible] = useState(false);
+  const handleOpenQR = () => setQrVisible(true);
+  const handleCloseQR = () => setQrVisible(false);
+  const openQR = () => setQrVisible(true);
+  const closeQR = () => setQrVisible(false);
+  const qrImage = {
+    uri: "https://api.qrserver.com/v1/create-qr-code/?size=210x210&data=Demo",
+  };
+
+  const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.5);
   return (
     <View className="flex-1 bg-[#F3F3F3]">
       <View style={{ height: 140, backgroundColor: "#90717E" }}>
@@ -63,31 +68,41 @@ export default function TeamInfoScreen({
           <Card.Content className="">
             <View className="items-center">
               {/* Avatar + camera overlay (owner only) */}
-              <View style={{ marginTop: -50 }}>
+              <View style={{ marginTop: -65 }}>
                 <View style={{ position: "relative" }}>
                   <View
                     style={{
-                      borderWidth: 4,
+                      borderWidth: 6,
                       borderColor: "#fff",
                       borderRadius: 999,
                     }}
                   >
                     {avatarUri ? (
-                      <Avatar.Image size={96} source={{ uri: avatarUri }} />
+                      <Avatar.Image size={120} source={{ uri: avatarUri }} />
                     ) : (
-                      <Avatar.Text size={96} label={teamName.charAt(0)} />
+                      <Avatar.Text
+                        size={120}
+                        label={teamName.charAt(0)}
+                        labelStyle={{
+                          fontSize: 58,
+                          fontWeight: "800",
+                          letterSpacing: 1,
+                          color: "#fff",
+                        }}
+                        style={{ backgroundColor: "#90717E" }}
+                      />
                     )}
                   </View>
 
                   {isOwner && (
                     <IconButton
                       icon="camera-outline"
-                      size={18}
+                      size={22}
                       mode="contained"
                       style={{
                         position: "absolute",
-                        right: -6,
-                        bottom: -6,
+                        right: 0,
+                        bottom: -10,
                         borderRadius: 999,
                       }}
                       onPress={() => router.push("/")}
@@ -98,8 +113,14 @@ export default function TeamInfoScreen({
               </View>
 
               {/* Team name */}
-              <View className="mt-3 flex-row items-center gap-1">
-                <Text style={{ fontWeight: "800", letterSpacing: 0.2 }}>
+              <View className="mt-3 flex-row items-center">
+                <Text
+                  style={{
+                    fontWeight: "800",
+                    letterSpacing: 0.5,
+                    fontSize: 20,
+                  }}
+                >
                   {teamName}
                 </Text>
                 {isOwner && (
@@ -121,8 +142,8 @@ export default function TeamInfoScreen({
           style={{ marginTop: 10, borderRadius: 0, backgroundColor: "#fff" }}
         >
           <Card.Content>
-            <View className="flex-row items-start gap-2">
-              <IconButton icon="information-outline" size={16} />
+            <View className="flex-row items-center gap-2">
+              <IconButton icon="information-outline" size={20} />
               <Text className="flex-1 text-[13px] text-black/80">
                 {description}
               </Text>
@@ -142,9 +163,9 @@ export default function TeamInfoScreen({
                   title="QR code"
                   left={(p) => <List.Icon {...p} icon="qrcode" />}
                   right={(p) => <List.Icon {...p} icon="chevron-right" />}
-                  onPress={() => router.push("/")}
+                  onPress={openQR}
+                  style={{ paddingRight: 0 }}
                 />
-                <Divider />
               </>
             )}
 
@@ -153,8 +174,8 @@ export default function TeamInfoScreen({
               left={(p) => <List.Icon {...p} icon="bell-outline" />}
               right={(p) => <List.Icon {...p} icon="chevron-right" />}
               onPress={() => router.push("/")}
+              style={{ paddingRight: 0 }}
             />
-            <Divider />
 
             {canManage && (
               <>
@@ -163,8 +184,8 @@ export default function TeamInfoScreen({
                   left={(p) => <List.Icon {...p} icon="account-plus-outline" />}
                   right={(p) => <List.Icon {...p} icon="chevron-right" />}
                   onPress={() => router.push("/")}
+                  style={{ paddingRight: 0 }}
                 />
-                <Divider />
               </>
             )}
 
@@ -173,38 +194,47 @@ export default function TeamInfoScreen({
               left={(p) => <List.Icon {...p} icon="account-group-outline" />}
               right={(p) => <List.Icon {...p} icon="chevron-right" />}
               onPress={() => router.push("/")}
+              style={{ paddingRight: 0 }}
             />
-            <Divider />
 
-            {/* Leave team (mọi role) */}
+            {/* All role) */}
             <List.Item
               title="Leave team"
               titleStyle={{ color: "#DF3B27", fontWeight: "600" }}
               left={(p) => <List.Icon {...p} color="#DF3B27" icon="logout" />}
               right={(p) => (
-                <List.Icon {...p} color="#DF3B27" icon="chevron-right" />
+                <List.Icon {...p} icon="chevron-right" color="#DF3B27" />
               )}
+              style={{ paddingRight: 0 }}
               onPress={() => router.push("/")}
             />
-            <Divider />
 
             {/* Delete team (owner-only) */}
             {isOwner && (
               <List.Item
                 title="Delete team"
-                titleStyle={{ color: "#DF3B27", fontWeight: "700" }}
+                titleStyle={{ color: "#DF3B27", fontWeight: "600" }}
                 left={(p) => (
                   <List.Icon {...p} color="#DF3B27" icon="trash-can-outline" />
                 )}
                 right={(p) => (
                   <List.Icon {...p} color="#DF3B27" icon="chevron-right" />
                 )}
+                style={{ paddingRight: 0 }}
                 onPress={() => router.push("/")}
               />
             )}
           </Card.Content>
         </Card>
       </View>
+
+      {/* QR bottom sheet */}
+      <TeamQRSheet
+        qrVisible={qrVisible}
+        onClose={closeQR}
+        teamName={teamName}
+        qrImage={qrImage}
+      />
     </View>
   );
 }
