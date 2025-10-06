@@ -1,21 +1,19 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  BackHandler,
   Dimensions,
   GestureResponderEvent,
   ImageSourcePropType,
+  Pressable,
   Image as RNImage,
   View,
 } from "react-native";
-import {
-  IconButton,
-  Menu,
-  Modal,
-  Portal,
-  Surface,
-  Text,
-} from "react-native-paper";
+import { IconButton, Menu, Portal, Surface, Text } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.6);
+const ANIM_DUR = 220;
 
 type Props = {
   qrVisible: boolean;
@@ -24,12 +22,19 @@ type Props = {
   qrImage: ImageSourcePropType;
 };
 
-export default function TeamQRSheet({
+export default function TeamQRSheetView({
   qrVisible,
   onClose,
   teamName,
   qrImage,
 }: Props) {
+  const insets = useSafeAreaInsets();
+
+  // Animation states
+  const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
+  const backdrop = useRef(new Animated.Value(0)).current;
+
+  // Menu states
   const [menuVisible, setMenuVisible] = useState(false);
   const [anchorXY, setAnchorXY] = useState<
     { x: number; y: number } | undefined
@@ -41,43 +46,112 @@ export default function TeamQRSheet({
     setAnchorXY({ x: pageX, y: pageY + 8 });
     requestAnimationFrame(() => setMenuVisible(true));
   };
-
   const closeMenu = () => {
     setMenuVisible(false);
-    setAnchorXY(undefined); // reset anchor
+    setAnchorXY(undefined);
   };
-
   const handleSave = () => {
     closeMenu();
-    // TODO: save QR in gallery
+    // TODO: save QR to gallery
   };
-
   const handleReset = () => {
     closeMenu();
-    // TODO: call API reset/regenerate QR
+    // TODO: call API to reset/regenerate QR
   };
 
-  const handleCloseSheet = () => {
+  const animateOpen = () =>
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: ANIM_DUR,
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdrop, {
+        toValue: 1,
+        duration: ANIM_DUR,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+  const animateClose = (cb?: () => void) =>
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: SHEET_HEIGHT,
+        duration: ANIM_DUR,
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdrop, {
+        toValue: 0,
+        duration: ANIM_DUR,
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => finished && cb?.());
+
+  const handleClose = () => {
     closeMenu();
-    onClose();
+    animateClose(onClose);
   };
+
+  // Drive animations from prop
+  useEffect(() => {
+    if (qrVisible) animateOpen();
+    else animateClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrVisible]);
+
+  // Android back button closes sheet
+  useEffect(() => {
+    if (!qrVisible) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      handleClose();
+      return true;
+    });
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrVisible]);
+
+  if (!qrVisible) return null;
 
   return (
     <Portal>
-      <Modal
-        visible={qrVisible}
-        onDismiss={handleCloseSheet}
-        contentContainerStyle={{ flex: 1, justifyContent: "flex-end" }}
+      {/* Backdrop */}
+      <Animated.View
+        pointerEvents="auto"
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          opacity: backdrop,
+        }}
+      >
+        {/* Tap outside to close */}
+        <Pressable style={{ flex: 1 }} onPress={handleClose} />
+      </Animated.View>
+
+      {/* Bottom Sheet */}
+      <Animated.View
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          transform: [{ translateY }],
+        }}
       >
         <Surface
+          elevation={0} // không bóng để tránh "vệt xám" ở đáy
           style={{
             height: SHEET_HEIGHT,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
-            paddingHorizontal: 16,
-            paddingTop: 20,
-            paddingBottom: 24,
             backgroundColor: "#F2EFF0",
+            paddingTop: 20,
+            paddingHorizontal: 16,
+            paddingBottom: Math.max(24, insets.bottom), // safe-area
+            overflow: "hidden",
           }}
         >
           {/* drag indicator */}
@@ -93,14 +167,14 @@ export default function TeamQRSheet({
           />
 
           {/* header */}
-          <View className="flex-row items-center">
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
             <IconButton
               icon="arrow-left"
               size={30}
               iconColor="#90717E"
-              onPress={handleCloseSheet}
+              onPress={handleClose}
             />
-            <View className="flex-1" />
+            <View style={{ flex: 1 }} />
             <IconButton
               icon="dots-vertical"
               iconColor="#90717E"
@@ -113,7 +187,10 @@ export default function TeamQRSheet({
                 onDismiss={closeMenu}
                 anchor={anchorXY}
                 anchorPosition="bottom"
-                contentStyle={{ backgroundColor: "#EFE7EA", borderRadius: 12 }}
+                contentStyle={{
+                  backgroundColor: "#EFE7EA",
+                  borderRadius: 12,
+                }}
               >
                 <Menu.Item
                   leadingIcon="download"
@@ -129,12 +206,13 @@ export default function TeamQRSheet({
             )}
           </View>
 
+          {/* content */}
           <View
             style={{
               alignSelf: "center",
-              width: 260,
+              width: 300,
               alignItems: "center",
-              marginTop: 60,
+              marginTop: 20,
             }}
           >
             <View
@@ -146,7 +224,7 @@ export default function TeamQRSheet({
             >
               <RNImage
                 source={qrImage}
-                style={{ width: "100%", height: 210, resizeMode: "contain" }}
+                style={{ width: "100%", height: 260, resizeMode: "contain" }}
               />
             </View>
 
@@ -162,7 +240,7 @@ export default function TeamQRSheet({
             </Text>
           </View>
         </Surface>
-      </Modal>
+      </Animated.View>
     </Portal>
   );
 }

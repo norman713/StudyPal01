@@ -144,7 +144,7 @@ export default function TeamInfoScreen({
           <Card.Content>
             <View className="flex-row items-center gap-2">
               <IconButton icon="information-outline" size={20} />
-              <Text className="flex-1 text-[13px] text-black/80">
+              <Text className="flex-1 text-[15px] text-black/80">
                 {description}
               </Text>
             </View>
