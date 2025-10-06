@@ -67,14 +67,11 @@ export default function DescriptionScreen() {
           titleStyle={{ color: "#fff", fontSize: 18, fontWeight: "600" }}
         />
       </Appbar.Header>
-
-      {/* Khối TRẮNG chứa input + Save */}
       <View
         style={{
           flex: 1,
           margin: 12,
           backgroundColor: "#fff",
-          borderRadius: 8,
           padding: 12,
         }}
       >
@@ -84,7 +81,6 @@ export default function DescriptionScreen() {
           multiline
           value={value}
           onChangeText={setValue}
-          // không cần placeholder nữa vì ta hiển thị DEFAULT_TEXT
           style={{
             flex: 1,
             textAlignVertical: "top",

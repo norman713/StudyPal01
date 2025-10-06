@@ -51,6 +51,10 @@ export default function TeamInfoScreen({
     router.push("/(team)/description");
   };
 
+  const handleInvite = () => {
+    router.push("/(team)/invite");
+  };
+
   const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.5);
   return (
     <View className="flex-1 bg-[#F2EFF0]">
@@ -214,7 +218,7 @@ export default function TeamInfoScreen({
                   title="Invite user"
                   left={(p) => <List.Icon {...p} icon="account-plus-outline" />}
                   right={(p) => <List.Icon {...p} icon="chevron-right" />}
-                  onPress={() => router.push("/")}
+                  onPress={handleInvite}
                   style={{ paddingRight: 0 }}
                 />
               </>
