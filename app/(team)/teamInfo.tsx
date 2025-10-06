@@ -1,7 +1,14 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { Dimensions, View } from "react-native";
-import { Avatar, Card, IconButton, List, Text } from "react-native-paper";
+import {
+  Avatar,
+  Card,
+  IconButton,
+  List,
+  Text,
+  TouchableRipple,
+} from "react-native-paper";
 import TeamQRSheet from "./components/bottomSheet";
 
 type Role = "member" | "admin" | "owner";
@@ -33,6 +40,15 @@ export default function TeamInfoScreen({
   const closeQR = () => setQrVisible(false);
   const qrImage = {
     uri: "https://api.qrserver.com/v1/create-qr-code/?size=210x210&data=Demo",
+  };
+
+  //Handlers
+  const handleNotiSettings = () => {
+    router.push("/(team)/noti");
+  };
+
+  const handleDescription = () => {
+    router.push("/(team)/description");
   };
 
   const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.5);
@@ -139,16 +155,31 @@ export default function TeamInfoScreen({
         {/* Card 2: description*/}
         <Card
           mode="contained"
-          style={{ marginTop: 10, borderRadius: 0, backgroundColor: "#fff" }}
+          style={{
+            marginTop: 10,
+            borderRadius: 0,
+            padding: 10,
+            backgroundColor: "#fff",
+          }}
         >
-          <Card.Content>
-            <View className="flex-row items-center gap-2">
-              <IconButton icon="information-outline" size={20} />
-              <Text className="flex-1 text-[15px] text-black/80">
-                {description}
-              </Text>
-            </View>
-          </Card.Content>
+          <TouchableRipple
+            onPress={isOwner ? handleDescription : undefined}
+            disabled={!isOwner}
+            rippleColor="rgba(0,0,0,0.08)"
+            style={{ borderRadius: 0 }}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !isOwner }}
+            accessibilityHint="Open team description"
+          >
+            <Card.Content>
+              <View className="flex-row items-center gap-2">
+                <IconButton icon="information-outline" size={20} disabled />
+                <Text className="flex-1 text-[15px] text-black/80">
+                  {description}
+                </Text>
+              </View>
+            </Card.Content>
+          </TouchableRipple>
         </Card>
 
         {/* Card 3: Action lists */}
@@ -156,7 +187,7 @@ export default function TeamInfoScreen({
           mode="contained"
           style={{ marginTop: 10, borderRadius: 0, backgroundColor: "#fff" }}
         >
-          <Card.Content style={{ paddingVertical: 0 }}>
+          <Card.Content>
             {canManage && (
               <>
                 <List.Item
@@ -173,7 +204,7 @@ export default function TeamInfoScreen({
               title="Notification settings"
               left={(p) => <List.Icon {...p} icon="bell-outline" />}
               right={(p) => <List.Icon {...p} icon="chevron-right" />}
-              onPress={() => router.push("/")}
+              onPress={handleNotiSettings}
               style={{ paddingRight: 0 }}
             />
 
