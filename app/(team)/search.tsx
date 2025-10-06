@@ -11,7 +11,9 @@ import {
   Text,
 } from "react-native-paper";
 
+import BottomBar from "@/components/ui/buttom";
 import Header from "@/components/ui/header";
+import TeamNameModal from "./components/teamName";
 
 /* ---------- Types & mock data (swap with API) ---------- */
 type TeamRole = "owner" | "member";
@@ -32,7 +34,15 @@ export default function Search() {
   const INACTIVE = "#E3DBDF";
   const LABEL_SIZE = 11;
   const nav = useNavigation();
+
+  //State
   const [query, setQuery] = useState("");
+  const [bottomTab, setBottomTab] = useState<
+    "me" | "team" | "notification" | "trash"
+  >("team");
+  const [modalCreateVisible, setCreateModalVisible] = useState(false); // This is the boolean state
+  const [teamName, setTeamName] = useState("");
+
   const [tab, setTab] = useState<"joined" | "owned">("joined");
 
   const teams = useMemo(() => {
@@ -44,6 +54,16 @@ export default function Search() {
     const q = query.trim().toLowerCase();
     return base.filter((t) => t.name.toLowerCase().includes(q));
   }, [query, tab]);
+
+  //Handlers
+  const handleSave = (name: string) => {
+    setTeamName(name);
+    setCreateModalVisible(false); // Close modal after saving
+  };
+
+  const handleCancel = () => {
+    setCreateModalVisible(false); // Close modal on cancel
+  };
 
   return (
     <View className="flex-1 bg-white">
@@ -86,7 +106,7 @@ export default function Search() {
         {/* Toggle + Actions  */}
         <View className="pt-3">
           <View className="flex-row items-center">
-            {/* Toggle (trái) */}
+            {/* Toggle (left) */}
             <View style={{ maxWidth: "70%", flexShrink: 1 }}>
               <SegmentedButtons
                 value={tab}
@@ -133,7 +153,7 @@ export default function Search() {
                 ]}
                 style={{
                   alignSelf: "flex-start",
-                  backgroundColor: INACTIVE, // phần nền lộ ra ở giữa
+                  backgroundColor: INACTIVE, // Part of the background
                   borderRadius: 10,
                   padding: 5,
                   overflow: "hidden",
@@ -141,28 +161,18 @@ export default function Search() {
               />
             </View>
 
-            {/* spacer */}
+            {/* Spacer */}
             <View className="flex-1" />
 
-            {/* actions  */}
-            <View className="flex-row items-center gap-2">
-              <IconButton
-                icon="qrcode-scan"
-                mode="outlined"
-                iconColor="#90717E"
-                size={25}
-                style={{ borderWidth: 0 }}
-                onPress={() => router.push("/")}
-              />
-              <IconButton
-                icon="plus"
-                mode="contained"
-                iconColor="#fff"
-                size={25}
-                style={{ borderRadius: 12, backgroundColor: "#90717E" }}
-                onPress={() => router.push("/")}
-              />
-            </View>
+            {/* Actions */}
+            <IconButton
+              icon="qrcode-scan"
+              mode="outlined"
+              iconColor="#90717E"
+              size={25}
+              style={{ borderWidth: 0 }}
+              onPress={() => router.push("/")}
+            />
           </View>
         </View>
 
@@ -202,6 +212,21 @@ export default function Search() {
           )}
         />
       </View>
+
+      {/* Bottom */}
+      <BottomBar
+        activeTab={bottomTab}
+        onTabPress={setBottomTab}
+        onCenterPress={() => setCreateModalVisible(true)} // Show modal when center button is pressed
+      />
+
+      {/* TeamNameModal should receive modalCreateVisible (not setCreateModalVisible) */}
+      <TeamNameModal
+        visible={modalCreateVisible} // Pass the state here (boolean)
+        onSave={handleSave}
+        onCancel={handleCancel}
+        initialName={teamName}
+      />
     </View>
   );
 }

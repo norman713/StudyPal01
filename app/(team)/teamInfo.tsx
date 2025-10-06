@@ -11,6 +11,7 @@ import {
   TouchableRipple,
 } from "react-native-paper";
 import TeamQRSheet from "./components/bottomSheet";
+import TeamNameModal from "./components/teamName";
 
 type Role = "member" | "admin" | "owner";
 
@@ -23,7 +24,7 @@ type TeamInfoProps = {
 };
 
 export default function TeamInfoScreen({
-  role = "admin",
+  role = "owner",
   teamName = "THIS IS TEAM NAME DEMO",
   description = "This is team description. You can write what ever here. Team Pikachu forever...",
   avatarUri,
@@ -44,6 +45,8 @@ export default function TeamInfoScreen({
   };
   const [leaveModalVisible, setLeaveModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [teamNameModalVisible, setTeamNameModalVisible] = useState(false);
+  const [teamNameValue, setTeamNameValue] = useState(teamName);
 
   //Handlers
   const handleNotiSettings = () => {
@@ -164,13 +167,13 @@ export default function TeamInfoScreen({
                     fontSize: 20,
                   }}
                 >
-                  {teamName}
+                  {teamNameValue}
                 </Text>
                 {isOwner && (
                   <IconButton
                     icon="pencil-outline"
                     size={16}
-                    onPress={() => router.push("/")}
+                    onPress={() => setTeamNameModalVisible(true)}
                     accessibilityLabel="Edit team name"
                   />
                 )}
@@ -311,6 +314,15 @@ export default function TeamInfoScreen({
         confirmText="Leave"
         onConfirm={handleConfirmLDelete}
         onCancel={() => setDeleteModalVisible(false)}
+      />
+      <TeamNameModal
+        visible={teamNameModalVisible}
+        initialName={teamNameValue}
+        onCancel={() => setTeamNameModalVisible(false)}
+        onSave={(newName) => {
+          setTeamNameValue(newName);
+          setTeamNameModalVisible(false);
+        }}
       />
     </View>
   );

@@ -10,6 +10,7 @@ import {
   Searchbar,
   Text,
 } from "react-native-paper";
+import UpdateRoleModal from "./components/updateRole";
 
 // ================== TYPES ==================
 type Role = "Owner" | "Admin" | "Member";
@@ -26,22 +27,64 @@ type User = {
 const ACCENT = "#90717E";
 
 const USERS: User[] = [
-  { id: "1", name: "Sienna", email: "sienna@studio.dev", role: "Owner" },
-  { id: "2", name: "Sienna", email: "admin@studio.dev", role: "Admin" },
-  { id: "3", name: "Sienna", email: "mem1@studio.dev", role: "Member" },
-  { id: "4", name: "Sienna", email: "mem2@studio.dev", role: "Member" },
-  { id: "5", name: "Sienna", email: "mem3@studio.dev", role: "Member" },
-  { id: "6", name: "Sienna", email: "mem4@studio.dev", role: "Member" },
+  {
+    id: "1",
+    name: "Sienna",
+    email: "sienna@studio.dev",
+    avatar:
+      "https://vn.portal-pokemon.com/play/resources/pokedex/img/pm/c0cb468a31cb0b1cd34b6ad4c6c4c02de1d4c595.png",
+    role: "Owner",
+  },
+  {
+    id: "2",
+    name: "Liam",
+    email: "admin@studio.dev",
+    avatar:
+      "https://www.pngplay.com/wp-content/uploads/12/Pikachu-Meme-Transparent-Free-PNG.png",
+    role: "Admin",
+  },
+  {
+    id: "3",
+    name: "Emma",
+    email: "mem1@studio.dev",
+    avatar:
+      "https://cdn.pixabay.com/photo/2021/12/26/17/31/pokemon-6895600_640.png",
+    role: "Member",
+  },
+  {
+    id: "4",
+    name: "Noah",
+    email: "mem2@studio.dev",
+    avatar:
+      "https://www.pngplay.com/wp-content/uploads/12/Pikachu-Meme-Transparent-Free-PNG.png",
+    role: "Member",
+  },
+  {
+    id: "5",
+    name: "Olivia",
+    email: "mem3@studio.dev",
+    avatar:
+      "https://vn.portal-pokemon.com/play/resources/pokedex/img/pm/8bb97c22409c5c6d259c29bd36af86911b112716.png",
+    role: "Member",
+  },
+  {
+    id: "6",
+    name: "Ava",
+    email: "mem4@studio.dev",
+    avatar:
+      "https://www.pngplay.com/wp-content/uploads/12/Pikachu-Meme-Transparent-Free-PNG.png",
+    role: "Member",
+  },
 ];
 
-const CURRENT_USER_ROLE = "Admin" as Role;
+const CURRENT_USER_ROLE = "Owner" as Role;
 
 // ================== SUB COMPONENTS ==================
 const RoleBadge = React.memo(({ role }: { role: Role }) => (
   <Text style={{ fontSize: 14, marginTop: 2, color: "#92AAA5" }}>{role}</Text>
 ));
 
-// Check show menu "..."
+// Check show menu
 const canShowKebab = (row: User): boolean => {
   if (CURRENT_USER_ROLE === "Owner") return true;
   if (CURRENT_USER_ROLE === "Admin") return row.role === "Member";
@@ -51,6 +94,7 @@ const canShowKebab = (row: User): boolean => {
 const getMenuItems = (
   row: User,
   closeMenu: () => void,
+  onOpenUpdateRole: (user: User) => void,
   router: ReturnType<typeof useRouter>
 ) => {
   const handleViewProfile = () => {
@@ -65,7 +109,7 @@ const getMenuItems = (
 
   const handleUpdateRole = () => {
     closeMenu();
-    console.log("Update role", row.id);
+    onOpenUpdateRole(row);
   };
 
   if (CURRENT_USER_ROLE === "Owner") {
@@ -91,11 +135,13 @@ const MemberRow = React.memo(
     openMenuForId,
     setOpenMenuForId,
     router,
+    onOpenUpdateRole,
   }: {
     item: User;
     openMenuForId: string | null;
     setOpenMenuForId: React.Dispatch<React.SetStateAction<string | null>>;
     router: ReturnType<typeof useRouter>;
+    onOpenUpdateRole: (user: User) => void;
   }) => {
     const showDots = canShowKebab(item);
     const isMenuOpen = openMenuForId === item.id;
@@ -140,12 +186,11 @@ const MemberRow = React.memo(
                 <IconButton icon="dots-horizontal" onPress={handleToggleMenu} />
               }
             >
-              {getMenuItems(item, handleDismiss, router)}
+              {getMenuItems(item, handleDismiss, onOpenUpdateRole, router)}
             </Menu>
           ) : null
         }
         description={undefined}
-        onPress={() => {}}
       />
     );
   }
@@ -157,6 +202,8 @@ export default function TeamMembersScreen() {
   const [query, setQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [openMenuForId, setOpenMenuForId] = useState<string | null>(null);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const members = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -172,6 +219,24 @@ export default function TeamMembersScreen() {
     if (showSearch) setQuery("");
   }, [showSearch]);
 
+  const handleInvite = () => {
+    router.push("/(team)/invite");
+  };
+
+  const onOpenUpdateRole = (user: User) => {
+    setSelectedUser(user);
+    setShowRoleModal(true);
+  };
+
+  const handleSaveRole = (newRole: Role) => {
+    console.log("Updated role:", selectedUser?.name, "→", newRole);
+    setShowRoleModal(false);
+  };
+
+  const handleCancel = () => {
+    setShowRoleModal(false);
+  };
+
   const renderItem = useCallback(
     ({ item }: { item: User }) => (
       <MemberRow
@@ -179,14 +244,12 @@ export default function TeamMembersScreen() {
         openMenuForId={openMenuForId}
         setOpenMenuForId={setOpenMenuForId}
         router={router}
+        onOpenUpdateRole={onOpenUpdateRole}
       />
     ),
     [openMenuForId, router]
   );
 
-  const handleInvite = () => {
-    router.push("/(team)/invite");
-  };
   return (
     <View className="flex-1 bg-[#EFE7EA]">
       {/* App bar */}
@@ -203,7 +266,6 @@ export default function TeamMembersScreen() {
             onPress={handleInvite}
           />
         )}
-
         <Appbar.Action
           icon={showSearch ? "close" : "magnify"}
           color="#fff"
@@ -248,6 +310,18 @@ export default function TeamMembersScreen() {
           renderItem={renderItem}
         />
       </View>
+
+      {/* Update Role Modal */}
+      {selectedUser && (
+        <UpdateRoleModal
+          visible={showRoleModal}
+          userName={selectedUser.name}
+          userAvatar={selectedUser.avatar}
+          currentRole={selectedUser.role}
+          onSave={handleSaveRole}
+          onCancel={handleCancel}
+        />
+      )}
     </View>
   );
 }
