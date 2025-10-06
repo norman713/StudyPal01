@@ -46,15 +46,14 @@ export default function InviteUserScreen() {
 
   const handleConfirmInvite = async () => {
     if (selectedUser) {
-      console.log("Invite user: ", selectedUser);
-      setConfirmOpen(false); // Đóng QuestionModal
-      setSuccessOpen(true); // Mở SuccessModal
+      setConfirmOpen(false);
+      setSuccessOpen(true);
     }
   };
 
   const handleSuccessClose = () => {
-    setSuccessOpen(false); // Đóng SuccessModal
-    setSelectedUser(null); // Reset selectedUser sau khi đóng SuccessModal
+    setSuccessOpen(false);
+    setSelectedUser(null);
   };
 
   const renderItem = ({ item }: { item: User }) => (

@@ -141,10 +141,10 @@ export default function Search() {
               />
             </View>
 
-            {/* spacer giữa */}
+            {/* spacer */}
             <View className="flex-1" />
 
-            {/* actions (phải) */}
+            {/* actions  */}
             <View className="flex-row items-center gap-2">
               <IconButton
                 icon="qrcode-scan"
@@ -176,7 +176,6 @@ export default function Search() {
           data={teams}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: 24 }}
-          ItemSeparatorComponent={() => <View className="h-[1px] bg-black/5" />}
           renderItem={({ item }) => (
             <List.Item
               title={item.name}

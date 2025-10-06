@@ -1,3 +1,4 @@
+import ErrorModal from "@/components/modal/error";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { Dimensions, View } from "react-native";
@@ -22,7 +23,7 @@ type TeamInfoProps = {
 };
 
 export default function TeamInfoScreen({
-  role = "owner",
+  role = "admin",
   teamName = "THIS IS TEAM NAME DEMO",
   description = "This is team description. You can write what ever here. Team Pikachu forever...",
   avatarUri,
@@ -41,6 +42,8 @@ export default function TeamInfoScreen({
   const qrImage = {
     uri: "https://api.qrserver.com/v1/create-qr-code/?size=210x210&data=Demo",
   };
+  const [leaveModalVisible, setLeaveModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
   //Handlers
   const handleNotiSettings = () => {
@@ -54,6 +57,24 @@ export default function TeamInfoScreen({
   const handleInvite = () => {
     router.push("/(team)/invite");
   };
+  const handleShowMember = () => {
+    router.push("/(team)/member");
+  };
+  const handleLeave = () => {
+    setLeaveModalVisible(true);
+  };
+  const handleConfirmLeave = () => {
+    setLeaveModalVisible(false);
+    router.push("/(team)/search");
+  };
+
+  const handleDelete = () => {
+    setDeleteModalVisible(true);
+  };
+  const handleConfirmLDelete = () => {
+    setDeleteModalVisible(false);
+    router.push("/(team)/search");
+  };
 
   const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.5);
   return (
@@ -62,12 +83,12 @@ export default function TeamInfoScreen({
         <IconButton
           icon="arrow-left"
           onPress={() => router.back()}
-          size={20}
+          size={25}
+          iconColor="#fff"
           mode="outlined"
           style={{
             position: "absolute",
             top: 14,
-            left: 10,
             outlineColor: "#fff",
             borderWidth: 0,
           }}
@@ -117,13 +138,15 @@ export default function TeamInfoScreen({
                   {isOwner && (
                     <IconButton
                       icon="camera-outline"
-                      size={22}
-                      mode="contained"
+                      size={30}
+                      iconColor="#90717E"
+                      mode="contained-tonal"
                       style={{
                         position: "absolute",
                         right: 0,
                         bottom: -10,
-                        borderRadius: 999,
+                        borderBlockColor: "#ccc",
+                        backgroundColor: "#fff",
                       }}
                       onPress={() => router.push("/")}
                       accessibilityLabel="Change team avatar"
@@ -228,7 +251,7 @@ export default function TeamInfoScreen({
               title={`Show members (${memberCount})`}
               left={(p) => <List.Icon {...p} icon="account-group-outline" />}
               right={(p) => <List.Icon {...p} icon="chevron-right" />}
-              onPress={() => router.push("/")}
+              onPress={handleShowMember}
               style={{ paddingRight: 0 }}
             />
 
@@ -241,7 +264,7 @@ export default function TeamInfoScreen({
                 <List.Icon {...p} icon="chevron-right" color="#DF3B27" />
               )}
               style={{ paddingRight: 0 }}
-              onPress={() => router.push("/")}
+              onPress={handleLeave}
             />
 
             {/* Delete team (owner-only) */}
@@ -256,7 +279,7 @@ export default function TeamInfoScreen({
                   <List.Icon {...p} color="#DF3B27" icon="chevron-right" />
                 )}
                 style={{ paddingRight: 0 }}
-                onPress={() => router.push("/")}
+                onPress={handleDelete}
               />
             )}
           </Card.Content>
@@ -269,6 +292,25 @@ export default function TeamInfoScreen({
         onClose={closeQR}
         teamName={teamName}
         qrImage={qrImage}
+      />
+
+      {/* ⚠️ ErrorModal  Leave */}
+      <ErrorModal
+        visible={leaveModalVisible}
+        title="Leave team?"
+        message="Are you sure you want to leave this team?"
+        confirmText="Leave"
+        onConfirm={handleConfirmLeave}
+        onCancel={() => setLeaveModalVisible(false)}
+      />
+      {/* ⚠️ ErrorModal  Delete */}
+      <ErrorModal
+        visible={deleteModalVisible}
+        title="Leave team?"
+        message="Are you sure you want to delete this team?"
+        confirmText="Leave"
+        onConfirm={handleConfirmLDelete}
+        onCancel={() => setDeleteModalVisible(false)}
       />
     </View>
   );
