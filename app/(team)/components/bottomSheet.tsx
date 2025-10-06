@@ -15,13 +15,13 @@ import {
   Text,
 } from "react-native-paper";
 
-const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.5);
+const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.6);
 
 type Props = {
   qrVisible: boolean;
   onClose: () => void;
   teamName: string;
-  qrImage: ImageSourcePropType; // { uri } hoặc require(...)
+  qrImage: ImageSourcePropType;
 };
 
 export default function TeamQRSheet({
@@ -38,24 +38,23 @@ export default function TeamQRSheet({
   // --- handlers ---
   const openMenuAt = (e: GestureResponderEvent) => {
     const { pageX, pageY } = e.nativeEvent;
-    // đặt anchor trước, rồi mới bật visible để Menu luôn có anchor hợp lệ
     setAnchorXY({ x: pageX, y: pageY + 8 });
     requestAnimationFrame(() => setMenuVisible(true));
   };
 
   const closeMenu = () => {
     setMenuVisible(false);
-    setAnchorXY(undefined); // reset anchor -> lần sau đo lại
+    setAnchorXY(undefined); // reset anchor
   };
 
   const handleSave = () => {
     closeMenu();
-    // TODO: lưu ảnh QR vào gallery
+    // TODO: save QR in gallery
   };
 
   const handleReset = () => {
     closeMenu();
-    // TODO: gọi API reset/regenerate QR
+    // TODO: call API reset/regenerate QR
   };
 
   const handleCloseSheet = () => {
@@ -71,22 +70,21 @@ export default function TeamQRSheet({
         contentContainerStyle={{ flex: 1, justifyContent: "flex-end" }}
       >
         <Surface
-          elevation={2}
           style={{
             height: SHEET_HEIGHT,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
             paddingHorizontal: 16,
-            paddingTop: 10,
+            paddingTop: 20,
             paddingBottom: 24,
-            backgroundColor: "#EFE7EA",
+            backgroundColor: "#F2EFF0",
           }}
         >
           {/* drag indicator */}
           <View
             style={{
               alignSelf: "center",
-              width: 48,
+              width: 50,
               height: 4,
               borderRadius: 99,
               backgroundColor: "rgba(0,0,0,0.25)",
@@ -98,13 +96,17 @@ export default function TeamQRSheet({
           <View className="flex-row items-center">
             <IconButton
               icon="arrow-left"
-              size={20}
+              size={30}
+              iconColor="#90717E"
               onPress={handleCloseSheet}
             />
             <View className="flex-1" />
-            <IconButton icon="dots-vertical" size={20} onPress={openMenuAt} />
-
-            {/* Menu chỉ mount khi có anchor hợp lệ & đang mở */}
+            <IconButton
+              icon="dots-vertical"
+              iconColor="#90717E"
+              size={30}
+              onPress={openMenuAt}
+            />
             {menuVisible && anchorXY && (
               <Menu
                 visible={menuVisible}
@@ -127,13 +129,12 @@ export default function TeamQRSheet({
             )}
           </View>
 
-          {/* nội dung: ảnh + caption cùng bề ngang */}
           <View
             style={{
               alignSelf: "center",
               width: 260,
               alignItems: "center",
-              marginTop: 6,
+              marginTop: 60,
             }}
           >
             <View
@@ -141,7 +142,6 @@ export default function TeamQRSheet({
                 width: "100%",
                 backgroundColor: "#fff",
                 padding: 14,
-                borderRadius: 8,
               }}
             >
               <RNImage
@@ -154,7 +154,7 @@ export default function TeamQRSheet({
               style={{
                 width: "100%",
                 textAlign: "center",
-                marginTop: 10,
+                marginTop: 20,
                 color: "#333",
               }}
             >

@@ -46,6 +46,15 @@ export default function LoginPage() {
   const imageSource = require("../../assets/images/Reading.png");
   const ggIcon = require("../../assets/images/GoogleIcon.png");
   const navigation = useNavigation();
+
+  // helpers (tuỳ chọn)
+  const isTokenValid = (expStr?: string | null) => {
+    if (!expStr) return true;
+    const exp = Number(expStr);
+    const now = Date.now();
+    const LEEWAY_MS = 5_000;
+    return exp > now + LEEWAY_MS;
+  };
   //Hooks
   const router = useRouter();
 
@@ -65,8 +74,32 @@ export default function LoginPage() {
     password: "",
   });
 
+  //Effects
+
   useEffect(() => {
-    // disable gesture back (iOS)
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const [token, expStr] = await Promise.all([
+          AsyncStorage.getItem(ACCESS_KEY),
+          AsyncStorage.getItem(EXP_KEY),
+        ]);
+
+        if (token && isTokenValid(expStr) && !cancelled) {
+          router.replace("/(team)/search");
+        } else if (token && !isTokenValid(expStr)) {
+          await AsyncStorage.multiRemove([ACCESS_KEY, REFRESH_KEY, EXP_KEY]);
+        }
+      } catch (_) {}
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     navigation.setOptions({ gestureEnabled: false });
 
     // disable hardware back (Android)
@@ -109,10 +142,8 @@ export default function LoginPage() {
         password.trim()
       );
 
-      // Tính expiresAt từ JWT (nếu có exp)
+      // Calculate expiresAt từ JWT
       const expMs = getJwtExpMs(accessToken);
-
-      // Lưu token + expiresAt (đồng bộ với axios interceptor)
       await AsyncStorage.setItem(ACCESS_KEY, accessToken);
       await AsyncStorage.setItem(REFRESH_KEY, refreshToken);
       if (expMs) {
@@ -123,7 +154,7 @@ export default function LoginPage() {
 
       setShowError(false);
       setErrorMessage("");
-      router.push("/(team)/search");
+      router.replace("/(team)/search");
     } catch (err: any) {
       const apiMessage =
         err?.response?.data?.message || "Email or password is incorrect.";

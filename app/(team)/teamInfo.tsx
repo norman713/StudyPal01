@@ -37,7 +37,7 @@ export default function TeamInfoScreen({
 
   const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.5);
   return (
-    <View className="flex-1 bg-[#F3F3F3]">
+    <View className="flex-1 bg-[#F2EFF0]">
       <View style={{ height: 140, backgroundColor: "#90717E" }}>
         <IconButton
           icon="arrow-left"
