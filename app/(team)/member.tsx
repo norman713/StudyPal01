@@ -99,7 +99,10 @@ const getMenuItems = (
 ) => {
   const handleViewProfile = () => {
     closeMenu();
-    router.push("/");
+    router.push({
+      pathname: "/(team)/profile/[id]",
+      params: { id: row.id },
+    });
   };
 
   const handleRemove = () => {

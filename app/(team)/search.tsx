@@ -1,6 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
-import { router } from "expo-router";
-import React, { useMemo, useState } from "react";
+import { useRouter } from "expo-router";
+
+import React, { useEffect, useState } from "react";
 import { FlatList, View } from "react-native";
 import {
   Avatar,
@@ -13,22 +14,15 @@ import {
 
 import BottomBar from "@/components/ui/buttom";
 import Header from "@/components/ui/header";
-import TeamNameModal from "./components/teamName";
+import CreateModal from "./components/createTeam";
+import JoinTeamModal from "./components/joinTeam";
 
-/* ---------- Types & mock data (swap with API) ---------- */
-type TeamRole = "owner" | "member";
-type Team = { id: string; name: string; role: TeamRole; avatar?: string };
-
-const MOCK_TEAMS: Team[] = [
-  { id: "1", name: "Sienna’s team", role: "owner" },
-  { id: "2", name: "Frontend Guild", role: "member" },
-  { id: "3", name: "Mobile Squad", role: "member" },
-  { id: "4", name: "DevOps Ninjas", role: "owner" },
-  { id: "5", name: "UI/UX Studio", role: "member" },
-];
+import teamApi, { Team } from "@/api/teamApi";
 
 /* ======================================================= */
 export default function Search() {
+  const router = useRouter();
+
   //CONST
   const ACTIVE = "#90717E";
   const INACTIVE = "#E3DBDF";
@@ -40,31 +34,47 @@ export default function Search() {
   const [bottomTab, setBottomTab] = useState<
     "me" | "team" | "notification" | "trash"
   >("team");
-  const [modalCreateVisible, setCreateModalVisible] = useState(false); // This is the boolean state
+  const [modalCreateVisible, setCreateModalVisible] = useState(false);
+  const [joinVisible, setJoinVisible] = useState(false);
   const [teamName, setTeamName] = useState("");
-
+  const [teamDescription, setTeamDescription] = useState("");
   const [tab, setTab] = useState<"joined" | "owned">("joined");
 
-  const teams = useMemo(() => {
-    const base =
-      tab === "owned"
-        ? MOCK_TEAMS.filter((t) => t.role === "owner")
-        : MOCK_TEAMS;
-    if (!query.trim()) return base;
-    const q = query.trim().toLowerCase();
-    return base.filter((t) => t.name.toLowerCase().includes(q));
-  }, [query, tab]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    console.log("Fetching teams for tab:", tab);
+    const fetchTeams = async () => {
+      try {
+        setLoading(true);
+        const res = await teamApi.getAll(tab === "joined" ? "JOINED" : "OWNED");
+        console.log("Response:", res);
+        setTeams(res.teams ?? []);
+      } catch (err) {
+        console.error("[fetchTeams] Error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTeams();
+  }, [tab]);
 
   //Handlers
-  const handleSave = (name: string) => {
+  const handleSave = (name: string, description: string) => {
     setTeamName(name);
-    setCreateModalVisible(false); // Close modal after saving
+    setTeamDescription(description);
+    setCreateModalVisible(false);
   };
 
   const handleCancel = () => {
-    setCreateModalVisible(false); // Close modal on cancel
+    setCreateModalVisible(false);
   };
 
+  const handleJoin = () => {
+    console.log("Joined team!");
+  };
   return (
     <View className="flex-1 bg-white">
       {/* Header */}
@@ -191,14 +201,14 @@ export default function Search() {
               title={item.name}
               onPress={() => router.push("/(team)/teamInfo")}
               left={() =>
-                item.avatar ? (
-                  <Avatar.Image size={40} source={{ uri: item.avatar }} />
+                item.avatarUrl ? (
+                  <Avatar.Image size={40} source={{ uri: item.avatarUrl }} />
                 ) : (
                   <Avatar.Text size={40} label={item.name.charAt(0)} />
                 )
               }
               right={() =>
-                item.role === "owner" ? (
+                item.owner ? (
                   <IconButton
                     icon="key-outline"
                     iconColor="#90717E"
@@ -217,15 +227,31 @@ export default function Search() {
       <BottomBar
         activeTab={bottomTab}
         onTabPress={setBottomTab}
-        onCenterPress={() => setCreateModalVisible(true)} // Show modal when center button is pressed
+        onCenterPress={() => setJoinVisible(true)} // Show modal when center button is pressed
       />
 
       {/* TeamNameModal should receive modalCreateVisible (not setCreateModalVisible) */}
-      <TeamNameModal
-        visible={modalCreateVisible} // Pass the state here (boolean)
+      <CreateModal
+        visible={modalCreateVisible}
         onSave={handleSave}
         onCancel={handleCancel}
         initialName={teamName}
+        initialDescription={teamDescription}
+      />
+
+      <JoinTeamModal
+        visible={joinVisible}
+        avatar="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png"
+        teamName="This is team name"
+        description="This is team information ahihi"
+        ownerName="Nguyetlun115"
+        ownerAvatar="https://i.pravatar.cc/100?img=5"
+        membersCount={30}
+        onJoin={() => {
+          console.log("Joined team!");
+          setJoinVisible(false);
+        }}
+        onClose={() => setJoinVisible(false)}
       />
     </View>
   );

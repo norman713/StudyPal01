@@ -103,7 +103,7 @@ function isAuthPublic(url?: string | null) {
     u.includes("/auth/validate") ||
     u.includes("/auth/code") ||
     u.includes("/auth/prov") ||
-    u.includes("/auth/refresh") // refresh bản thân nó không kèm Bearer
+    u.includes("/auth/refresh") 
   );
 }
 

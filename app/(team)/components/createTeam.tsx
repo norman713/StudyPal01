@@ -9,20 +9,23 @@ import {
   View,
 } from "react-native";
 
-interface TeamNameModalProps {
+interface CreateModalProps {
   visible: boolean;
-  onSave: (teamName: string) => void;
+  onSave: (teamName: string, description: string) => void; // Chỉnh sửa prop để nhận thêm description
   onCancel: () => void;
   initialName?: string;
+  initialDescription?: string; // Thêm prop initialDescription
 }
 
-export default function TeamNameModal({
+export default function CreateModal({
   visible,
   onSave,
   onCancel,
   initialName = "",
-}: TeamNameModalProps) {
+  initialDescription = "",
+}: CreateModalProps) {
   const [teamName, setTeamName] = useState(initialName);
+  const [description, setDescription] = useState(initialDescription); // Thêm state cho description
 
   return (
     <Modal transparent visible={visible} animationType="fade">
@@ -42,25 +45,37 @@ export default function TeamNameModal({
 
           {/* Title */}
           <Text className="text-[18px] font-PoppinsSemiBold text-black mb-4">
-            Team name
+            Create new team
           </Text>
 
-          {/* Input field */}
+          {/* Team name input */}
           <TextInput
             placeholder="Enter team name"
             value={teamName}
             onChangeText={setTeamName}
-            className="w-full border border-[#DADADA] rounded-lg px-3 py-2 text-[15px] text-black"
+            className="w-full border border-[#DADADA] rounded-lg px-3 py-2 text-[15px] text-black mb-3"
+            placeholderTextColor="#9CA3AF"
+          />
+
+          {/* Team description input */}
+          <TextInput
+            placeholder="Enter team description"
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            numberOfLines={5}
+            textAlignVertical="top"
+            className="w-full border border-[#DADADA] rounded-lg px-3 py-2 text-[15px] text-black h-[120px]"
             placeholderTextColor="#9CA3AF"
           />
 
           {/* Save button */}
           <TouchableOpacity
-            onPress={() => onSave(teamName)}
+            onPress={() => onSave(teamName, description)}
             className="bg-[#90717E] rounded-full w-full py-3 mt-6 items-center"
           >
             <Text className="text-white text-[15px] font-PoppinsRegular">
-              Save
+              Create
             </Text>
           </TouchableOpacity>
         </View>
