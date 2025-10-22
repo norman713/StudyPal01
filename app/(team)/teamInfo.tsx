@@ -1,7 +1,10 @@
+import memberApi from "@/api/memberApi";
+import teamApi from "@/api/teamApi";
 import ErrorModal from "@/components/modal/error";
-import { router } from "expo-router";
-import React, { useState } from "react";
-import { Dimensions, View } from "react-native";
+import { FontAwesome } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Dimensions, View } from "react-native";
 import {
   Avatar,
   Card,
@@ -13,31 +16,38 @@ import {
 import TeamQRSheet from "./components/bottomSheet";
 import TeamNameModal from "./components/teamName";
 
-type Role = "member" | "admin" | "owner";
+type Role = "MEMBER" | "ADMIN" | "OWNER";
 
 type TeamInfoProps = {
+  id: string;
+  name: string;
   role: Role;
-  teamName: string;
-  description?: string;
   avatarUri?: string;
-  memberCount: number;
+  description?: string;
+  totalMembers: number;
 };
 
 export default function TeamInfoScreen({
-  role = "owner",
-  teamName = "THIS IS TEAM NAME DEMO",
+  role = "OWNER",
+  name = "THIS IS TEAM NAME DEMO",
   description = "This is team description. You can write what ever here. Team Pikachu forever...",
   avatarUri,
-  memberCount = 10,
+  totalMembers = 10,
 }: TeamInfoProps) {
-  const isOwner = role === "owner";
-  const isAdmin = role === "admin";
+  //Router params
+  const { id } = useLocalSearchParams();
+
+  const isOwner = role === "OWNER";
+  const isAdmin = role === "ADMIN";
   const canManage = isOwner || isAdmin;
 
   //States
   const [qrVisible, setQrVisible] = useState(false);
+  const [team, setTeam] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const handleOpenQR = () => setQrVisible(true);
   const handleCloseQR = () => setQrVisible(false);
+  const [error, setError] = useState<string | null>(null);
   const openQR = () => setQrVisible(true);
   const closeQR = () => setQrVisible(false);
   const qrImage = {
@@ -46,8 +56,35 @@ export default function TeamInfoScreen({
   const [leaveModalVisible, setLeaveModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [teamNameModalVisible, setTeamNameModalVisible] = useState(false);
-  const [teamNameValue, setTeamNameValue] = useState(teamName);
+  const [teamNameValue, setTeamNameValue] = useState(name);
 
+  useEffect(() => {
+    if (!id) return;
+    const fetchTeamInfo = async () => {
+      try {
+        const data = await teamApi.getInfo(id as string);
+
+        console.log("This is data :", data);
+
+        setTeam(data);
+      } catch (err: any) {
+        console.error("Failed to fetch team info:", err);
+        setError("Failed to load team information. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTeamInfo();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-[#F2EFF0]">
+        <ActivityIndicator size="large" color="#90717E" />
+        <Text className="mt-2 text-gray-600">Loading team information...</Text>
+      </View>
+    );
+  }
   //Handlers
   const handleNotiSettings = () => {
     router.push("/(team)/noti");
@@ -66,17 +103,35 @@ export default function TeamInfoScreen({
   const handleLeave = () => {
     setLeaveModalVisible(true);
   };
-  const handleConfirmLeave = () => {
+  const handleConfirmLeave = async () => {
+    if (!id) return;
     setLeaveModalVisible(false);
-    router.push("/(team)/search");
+    setLoading(true);
+    try {
+      await memberApi.leave(id as string);
+      router.push("/(team)/search");
+    } catch (err: any) {
+      setError("Failed to leave team. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = () => {
     setDeleteModalVisible(true);
   };
-  const handleConfirmLDelete = () => {
+  const handleConfirmLDelete = async () => {
+    if (!id) return;
     setDeleteModalVisible(false);
-    router.push("/(team)/search");
+    setLoading(true);
+    try {
+      await teamApi.delete(id as string);
+      router.push("/(team)/search");
+    } catch (err: any) {
+      setError("Failed to delete team. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.5);
@@ -121,12 +176,15 @@ export default function TeamInfoScreen({
                       borderRadius: 999,
                     }}
                   >
-                    {avatarUri ? (
-                      <Avatar.Image size={120} source={{ uri: avatarUri }} />
+                    {team?.avatarUrl ? (
+                      <Avatar.Image
+                        size={120}
+                        source={{ uri: team.avatarUrl }}
+                      />
                     ) : (
                       <Avatar.Text
                         size={120}
-                        label={teamName.charAt(0)}
+                        label={name.charAt(0)}
                         labelStyle={{
                           fontSize: 58,
                           fontWeight: "800",
@@ -167,14 +225,16 @@ export default function TeamInfoScreen({
                     fontSize: 20,
                   }}
                 >
-                  {teamNameValue}
+                  {team?.name ?? "Loading..."}
                 </Text>
                 {isOwner && (
                   <IconButton
                     icon="pencil-outline"
-                    size={16}
+                    size={24}
+                    iconColor="#90717E"
                     onPress={() => setTeamNameModalVisible(true)}
                     accessibilityLabel="Edit team name"
+                    style={{ marginLeft: -6 }}
                   />
                 )}
               </View>
@@ -203,9 +263,9 @@ export default function TeamInfoScreen({
           >
             <Card.Content>
               <View className="flex-row items-center gap-2">
-                <IconButton icon="information-outline" size={20} disabled />
+                <IconButton icon="information-outline" size={24} disabled />
                 <Text className="flex-1 text-[15px] text-black/80">
-                  {description}
+                  {team?.description ?? "No description provided."}
                 </Text>
               </View>
             </Card.Content>
@@ -222,8 +282,12 @@ export default function TeamInfoScreen({
               <>
                 <List.Item
                   title="QR code"
-                  left={(p) => <List.Icon {...p} icon="qrcode" />}
-                  right={(p) => <List.Icon {...p} icon="chevron-right" />}
+                  left={(p) => (
+                    <FontAwesome name="qrcode" size={24} color="black" />
+                  )}
+                  right={(p) => (
+                    <FontAwesome name="caret-right" size={20} color="#49454F" />
+                  )}
                   onPress={openQR}
                   style={{ paddingRight: 0 }}
                 />
@@ -232,8 +296,12 @@ export default function TeamInfoScreen({
 
             <List.Item
               title="Notification settings"
-              left={(p) => <List.Icon {...p} icon="bell-outline" />}
-              right={(p) => <List.Icon {...p} icon="chevron-right" />}
+              left={(props) => (
+                <FontAwesome name="gear" size={24} color="black" />
+              )}
+              right={(p) => (
+                <FontAwesome name="caret-right" size={20} color="#49454F" />
+              )}
               onPress={handleNotiSettings}
               style={{ paddingRight: 0 }}
             />
@@ -242,8 +310,12 @@ export default function TeamInfoScreen({
               <>
                 <List.Item
                   title="Invite user"
-                  left={(p) => <List.Icon {...p} icon="account-plus-outline" />}
-                  right={(p) => <List.Icon {...p} icon="chevron-right" />}
+                  left={(p) => (
+                    <FontAwesome name="user-plus" size={24} color="black" />
+                  )}
+                  right={(p) => (
+                    <FontAwesome name="caret-right" size={20} color="#49454F" />
+                  )}
                   onPress={handleInvite}
                   style={{ paddingRight: 0 }}
                 />
@@ -251,9 +323,11 @@ export default function TeamInfoScreen({
             )}
 
             <List.Item
-              title={`Show members (${memberCount})`}
-              left={(p) => <List.Icon {...p} icon="account-group-outline" />}
-              right={(p) => <List.Icon {...p} icon="chevron-right" />}
+              title={`Show members (${team?.totalMembers})`}
+              left={(p) => <FontAwesome name="users" size={24} color="black" />}
+              right={(p) => (
+                <FontAwesome name="caret-right" size={20} color="#49454F" />
+              )}
               onPress={handleShowMember}
               style={{ paddingRight: 0 }}
             />
@@ -262,9 +336,11 @@ export default function TeamInfoScreen({
             <List.Item
               title="Leave team"
               titleStyle={{ color: "#DF3B27", fontWeight: "600" }}
-              left={(p) => <List.Icon {...p} color="#DF3B27" icon="logout" />}
+              left={(p) => (
+                <FontAwesome name="sign-out" size={24} color="#DF3B27" />
+              )}
               right={(p) => (
-                <List.Icon {...p} icon="chevron-right" color="#DF3B27" />
+                <FontAwesome name="caret-right" size={20} color="#DF3B27" />
               )}
               style={{ paddingRight: 0 }}
               onPress={handleLeave}
@@ -276,10 +352,10 @@ export default function TeamInfoScreen({
                 title="Delete team"
                 titleStyle={{ color: "#DF3B27", fontWeight: "600" }}
                 left={(p) => (
-                  <List.Icon {...p} color="#DF3B27" icon="trash-can-outline" />
+                  <FontAwesome name="trash" size={24} color="#DF3B27" />
                 )}
                 right={(p) => (
-                  <List.Icon {...p} color="#DF3B27" icon="chevron-right" />
+                  <FontAwesome name="caret-right" size={20} color="#DF3B27" />
                 )}
                 style={{ paddingRight: 0 }}
                 onPress={handleDelete}
@@ -293,7 +369,7 @@ export default function TeamInfoScreen({
       <TeamQRSheet
         qrVisible={qrVisible}
         onClose={closeQR}
-        teamName={teamName}
+        teamName={name}
         qrImage={qrImage}
       />
 

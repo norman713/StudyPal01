@@ -130,17 +130,17 @@ axiosInstance.interceptors.request.use(
     }
 
     // logging nhẹ
-    if (__DEV__) {
-      console.log(
-        "Request:",
-        config.method?.toUpperCase(),
-        (config.baseURL || "") + (config.url || ""),
-        "Auth:",
-        (config.headers as any)?.Authorization ? "Bearer..." : "none",
-        "withCredentials:",
-        config.withCredentials
-      );
-    }
+    // if (__DEV__) {
+    //   console.log(
+    //     "Request:",
+    //     config.method?.toUpperCase(),
+    //     (config.baseURL || "") + (config.url || ""),
+    //     "Auth:",
+    //     (config.headers as any)?.Authorization ? "Bearer..." : "none",
+    //     "withCredentials:",
+    //     config.withCredentials
+    //   );
+    // }
 
     return config;
   },

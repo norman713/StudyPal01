@@ -2,22 +2,21 @@ import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 
 import React, { useEffect, useState } from "react";
-import { FlatList, View } from "react-native";
+import { FlatList, Pressable, View } from "react-native";
 import {
   Avatar,
   IconButton,
-  List,
   Searchbar,
   SegmentedButtons,
   Text,
 } from "react-native-paper";
 
+import teamApi, { Team } from "@/api/teamApi";
 import BottomBar from "@/components/ui/buttom";
 import Header from "@/components/ui/header";
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import CreateModal from "./components/createTeam";
 import JoinTeamModal from "./components/joinTeam";
-
-import teamApi, { Team } from "@/api/teamApi";
 
 /* ======================================================= */
 export default function Search() {
@@ -62,10 +61,21 @@ export default function Search() {
   }, [tab]);
 
   //Handlers
-  const handleSave = (name: string, description: string) => {
-    setTeamName(name);
-    setTeamDescription(description);
-    setCreateModalVisible(false);
+  const handleSave = async (name: string, description: string) => {
+    try {
+      setLoading(true);
+      const newTeam = await teamApi.create(name, description);
+      console.log("Created:", newTeam);
+      setCreateModalVisible(false);
+
+      // Reload team list
+      const res = await teamApi.getAll(tab === "joined" ? "JOINED" : "OWNED");
+      setTeams(res.teams ?? []);
+    } catch (err) {
+      console.error("[handleSave] Failed to create team:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -75,6 +85,30 @@ export default function Search() {
   const handleJoin = () => {
     console.log("Joined team!");
   };
+  /* ==========================================================
+     🔍 SEARCH (debounce 300ms)
+  ========================================================== */
+  useEffect(() => {
+    if (query.trim().length === 0) return;
+
+    const timeout = setTimeout(async () => {
+      try {
+        setLoading(true);
+        const res = await teamApi.search(
+          tab === "joined" ? "JOINED" : "OWNED",
+          query.trim()
+        );
+        setTeams(res.teams ?? []);
+      } catch (err) {
+        console.error("[searchTeams] Error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [query, tab]);
+
   return (
     <View className="flex-1 bg-white">
       {/* Header */}
@@ -197,28 +231,33 @@ export default function Search() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: 24 }}
           renderItem={({ item }) => (
-            <List.Item
-              title={item.name}
-              onPress={() => router.push("/(team)/teamInfo")}
-              left={() =>
-                item.avatarUrl ? (
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: "/(team)/teamInfo",
+                  params: { id: item.id },
+                })
+              }
+              className="flex-row items-center justify-between px-4 py-3"
+            >
+              {/* Avatar + Name */}
+              <View className="flex-row items-center">
+                {item.avatarUrl ? (
                   <Avatar.Image size={40} source={{ uri: item.avatarUrl }} />
                 ) : (
                   <Avatar.Text size={40} label={item.name.charAt(0)} />
-                )
-              }
-              right={() =>
-                item.owner ? (
-                  <IconButton
-                    icon="key-outline"
-                    iconColor="#90717E"
-                    accessibilityLabel="Owner"
-                    onPress={() => router.push("/")}
-                  />
-                ) : null
-              }
-              style={{ backgroundColor: "transparent" }}
-            />
+                )}
+
+                <Text className="ml-3 text-xl font-semibold text-black ">
+                  {item.name}
+                </Text>
+              </View>
+
+              {/* Icon owner */}
+              {item.owner && (
+                <FontAwesome5 name="key" size={20} color="#90717E" />
+              )}
+            </Pressable>
           )}
         />
       </View>
@@ -227,7 +266,7 @@ export default function Search() {
       <BottomBar
         activeTab={bottomTab}
         onTabPress={setBottomTab}
-        onCenterPress={() => setJoinVisible(true)} // Show modal when center button is pressed
+        onCenterPress={() => setCreateModalVisible(true)} // Show modal when center button is pressed
       />
 
       {/* TeamNameModal should receive modalCreateVisible (not setCreateModalVisible) */}

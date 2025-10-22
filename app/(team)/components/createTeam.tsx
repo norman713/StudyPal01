@@ -1,6 +1,7 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Modal,
   Text,
   TextInput,
@@ -11,10 +12,10 @@ import {
 
 interface CreateModalProps {
   visible: boolean;
-  onSave: (teamName: string, description: string) => void; // Chỉnh sửa prop để nhận thêm description
+  onSave: (teamName: string, description: string) => void;
   onCancel: () => void;
   initialName?: string;
-  initialDescription?: string; // Thêm prop initialDescription
+  initialDescription?: string;
 }
 
 export default function CreateModal({
@@ -25,7 +26,25 @@ export default function CreateModal({
   initialDescription = "",
 }: CreateModalProps) {
   const [teamName, setTeamName] = useState(initialName);
-  const [description, setDescription] = useState(initialDescription); // Thêm state cho description
+  const [description, setDescription] = useState(initialDescription);
+
+  // Reset input mỗi lần modal mở lại
+  useEffect(() => {
+    if (visible) {
+      setTeamName(initialName);
+      setDescription(initialDescription);
+    }
+  }, [visible]);
+
+  const handleSave = () => {
+    if (!teamName.trim() || !description.trim()) {
+      Alert.alert("Missing information", "Please fill in all fields.");
+      return;
+    }
+    onSave(teamName.trim(), description.trim());
+  };
+
+  const disabled = !teamName.trim() || !description.trim();
 
   return (
     <Modal transparent visible={visible} animationType="fade">
@@ -71,8 +90,11 @@ export default function CreateModal({
 
           {/* Save button */}
           <TouchableOpacity
-            onPress={() => onSave(teamName, description)}
-            className="bg-[#90717E] rounded-full w-full py-3 mt-6 items-center"
+            disabled={disabled}
+            onPress={handleSave}
+            className={`rounded-full w-full py-3 mt-6 items-center ${
+              disabled ? "bg-gray-400" : "bg-[#90717E]"
+            }`}
           >
             <Text className="text-white text-[15px] font-PoppinsRegular">
               Create
