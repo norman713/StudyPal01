@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
 import {
@@ -13,7 +13,7 @@ import {
 import UpdateRoleModal from "./components/updateRole";
 
 // ================== TYPES ==================
-type Role = "Owner" | "Admin" | "Member";
+type Role = "OWNER" | "ADMIN" | "MEMBER";
 
 type User = {
   id: string;
@@ -33,7 +33,7 @@ const USERS: User[] = [
     email: "sienna@studio.dev",
     avatar:
       "https://vn.portal-pokemon.com/play/resources/pokedex/img/pm/c0cb468a31cb0b1cd34b6ad4c6c4c02de1d4c595.png",
-    role: "Owner",
+    role: "OWNER",
   },
   {
     id: "2",
@@ -41,7 +41,7 @@ const USERS: User[] = [
     email: "admin@studio.dev",
     avatar:
       "https://www.pngplay.com/wp-content/uploads/12/Pikachu-Meme-Transparent-Free-PNG.png",
-    role: "Admin",
+    role: "ADMIN",
   },
   {
     id: "3",
@@ -49,7 +49,7 @@ const USERS: User[] = [
     email: "mem1@studio.dev",
     avatar:
       "https://cdn.pixabay.com/photo/2021/12/26/17/31/pokemon-6895600_640.png",
-    role: "Member",
+    role: "MEMBER",
   },
   {
     id: "4",
@@ -57,7 +57,7 @@ const USERS: User[] = [
     email: "mem2@studio.dev",
     avatar:
       "https://www.pngplay.com/wp-content/uploads/12/Pikachu-Meme-Transparent-Free-PNG.png",
-    role: "Member",
+    role: "MEMBER",
   },
   {
     id: "5",
@@ -65,7 +65,7 @@ const USERS: User[] = [
     email: "mem3@studio.dev",
     avatar:
       "https://vn.portal-pokemon.com/play/resources/pokedex/img/pm/8bb97c22409c5c6d259c29bd36af86911b112716.png",
-    role: "Member",
+    role: "MEMBER",
   },
   {
     id: "6",
@@ -73,11 +73,11 @@ const USERS: User[] = [
     email: "mem4@studio.dev",
     avatar:
       "https://www.pngplay.com/wp-content/uploads/12/Pikachu-Meme-Transparent-Free-PNG.png",
-    role: "Member",
+    role: "MEMBER",
   },
 ];
 
-const CURRENT_USER_ROLE = "Owner" as Role;
+const CURRENT_USER_ROLE = "OWNER" as Role;
 
 // ================== SUB COMPONENTS ==================
 const RoleBadge = React.memo(({ role }: { role: Role }) => (
@@ -86,8 +86,8 @@ const RoleBadge = React.memo(({ role }: { role: Role }) => (
 
 // Check show menu
 const canShowKebab = (row: User): boolean => {
-  if (CURRENT_USER_ROLE === "Owner") return true;
-  if (CURRENT_USER_ROLE === "Admin") return row.role === "Member";
+  if (CURRENT_USER_ROLE === "OWNER") return true;
+  if (CURRENT_USER_ROLE === "ADMIN") return row.role === "MEMBER";
   return false;
 };
 
@@ -115,7 +115,7 @@ const getMenuItems = (
     onOpenUpdateRole(row);
   };
 
-  if (CURRENT_USER_ROLE === "Owner") {
+  if (CURRENT_USER_ROLE === "OWNER") {
     return (
       <>
         <Menu.Item title="View profile" onPress={handleViewProfile} />
@@ -202,6 +202,11 @@ const MemberRow = React.memo(
 // ================== MAIN COMPONENT ==================
 export default function TeamMembersScreen() {
   const router = useRouter();
+  const { teamId, number, role } = useLocalSearchParams<{
+    teamId: string;
+    number: string;
+    role: string;
+  }>();
   const [query, setQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [openMenuForId, setOpenMenuForId] = useState<string | null>(null);
@@ -259,10 +264,10 @@ export default function TeamMembersScreen() {
       <Appbar.Header mode="small" style={{ backgroundColor: ACCENT }}>
         <Appbar.BackAction color="#fff" onPress={() => router.back()} />
         <Appbar.Content
-          title={`Team members (${USERS.length})`}
+          title={`Team members (${number})`}
           titleStyle={{ color: "#fff", fontSize: 18, fontWeight: "600" }}
         />
-        {CURRENT_USER_ROLE !== "Member" && (
+        {CURRENT_USER_ROLE !== "MEMBER" && (
           <Appbar.Action
             icon="account-plus"
             color="#fff"

@@ -13,12 +13,12 @@ interface UpdateRoleModalProps {
   visible: boolean;
   userName: string;
   userAvatar?: string;
-  currentRole: "Member" | "Admin" | "Owner";
-  onSave: (newRole: "Member" | "Admin" | "Owner") => void;
+  currentRole: "MEMBER" | "ADMIN" | "OWNER";
+  onSave: (newRole: "MEMBER" | "ADMIN" | "OWNER") => void;
   onCancel: () => void;
 }
 
-const ROLES = ["Member", "Admin", "Owner"];
+const ROLES = ["MEMBER", "ADMIN", "OWNER"];
 
 export default function UpdateRoleModal({
   visible,
@@ -91,7 +91,7 @@ export default function UpdateRoleModal({
                   key={role}
                   className="px-3 py-2"
                   onPress={() => {
-                    setSelectedRole(role as "Member" | "Admin" | "Owner");
+                    setSelectedRole(role as "MEMBER" | "ADMIN" | "OWNER");
                     setDropdownOpen(false);
                   }}
                 >

@@ -2,8 +2,9 @@ import memberApi from "@/api/memberApi";
 import teamApi from "@/api/teamApi";
 import ErrorModal from "@/components/modal/error";
 import { FontAwesome } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Dimensions, View } from "react-native";
 import {
   Avatar,
@@ -58,24 +59,30 @@ export default function TeamInfoScreen({
   const [teamNameModalVisible, setTeamNameModalVisible] = useState(false);
   const [teamNameValue, setTeamNameValue] = useState(name);
 
-  useEffect(() => {
+  const fetchTeamInfo = async () => {
     if (!id) return;
-    const fetchTeamInfo = async () => {
-      try {
-        const data = await teamApi.getInfo(id as string);
-
-        console.log("This is data :", data);
-
-        setTeam(data);
-      } catch (err: any) {
-        console.error("Failed to fetch team info:", err);
-        setError("Failed to load team information. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
+    setLoading(true);
+    try {
+      const data = await teamApi.getInfo(id as string);
+      console.log("This is data :", data);
+      setTeam(data);
+    } catch (err: any) {
+      console.error("Failed to fetch team info:", err);
+      setError("Failed to load team information. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  // first load
+  useEffect(() => {
     fetchTeamInfo();
   }, [id]);
+  // when come back to screen
+  useFocusEffect(
+    useCallback(() => {
+      fetchTeamInfo();
+    }, [id])
+  );
 
   if (loading) {
     return (
@@ -91,14 +98,27 @@ export default function TeamInfoScreen({
   };
 
   const handleDescription = () => {
-    router.push("/(team)/description");
+    router.push({
+      pathname: "/(team)/description",
+      params: {
+        teamId: id,
+        description: team?.description ?? "",
+      },
+    });
   };
 
   const handleInvite = () => {
     router.push("/(team)/invite");
   };
   const handleShowMember = () => {
-    router.push("/(team)/member");
+    router.push({
+      pathname: "/(team)/member",
+      params: {
+        teamId: id,
+        number: team?.totalMembers ?? 0,
+        role: team.role,
+      },
+    });
   };
   const handleLeave = () => {
     setLeaveModalVisible(true);
@@ -393,11 +413,23 @@ export default function TeamInfoScreen({
       />
       <TeamNameModal
         visible={teamNameModalVisible}
-        initialName={teamNameValue}
+        initialName={team.name}
         onCancel={() => setTeamNameModalVisible(false)}
-        onSave={(newName) => {
-          setTeamNameValue(newName);
+        onSave={async (newName) => {
+          if (!id) return;
           setTeamNameModalVisible(false);
+          setLoading(true);
+          try {
+            await teamApi.update(id as string, { name: newName });
+            setTeam((prev: any) => ({ ...prev, name: newName }));
+            setTeamNameValue(newName);
+            await fetchTeamInfo();
+          } catch (err: any) {
+            console.error("Failed to update team name:", err);
+            setError("Failed to update team name. Please try again later.");
+          } finally {
+            setLoading(false);
+          }
         }}
       />
     </View>

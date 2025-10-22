@@ -68,6 +68,11 @@ async delete(teamId: string) {
   return await axiosInstance.delete(url);
 },
 
+  async update(teamId: string, data: { name?: string; description?: string }) {
+    const url = `/teams/${teamId}`;
+    return await axiosInstance.patch(url, data);
+  },
+
 };
 
 export default teamApi;

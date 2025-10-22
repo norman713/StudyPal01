@@ -1,5 +1,6 @@
+import teamApi from "@/api/teamApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 import { Appbar, Button, TextInput } from "react-native-paper";
@@ -8,10 +9,15 @@ const ACCENT = "#90717E";
 const STORAGE_KEY = "team:description";
 const MAX_LEN = 2000;
 const DEFAULT_TEXT =
-  "This is where you write your team description and using textarea";
+  "This is where you write your team description and using textarehhh";
 
 export default function DescriptionScreen() {
   const router = useRouter();
+  const { teamId, description } = useLocalSearchParams<{
+    teamId?: string;
+    description?: string;
+  }>();
+
   const [value, setValue] = useState("");
   const [initial, setInitial] = useState("");
   const [loading, setLoading] = useState(true);
@@ -22,16 +28,24 @@ export default function DescriptionScreen() {
     (async () => {
       try {
         const saved = await AsyncStorage.getItem(STORAGE_KEY);
-        if (saved && saved.trim().length > 0) {
-          setValue(saved);
-          setInitial(saved);
-        } else {
-          setValue(DEFAULT_TEXT);
-          setInitial(DEFAULT_TEXT);
-          await AsyncStorage.setItem(STORAGE_KEY, DEFAULT_TEXT);
-        }
+
+        // Ưu tiên: description được truyền từ trang trước
+        const desc =
+          (description && description.trim().length > 0
+            ? description
+            : saved) || DEFAULT_TEXT;
+
+        setValue(desc);
+        setInitial(desc);
+
+        // Lưu lại local để dùng cho lần sau
+        await AsyncStorage.setItem(STORAGE_KEY, desc);
+      } catch (err) {
+        console.error("Failed to load saved description:", err);
       } finally {
         setLoading(false);
+
+        // Đặt con trỏ cuối text input
         setTimeout(() => {
           const len = (inputRef.current?.props?.value || "").length;
           inputRef.current?.setNativeProps?.({
@@ -40,19 +54,27 @@ export default function DescriptionScreen() {
         }, 0);
       }
     })();
-  }, []);
+  }, [description]);
 
   const dirty = useMemo(() => value !== initial, [value, initial]);
   const canSave = dirty && !saving && !loading && value.length <= MAX_LEN;
 
   const handleSave = async () => {
-    if (!canSave) return;
+    if (!canSave || !teamId) return;
     setSaving(true);
     try {
-      const trimmed = value.replace(/\s+$/g, "");
+      const trimmed = value.trim();
+
+      await teamApi.update(teamId as string, { description: trimmed });
+
+      // lưu local nếu cần
       await AsyncStorage.setItem(STORAGE_KEY, trimmed);
       setInitial(trimmed);
+
+      // quay lại
       router.back();
+    } catch (error) {
+      console.error("Failed to update description:", error);
     } finally {
       setSaving(false);
     }
@@ -67,6 +89,7 @@ export default function DescriptionScreen() {
           titleStyle={{ color: "#fff", fontSize: 18, fontWeight: "600" }}
         />
       </Appbar.Header>
+
       <View
         style={{
           flex: 1,
