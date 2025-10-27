@@ -7,7 +7,6 @@ export default function ProfileRoute() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  // Nếu chưa có id thì có thể loading nhẹ
   if (!id) {
     return (
       <View className="flex-1 justify-center items-center bg-[#F2EFF0]">

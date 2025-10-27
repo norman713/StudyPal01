@@ -1,6 +1,7 @@
+import memberApi from "@/api/memberApi";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
-import { FlatList, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Alert, FlatList, View } from "react-native";
 import {
   Appbar,
   Avatar,
@@ -18,7 +19,7 @@ type Role = "OWNER" | "ADMIN" | "MEMBER";
 type User = {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   avatar?: string;
   role: Role;
 };
@@ -26,68 +27,14 @@ type User = {
 // ================== CONSTANTS ==================
 const ACCENT = "#90717E";
 
-const USERS: User[] = [
-  {
-    id: "1",
-    name: "Sienna",
-    email: "sienna@studio.dev",
-    avatar:
-      "https://vn.portal-pokemon.com/play/resources/pokedex/img/pm/c0cb468a31cb0b1cd34b6ad4c6c4c02de1d4c595.png",
-    role: "OWNER",
-  },
-  {
-    id: "2",
-    name: "Liam",
-    email: "admin@studio.dev",
-    avatar:
-      "https://www.pngplay.com/wp-content/uploads/12/Pikachu-Meme-Transparent-Free-PNG.png",
-    role: "ADMIN",
-  },
-  {
-    id: "3",
-    name: "Emma",
-    email: "mem1@studio.dev",
-    avatar:
-      "https://cdn.pixabay.com/photo/2021/12/26/17/31/pokemon-6895600_640.png",
-    role: "MEMBER",
-  },
-  {
-    id: "4",
-    name: "Noah",
-    email: "mem2@studio.dev",
-    avatar:
-      "https://www.pngplay.com/wp-content/uploads/12/Pikachu-Meme-Transparent-Free-PNG.png",
-    role: "MEMBER",
-  },
-  {
-    id: "5",
-    name: "Olivia",
-    email: "mem3@studio.dev",
-    avatar:
-      "https://vn.portal-pokemon.com/play/resources/pokedex/img/pm/8bb97c22409c5c6d259c29bd36af86911b112716.png",
-    role: "MEMBER",
-  },
-  {
-    id: "6",
-    name: "Ava",
-    email: "mem4@studio.dev",
-    avatar:
-      "https://www.pngplay.com/wp-content/uploads/12/Pikachu-Meme-Transparent-Free-PNG.png",
-    role: "MEMBER",
-  },
-];
-
-const CURRENT_USER_ROLE = "OWNER" as Role;
-
 // ================== SUB COMPONENTS ==================
 const RoleBadge = React.memo(({ role }: { role: Role }) => (
   <Text style={{ fontSize: 14, marginTop: 2, color: "#92AAA5" }}>{role}</Text>
 ));
 
-// Check show menu
-const canShowKebab = (row: User): boolean => {
-  if (CURRENT_USER_ROLE === "OWNER") return true;
-  if (CURRENT_USER_ROLE === "ADMIN") return row.role === "MEMBER";
+const canShowKebab = (row: User, currentRole: Role): boolean => {
+  if (currentRole === "OWNER") return true;
+  if (currentRole === "ADMIN") return row.role === "MEMBER";
   return false;
 };
 
@@ -95,14 +42,12 @@ const getMenuItems = (
   row: User,
   closeMenu: () => void,
   onOpenUpdateRole: (user: User) => void,
-  router: ReturnType<typeof useRouter>
+  router: ReturnType<typeof useRouter>,
+  currentRole: Role
 ) => {
   const handleViewProfile = () => {
     closeMenu();
-    router.push({
-      pathname: "/(team)/profile/[id]",
-      params: { id: row.id },
-    });
+    router.push({ pathname: "/(team)/profile/[id]", params: { id: row.id } });
   };
 
   const handleRemove = () => {
@@ -115,7 +60,7 @@ const getMenuItems = (
     onOpenUpdateRole(row);
   };
 
-  if (CURRENT_USER_ROLE === "OWNER") {
+  if (currentRole === "OWNER") {
     return (
       <>
         <Menu.Item title="View profile" onPress={handleViewProfile} />
@@ -124,6 +69,7 @@ const getMenuItems = (
       </>
     );
   }
+
   return (
     <>
       <Menu.Item title="View profile" onPress={handleViewProfile} />
@@ -139,14 +85,16 @@ const MemberRow = React.memo(
     setOpenMenuForId,
     router,
     onOpenUpdateRole,
+    currentRole,
   }: {
     item: User;
     openMenuForId: string | null;
     setOpenMenuForId: React.Dispatch<React.SetStateAction<string | null>>;
     router: ReturnType<typeof useRouter>;
     onOpenUpdateRole: (user: User) => void;
+    currentRole: Role;
   }) => {
-    const showDots = canShowKebab(item);
+    const showDots = canShowKebab(item, currentRole);
     const isMenuOpen = openMenuForId === item.id;
 
     const handleToggleMenu = useCallback(() => {
@@ -189,7 +137,13 @@ const MemberRow = React.memo(
                 <IconButton icon="dots-horizontal" onPress={handleToggleMenu} />
               }
             >
-              {getMenuItems(item, handleDismiss, onOpenUpdateRole, router)}
+              {getMenuItems(
+                item,
+                handleDismiss,
+                onOpenUpdateRole,
+                router,
+                currentRole
+              )}
             </Menu>
           ) : null
         }
@@ -205,27 +159,54 @@ export default function TeamMembersScreen() {
   const { teamId, number, role } = useLocalSearchParams<{
     teamId: string;
     number: string;
-    role: string;
+    role: Role;
   }>();
+
   const [query, setQuery] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
+  const [searchMode, setSearchMode] = useState(false); // 🔹 dùng biến này thay vì showSearch
   const [openMenuForId, setOpenMenuForId] = useState<string | null>(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  const members = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return USERS;
-    return USERS.filter(
-      (u) =>
-        u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-    );
-  }, [query]);
+  const [members, setMembers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const toggleSearch = useCallback(() => {
-    setShowSearch((v) => !v);
-    if (showSearch) setQuery("");
-  }, [showSearch]);
+  const currentRole = role as Role;
+
+  useEffect(() => {
+    const fetchMembers = async () => {
+      if (!teamId) return;
+      try {
+        setLoading(true);
+        const res = await memberApi.getAll(teamId);
+        setMembers(
+          res.members.map((m) => ({
+            id: m.userId,
+            name: m.name,
+            avatar: m.avatarUrl,
+            email: "",
+            role: m.role,
+          }))
+        );
+      } catch (err) {
+        console.error("❌ Failed to fetch members:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMembers();
+  }, [teamId]);
+
+  const filteredMembers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter(
+      (u) =>
+        u.name.toLowerCase().includes(q) ||
+        (u.email ?? "").toLowerCase().includes(q)
+    );
+  }, [members, query]);
 
   const handleInvite = () => {
     router.push("/(team)/invite");
@@ -236,9 +217,49 @@ export default function TeamMembersScreen() {
     setShowRoleModal(true);
   };
 
-  const handleSaveRole = (newRole: Role) => {
-    console.log("Updated role:", selectedUser?.name, "→", newRole);
-    setShowRoleModal(false);
+  const handleSaveRole = async (newRole: Role) => {
+    if (!teamId || !selectedUser) {
+      console.warn("⚠️ Missing teamId or selectedUser", {
+        teamId,
+        selectedUser,
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await memberApi.updateRole(
+        String(teamId),
+        String(selectedUser.id),
+        newRole
+      );
+
+      // ✅ Update UI ngay
+      setMembers((prev) =>
+        prev.map((m) =>
+          m.id === selectedUser.id ? { ...m, role: newRole } : m
+        )
+      );
+
+      Alert.alert("Success", `Role updated to ${newRole}`);
+    } catch (err: any) {
+      let message = "Failed to update role. Please try again later.";
+      if (err.response?.data?.message) {
+        message = err.response.data.message;
+      } else if (err.message) {
+        message = err.message;
+      }
+
+      Alert.alert("Error", message);
+
+      // 🔸 Đóng modal luôn khi có lỗi
+      setShowRoleModal(false);
+    } finally {
+      setLoading(false);
+      // 🔸 Đảm bảo modal đóng sau khi xử lý xong
+      setShowRoleModal(false);
+    }
   };
 
   const handleCancel = () => {
@@ -253,53 +274,89 @@ export default function TeamMembersScreen() {
         setOpenMenuForId={setOpenMenuForId}
         router={router}
         onOpenUpdateRole={onOpenUpdateRole}
+        currentRole={currentRole}
       />
     ),
-    [openMenuForId, router]
+    [openMenuForId, router, currentRole]
   );
+
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-[#EFE7EA]">
+        <ActivityIndicator size="large" color={ACCENT} />
+        <Text style={{ color: "#555", marginTop: 8 }}>Loading members...</Text>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-[#EFE7EA]">
-      {/* App bar */}
-      <Appbar.Header mode="small" style={{ backgroundColor: ACCENT }}>
-        <Appbar.BackAction color="#fff" onPress={() => router.back()} />
-        <Appbar.Content
-          title={`Team members (${number})`}
-          titleStyle={{ color: "#fff", fontSize: 18, fontWeight: "600" }}
-        />
-        {CURRENT_USER_ROLE !== "MEMBER" && (
-          <Appbar.Action
-            icon="account-plus"
-            color="#fff"
-            onPress={handleInvite}
-          />
-        )}
-        <Appbar.Action
-          icon={showSearch ? "close" : "magnify"}
-          color="#fff"
-          onPress={toggleSearch}
-        />
-      </Appbar.Header>
-
-      {showSearch && (
-        <View style={{ paddingHorizontal: 12, paddingTop: 10 }}>
-          <Searchbar
-            placeholder="Search members"
-            value={query}
-            onChangeText={setQuery}
-            autoFocus
+      {searchMode ? (
+        <Appbar.Header mode="small" style={{ backgroundColor: ACCENT }}>
+          <View
             style={{
-              backgroundColor: "#fff",
-              elevation: 0,
-              borderRadius: 8,
+              flex: 1,
+              flexDirection: "row",
+              alignItems: "center",
             }}
-            inputStyle={{ fontSize: 15 }}
-            iconColor="#6B7280"
-            clearIcon="close"
+          >
+            <Searchbar
+              placeholder="Input text"
+              value={query}
+              onChangeText={setQuery}
+              autoFocus
+              style={{
+                flex: 1,
+                backgroundColor: "#fff",
+                borderRadius: 5,
+              }}
+              inputStyle={{
+                fontSize: 15,
+                paddingVertical: 0,
+                textAlignVertical: "center",
+              }}
+              iconColor="#6B7280"
+              clearIcon="close"
+              onIconPress={() => setQuery("")}
+              right={() => (
+                <IconButton
+                  icon="close"
+                  size={20}
+                  iconColor="#6B7280"
+                  style={{ marginRight: 4 }}
+                  onPress={() => {
+                    setSearchMode(false);
+                    setQuery("");
+                  }}
+                />
+              )}
+            />
+          </View>
+        </Appbar.Header>
+      ) : (
+        // 🔹 Mặc định hiển thị AppBar
+        <Appbar.Header mode="small" style={{ backgroundColor: ACCENT }}>
+          <Appbar.BackAction color="#fff" onPress={() => router.back()} />
+          <Appbar.Content
+            title={`Team members (${number})`}
+            titleStyle={{ color: "#fff", fontSize: 18, fontWeight: "600" }}
           />
-        </View>
+          {currentRole !== "MEMBER" && (
+            <Appbar.Action
+              icon="account-plus"
+              color="#fff"
+              onPress={handleInvite}
+            />
+          )}
+          <Appbar.Action
+            icon="magnify"
+            color="#fff"
+            onPress={() => setSearchMode(true)}
+          />
+        </Appbar.Header>
       )}
 
+      {/* Danh sách thành viên */}
       <View style={{ margin: 12, padding: 10, backgroundColor: "#fff" }}>
         <Text
           style={{
@@ -313,7 +370,7 @@ export default function TeamMembersScreen() {
         </Text>
 
         <FlatList
-          data={members}
+          data={filteredMembers}
           keyExtractor={(u) => u.id}
           renderItem={renderItem}
         />

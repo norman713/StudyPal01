@@ -5,7 +5,7 @@ import { FontAwesome } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Dimensions, View } from "react-native";
+import { ActivityIndicator, Alert, Dimensions, View } from "react-native";
 import {
   Avatar,
   Card,
@@ -46,8 +46,6 @@ export default function TeamInfoScreen({
   const [qrVisible, setQrVisible] = useState(false);
   const [team, setTeam] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const handleOpenQR = () => setQrVisible(true);
-  const handleCloseQR = () => setQrVisible(false);
   const [error, setError] = useState<string | null>(null);
   const openQR = () => setQrVisible(true);
   const closeQR = () => setQrVisible(false);
@@ -59,12 +57,14 @@ export default function TeamInfoScreen({
   const [teamNameModalVisible, setTeamNameModalVisible] = useState(false);
   const [teamNameValue, setTeamNameValue] = useState(name);
 
+  const [qrBase64, setQrBase64] = useState<string | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+
   const fetchTeamInfo = async () => {
     if (!id) return;
     setLoading(true);
     try {
       const data = await teamApi.getInfo(id as string);
-      console.log("This is data :", data);
       setTeam(data);
     } catch (err: any) {
       console.error("Failed to fetch team info:", err);
@@ -94,7 +94,13 @@ export default function TeamInfoScreen({
   }
   //Handlers
   const handleNotiSettings = () => {
-    router.push("/(team)/noti");
+    if (!id) return;
+    router.push({
+      pathname: "/(team)/noti",
+      params: {
+        teamId: id,
+      },
+    });
   };
 
   const handleDescription = () => {
@@ -151,6 +157,43 @@ export default function TeamInfoScreen({
       setError("Failed to delete team. Please try again later.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ABOUT QR HANDLER
+  const handleOpenQR = async () => {
+    if (!id) return;
+    setQrVisible(true);
+    setQrLoading(true);
+    try {
+      const base64 = await teamApi.getQR(id as string, 300, 300);
+      setQrBase64(base64);
+      if (base64) {
+        setQrBase64(base64);
+      } else {
+        console.error("QR field missing in response");
+      }
+    } catch (err) {
+      console.error("Failed to fetch QR:", err);
+      setError("Failed to load QR code. Please try again later.");
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  const handleResetQR = async () => {
+    if (!id) return;
+    try {
+      setQrLoading(true);
+      const res = await teamApi.resetQR(id as string);
+      Alert.alert("Success", res.message);
+      const newBase64 = await teamApi.getQR(id as string, 300, 300);
+      setQrBase64(newBase64);
+    } catch (err) {
+      console.error("Failed to reset QR:", err);
+      Alert.alert("Error", "Could not reset QR code.");
+    } finally {
+      setQrLoading(false);
     }
   };
 
@@ -308,7 +351,7 @@ export default function TeamInfoScreen({
                   right={(p) => (
                     <FontAwesome name="caret-right" size={20} color="#49454F" />
                   )}
-                  onPress={openQR}
+                  onPress={handleOpenQR}
                   style={{ paddingRight: 0 }}
                 />
               </>
@@ -389,8 +432,11 @@ export default function TeamInfoScreen({
       <TeamQRSheet
         qrVisible={qrVisible}
         onClose={closeQR}
-        teamName={name}
-        qrImage={qrImage}
+        onReset={handleResetQR}
+        teamName={team?.name}
+        qrImage={
+          qrBase64 ? { uri: `data:image/png;base64,${qrBase64}` } : undefined
+        }
       />
 
       {/* ⚠️ ErrorModal  Leave */}
@@ -405,9 +451,9 @@ export default function TeamInfoScreen({
       {/* ⚠️ ErrorModal  Delete */}
       <ErrorModal
         visible={deleteModalVisible}
-        title="Leave team?"
+        title="Delete team?"
         message="Are you sure you want to delete this team?"
-        confirmText="Leave"
+        confirmText="Delete"
         onConfirm={handleConfirmLDelete}
         onCancel={() => setDeleteModalVisible(false)}
       />

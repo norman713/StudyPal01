@@ -6,7 +6,12 @@ export interface Team {
   avatarUrl?: string;
   owner: boolean;
 }
-
+export interface TeamNotificationSetting {
+  id: string;
+  teamNotification: boolean;
+  teamPlanReminder: boolean;
+  chatNotification: boolean;
+}
 export interface TeamListResponse {
   teams: Team[];
   total: number;
@@ -71,6 +76,23 @@ async delete(teamId: string) {
   async update(teamId: string, data: { name?: string; description?: string }) {
     const url = `/teams/${teamId}`;
     return await axiosInstance.patch(url, data);
+  },
+  async getQR(teamId: string, width: number, height: number): Promise<string> {
+  const url = `/teams/${teamId}/qr`;
+  const params = { width, height };
+  const res = await axiosInstance.get(url, { params }) as { qrCode: string };
+  return res.qrCode;
+},
+
+async resetQR(teamId: string): Promise<{ success: boolean; message: string }> {
+  const url = `/teams/${teamId}/code`;
+  const res = await axiosInstance.patch(url) as { success: boolean; message: string };
+  return res;
+},
+  async getSetting(teamId: string): Promise<TeamNotificationSetting> {
+    const url = `/team-notification-settings/${teamId}`;
+    const res = await axiosInstance.get(url);
+    return res.data as TeamNotificationSetting;
   },
 
 };

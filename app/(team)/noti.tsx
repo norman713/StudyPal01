@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { Appbar, Divider, RadioButton, Text } from "react-native-paper";
+import teamApi, { TeamNotificationSetting } from "@/api/teamApi";
 
 type NotifyChannel = "plan" | "team" | "chat";
 

@@ -18,13 +18,15 @@ const ANIM_DUR = 220;
 type Props = {
   qrVisible: boolean;
   onClose: () => void;
+  onReset?: () => void;
   teamName: string;
-  qrImage: ImageSourcePropType;
+  qrImage?: ImageSourcePropType;
 };
 
 export default function TeamQRSheetView({
   qrVisible,
   onClose,
+  onReset,
   teamName,
   qrImage,
 }: Props) {
@@ -56,7 +58,11 @@ export default function TeamQRSheetView({
   };
   const handleReset = () => {
     closeMenu();
-    // TODO: call API to reset/regenerate QR
+    if (onReset) {
+      onReset();
+    } else {
+      console.warn("⚠️ No onReset handler provided");
+    }
   };
 
   const animateOpen = () =>
@@ -142,7 +148,6 @@ export default function TeamQRSheetView({
         }}
       >
         <Surface
-          elevation={0} // không bóng để tránh "vệt xám" ở đáy
           style={{
             height: SHEET_HEIGHT,
             borderTopLeftRadius: 20,
