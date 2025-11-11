@@ -15,6 +15,7 @@ import teamApi, { Team } from "@/api/teamApi";
 import BottomBar from "@/components/ui/buttom";
 import Header from "@/components/ui/header";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CreateModal from "./components/createTeam";
 import JoinTeamModal from "./components/joinTeam";
 
@@ -23,6 +24,10 @@ export default function Search() {
   const router = useRouter();
 
   //CONST
+  const insets = useSafeAreaInsets();
+  const BAR_H = 80;
+  const EXTRA = 16;
+
   const ACTIVE = "#90717E";
   const INACTIVE = "#E3DBDF";
   const LABEL_SIZE = 11;
@@ -110,7 +115,7 @@ export default function Search() {
   }, [query, tab]);
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1 bg-[#F2EFF0] ">
       {/* Header */}
       <Header
         avatarLabel="A"
@@ -134,139 +139,163 @@ export default function Search() {
           }
         }}
       />
-
-      {/* Content */}
-      <View className="flex-1 px-4">
-        {/* Search */}
-        <View className="pt-3">
-          <Searchbar
-            placeholder="Search by team name"
-            value={query}
-            onChangeText={setQuery}
-            style={{ borderRadius: 12 }}
-          />
-        </View>
-
-        {/* Toggle + Actions  */}
-        <View className="pt-3">
-          <View className="flex-row items-center">
-            {/* Toggle (left) */}
-            <View style={{ maxWidth: "70%", flexShrink: 1 }}>
-              <SegmentedButtons
-                value={tab}
-                onValueChange={(v) => setTab(v as "joined" | "owned")}
-                density="regular"
-                buttons={[
-                  {
-                    value: "joined",
-                    label: "JOINED",
-                    style: [
-                      {
-                        borderRadius: 10,
-                        borderWidth: 0,
-                        marginLeft: 0,
-                        elevation: 0,
-                      },
-                      tab === "joined" && { backgroundColor: ACTIVE },
-                    ],
-                    labelStyle: {
-                      fontSize: LABEL_SIZE,
-                      fontWeight: "700",
-                      color: tab === "joined" ? "#fff" : "#000",
-                    },
-                  },
-                  {
-                    value: "owned",
-                    label: "OWNED",
-                    style: [
-                      {
-                        borderRadius: 10,
-                        borderWidth: 0,
-                        marginLeft: 3,
-                        marginRight: 0,
-                        elevation: 0,
-                      },
-                      tab === "owned" && { backgroundColor: ACTIVE },
-                    ],
-                    labelStyle: {
-                      fontSize: LABEL_SIZE,
-                      fontWeight: "700",
-                      color: tab === "owned" ? "#fff" : "#000",
-                    },
-                  },
-                ]}
-                style={{
-                  alignSelf: "flex-start",
-                  backgroundColor: INACTIVE, // Part of the background
-                  borderRadius: 10,
-                  padding: 5,
-                  overflow: "hidden",
-                }}
-              />
-            </View>
-
-            {/* Spacer */}
-            <View className="flex-1" />
-
-            {/* Actions */}
-            <IconButton
-              icon="qrcode-scan"
-              mode="outlined"
-              iconColor="#90717E"
-              size={25}
-              style={{ borderWidth: 0 }}
-              onPress={() => router.push("/")}
+      <View className="flex-1 bg-white mx-3 my-3 mb-60">
+        {/* Content */}
+        <View className="flex-1 px-4 my-2">
+          {/* Search */}
+          <View className="pt-3">
+            <Searchbar
+              placeholder="Search by team name"
+              value={query}
+              onChangeText={setQuery}
+              style={{ borderRadius: 12 }}
             />
           </View>
-        </View>
 
-        {/* Title */}
-        <Text className="px-4 mt-2 text-base font-bold">
-          Team List ({teams.length})
-        </Text>
-
-        {/* List */}
-        <FlatList
-          data={teams}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingBottom: 24 }}
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() =>
-                router.push({
-                  pathname: "/(team)/teamInfo",
-                  params: { id: item.id },
-                })
-              }
-              className="flex-row items-center justify-between px-4 py-3"
-            >
-              {/* Avatar + Name */}
-              <View className="flex-row items-center">
-                {item.avatarUrl ? (
-                  <Avatar.Image size={40} source={{ uri: item.avatarUrl }} />
-                ) : (
-                  <Avatar.Text size={40} label={item.name.charAt(0)} />
-                )}
-
-                <Text className="ml-3 text-xl font-semibold text-black ">
-                  {item.name}
-                </Text>
+          {/* Toggle + Actions  */}
+          <View className="pt-3">
+            <View className="flex-row items-center">
+              {/* Toggle (left) */}
+              <View style={{ maxWidth: "70%", flexShrink: 1 }}>
+                <SegmentedButtons
+                  value={tab}
+                  onValueChange={(v) => setTab(v as "joined" | "owned")}
+                  density="regular"
+                  buttons={[
+                    {
+                      value: "joined",
+                      label: "JOINED",
+                      style: [
+                        {
+                          borderRadius: 10,
+                          borderWidth: 0,
+                          marginLeft: 0,
+                          elevation: 0,
+                        },
+                        tab === "joined" && { backgroundColor: ACTIVE },
+                      ],
+                      labelStyle: {
+                        fontSize: LABEL_SIZE,
+                        fontWeight: "700",
+                        color: tab === "joined" ? "#fff" : "#000",
+                      },
+                    },
+                    {
+                      value: "owned",
+                      label: "OWNED",
+                      style: [
+                        {
+                          borderRadius: 10,
+                          borderWidth: 0,
+                          marginLeft: 3,
+                          marginRight: 0,
+                          elevation: 0,
+                        },
+                        tab === "owned" && { backgroundColor: ACTIVE },
+                      ],
+                      labelStyle: {
+                        fontSize: LABEL_SIZE,
+                        fontWeight: "700",
+                        color: tab === "owned" ? "#fff" : "#000",
+                      },
+                    },
+                  ]}
+                  style={{
+                    alignSelf: "flex-start",
+                    backgroundColor: INACTIVE, // Part of the background
+                    borderRadius: 10,
+                    padding: 5,
+                    overflow: "hidden",
+                  }}
+                />
               </View>
 
-              {/* Icon owner */}
-              {item.owner && (
-                <FontAwesome5 name="key" size={20} color="#90717E" />
-              )}
-            </Pressable>
-          )}
-        />
+              {/* Spacer */}
+              <View className="flex-1" />
+
+              {/* Actions */}
+              <IconButton
+                icon="qrcode-scan"
+                mode="outlined"
+                iconColor="#90717E"
+                size={25}
+                style={{ borderWidth: 0 }}
+                onPress={() => router.push("/")}
+              />
+            </View>
+          </View>
+
+          {/* Title */}
+          <Text className="px-4 mt-2 text-base font-bold">
+            Team List ({teams.length})
+          </Text>
+
+          {/* List */}
+          <FlatList
+            data={teams}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ marginBottom: 24 }}
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: "/(team)/teamInfo",
+                    params: { id: item.id },
+                  })
+                }
+                className="flex-row items-center justify-between px-4 py-3"
+              >
+                {/* Avatar + Name */}
+                <View className="flex-row items-center">
+                  {item.avatarUrl ? (
+                    <Avatar.Image size={40} source={{ uri: item.avatarUrl }} />
+                  ) : (
+                    <Avatar.Text size={40} label={item.name.charAt(0)} />
+                  )}
+
+                  <Text className="ml-3 text-xl font-semibold text-black ">
+                    {item.name}
+                  </Text>
+                </View>
+
+                {/* Icon owner */}
+                {item.owner && (
+                  <FontAwesome5 name="key" size={20} color="#90717E" />
+                )}
+              </Pressable>
+            )}
+          />
+        </View>
       </View>
 
       {/* Bottom */}
       <BottomBar
         activeTab={bottomTab}
-        onTabPress={setBottomTab}
-        onCenterPress={() => setCreateModalVisible(true)} // Show modal when center button is pressed
+        onTabPress={(tab) => {
+          setBottomTab(tab);
+
+          switch (tab) {
+            case "me":
+              router.push("/");
+              break;
+
+            case "team":
+              router.push("/(team)/search");
+              break;
+
+            case "notification":
+              router.push("/(noti)");
+              break;
+
+            case "trash":
+              router.push("/");
+              break;
+
+            default:
+              break;
+          }
+        }}
+        onCenterPress={() => setCreateModalVisible(true)}
       />
 
       {/* TeamNameModal should receive modalCreateVisible (not setCreateModalVisible) */}

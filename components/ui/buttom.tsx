@@ -1,8 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Svg, { Path } from "react-native-svg";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import addButtonImg from "../../assets/images/Addbutton.png";
 
 type Tab = "me" | "team" | "notification" | "trash";
 
@@ -20,105 +19,105 @@ export default function BottomBar({
   return (
     <View style={styles.wrapper}>
       <View style={StyleSheet.absoluteFill}>
-        <Svg
-          width="100%"
-          height="80"
-          viewBox="0 0 100 80"
-          preserveAspectRatio="none"
-        >
-          <Path
-            d="M0,0 H100 V80 H0 V0 Z M50,0 C45,0 42,20 35,20 C42,20 45,0 50,0 Z"
-            fill="#F8F7F8"
-          />
-        </Svg>
+        <View
+          style={{
+            ...StyleSheet.absoluteFillObject,
+            backgroundColor: "#FFFFFF",
+            borderTopWidth: 1,
+            borderTopColor: "#ccc",
+          }}
+        />
       </View>
 
       {/* Các tab */}
       <View style={styles.container}>
         {/* Me */}
-        <TouchableOpacity style={styles.tab} onPress={() => onTabPress("me")}>
-          <MaterialCommunityIcons
-            name="account-outline"
-            size={22}
-            color={activeTab === "me" ? "#90717E" : "#7E9181"}
-          />
-          <Text
-            style={[
-              styles.label,
-              { color: activeTab === "me" ? "#90717E" : "#7E9181" },
-            ]}
+        <View style={styles.group}>
+          <TouchableOpacity style={styles.tab} onPress={() => onTabPress("me")}>
+            <MaterialCommunityIcons
+              name="account-outline"
+              size={22}
+              color={activeTab === "me" ? "#90717E" : "#7E9181"}
+            />
+            <Text
+              style={[
+                styles.label,
+                { color: activeTab === "me" ? "#90717E" : "#7E9181" },
+              ]}
+            >
+              Me
+            </Text>
+          </TouchableOpacity>
+          {/* Team */}
+          <TouchableOpacity
+            style={styles.tab}
+            onPress={() => onTabPress("team")}
           >
-            Me
-          </Text>
-        </TouchableOpacity>
+            <MaterialCommunityIcons
+              name="account-group-outline"
+              size={22}
+              color={activeTab === "team" ? "#90717E" : "#7E9181"}
+            />
+            <Text
+              style={[
+                styles.label,
+                { color: activeTab === "team" ? "#90717E" : "#7E9181" },
+              ]}
+            >
+              Team
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-        {/* Team */}
-        <TouchableOpacity style={styles.tab} onPress={() => onTabPress("team")}>
-          <MaterialCommunityIcons
-            name="account-group-outline"
-            size={22}
-            color={activeTab === "team" ? "#90717E" : "#7E9181"}
-          />
-          <Text
-            style={[
-              styles.label,
-              { color: activeTab === "team" ? "#90717E" : "#7E9181" },
-            ]}
+        {/* left group */}
+        <View style={styles.group}>
+          {/* Notification */}
+          <TouchableOpacity
+            style={styles.tab}
+            onPress={() => onTabPress("notification")}
           >
-            Team
-          </Text>
-        </TouchableOpacity>
+            <MaterialCommunityIcons
+              name="bell-outline"
+              size={22}
+              color={activeTab === "notification" ? "#90717E" : "#7E9181"}
+            />
+            <Text
+              style={[
+                styles.label,
+                { color: activeTab === "notification" ? "#90717E" : "#7E9181" },
+              ]}
+            >
+              Notification
+            </Text>
+          </TouchableOpacity>
 
+          {/* Trash */}
+          <TouchableOpacity
+            style={styles.tab}
+            onPress={() => onTabPress("trash")}
+          >
+            <MaterialCommunityIcons
+              name="trash-can-outline"
+              size={22}
+              color={activeTab === "trash" ? "#90717E" : "#7E9181"}
+            />
+            <Text
+              style={[
+                styles.label,
+                { color: activeTab === "trash" ? "#90717E" : "#7E9181" },
+              ]}
+            >
+              Trash
+            </Text>
+          </TouchableOpacity>
+        </View>
         {/* Center Button */}
         <TouchableOpacity style={styles.centerButton} onPress={onCenterPress}>
-          <LinearGradient
-            colors={["#90717E", "#8C8C8C"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.gradient}
-          >
-            <MaterialCommunityIcons name="plus" size={30} color="#fff" />
-          </LinearGradient>
-        </TouchableOpacity>
-
-        {/* Notification */}
-        <TouchableOpacity
-          style={styles.tab}
-          onPress={() => onTabPress("notification")}
-        >
-          <MaterialCommunityIcons
-            name="bell-outline"
-            size={22}
-            color={activeTab === "notification" ? "#90717E" : "#7E9181"}
+          <Image
+            source={addButtonImg}
+            style={styles.centerImage}
+            resizeMode="contain"
           />
-          <Text
-            style={[
-              styles.label,
-              { color: activeTab === "notification" ? "#90717E" : "#7E9181" },
-            ]}
-          >
-            Notification
-          </Text>
-        </TouchableOpacity>
-
-        {/* Trash */}
-        <TouchableOpacity
-          style={styles.tab}
-          onPress={() => onTabPress("trash")}
-        >
-          <MaterialCommunityIcons
-            name="trash-can-outline"
-            size={22}
-            color={activeTab === "trash" ? "#90717E" : "#7E9181"}
-          />
-          <Text
-            style={[
-              styles.label,
-              { color: activeTab === "trash" ? "#90717E" : "#7E9181" },
-            ]}
-          >
-            Trash
-          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -135,14 +134,18 @@ const styles = StyleSheet.create({
   },
   container: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "space-between",
     alignItems: "center",
-    height: 70,
+    height: 80,
+    paddingHorizontal: 24,
+  },
+  group: {
+    flexDirection: "row",
+    gap: 35,
   },
   tab: {
     alignItems: "center",
     justifyContent: "center",
-    flex: 1,
   },
   label: {
     fontSize: 12,
@@ -152,23 +155,23 @@ const styles = StyleSheet.create({
   centerButton: {
     position: "absolute",
     top: -30,
-    alignSelf: "center",
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
+    left: "45%",
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 10,
+    borderColor: "#FFFFFF",
     shadowColor: "#000",
-    shadowOpacity: 0.7,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    transform: [{ translateY: 10 }],
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+    zIndex: 10,
+    overflow: "visible",
   },
-  gradient: {
+  centerImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
+    borderRadius: 40,
   },
 });
