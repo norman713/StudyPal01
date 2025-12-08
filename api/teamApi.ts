@@ -33,16 +33,31 @@ export interface CreateTeamResponse {
   description: string;
 }
 const teamApi = {
-  async getAll(
-    filter: "JOINED" | "OWNED",
-    cursor?: string,
-    size: number = 10
-  ): Promise<TeamListResponse> {
-    const url = "/teams/all";
-    const params = { filter, cursor, size };
-    const res = (await axiosInstance.get(url, { params })) as TeamListResponse;
-    return res;
-  },
+  // async searchTeams(
+  //   filter: "JOINED" | "OWNED",
+  //   keyword?: string,
+  //   cursor?: string,
+  //   size: number = 10
+  // ): Promise<TeamListResponse> {
+  //   const url = "/teams/search";
+  //   const params = { filter, keyword, cursor, size };
+  //   const res = await axiosInstance.get<TeamListResponse>(url, { params });
+  //   return res.data;
+  // },
+async searchTeams(
+  filter: "JOINED" | "OWNED",
+  keyword?: string,
+  cursor?: string,
+  size: number = 10
+): Promise<TeamListResponse> {
+  const url = "/teams/search";
+  const params = { filter, keyword, cursor, size };
+
+  const data: TeamListResponse = await axiosInstance.get(url, { params });
+  return data;
+},
+
+
 
     async create(name: string, description: string): Promise<CreateTeamResponse> {
     const url = "/teams";
@@ -50,17 +65,7 @@ const teamApi = {
     return res;
   },
   
-    async search(
-    filter: "JOINED" | "OWNED",
-    keyword: string,
-    cursor?: string,
-    size: number = 10
-  ): Promise<TeamListResponse> {
-    const url = "/teams/search";
-    const params = { filter, keyword, cursor, size };
-    const res = (await axiosInstance.get(url, { params })) as TeamListResponse;
-    return res;
-  },
+
 
   async getInfo(teamId: string) {
   const url = `/teams/${teamId}`;

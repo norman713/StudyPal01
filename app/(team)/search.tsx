@@ -49,12 +49,15 @@ export default function Search() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log("Fetching teams for tab:", tab);
     const fetchTeams = async () => {
       try {
         setLoading(true);
-        const res = await teamApi.getAll(tab === "joined" ? "JOINED" : "OWNED");
-        console.log("Response:", res);
+        const res = await teamApi.searchTeams(
+          tab === "joined" ? "JOINED" : "OWNED",
+          undefined,
+          undefined,
+          50
+        );
         setTeams(res.teams ?? []);
       } catch (err) {
         console.error("[fetchTeams] Error:", err);
@@ -73,8 +76,14 @@ export default function Search() {
       console.log("Created:", newTeam);
       setCreateModalVisible(false);
 
-      // Reload team list
-      const res = await teamApi.getAll(tab === "joined" ? "JOINED" : "OWNED");
+      // Reload team list bằng searchTeams mới
+      const res = await teamApi.searchTeams(
+        tab === "joined" ? "JOINED" : "OWNED",
+        undefined, // không search keyword
+        undefined, // không dùng cursor
+        50 // size tuỳ bạn
+      );
+
       setTeams(res.teams ?? []);
     } catch (err) {
       console.error("[handleSave] Failed to create team:", err);
@@ -94,12 +103,20 @@ export default function Search() {
      🔍 SEARCH (debounce 300ms)
   ========================================================== */
   useEffect(() => {
-    if (query.trim().length === 0) return;
+    const run = async () => {
+      if (query.trim().length === 0) {
+        // Nếu clear search -> load lại danh sách mặc định
+        const res = await teamApi.searchTeams(
+          tab === "joined" ? "JOINED" : "OWNED",
+          undefined
+        );
+        setTeams(res.teams ?? []);
+        return;
+      }
 
-    const timeout = setTimeout(async () => {
       try {
         setLoading(true);
-        const res = await teamApi.search(
+        const res = await teamApi.searchTeams(
           tab === "joined" ? "JOINED" : "OWNED",
           query.trim()
         );
@@ -109,8 +126,9 @@ export default function Search() {
       } finally {
         setLoading(false);
       }
-    }, 300);
+    };
 
+    const timeout = setTimeout(run, 300);
     return () => clearTimeout(timeout);
   }, [query, tab]);
 
