@@ -79,9 +79,9 @@ export default function Search() {
       // Reload team list bằng searchTeams mới
       const res = await teamApi.searchTeams(
         tab === "joined" ? "JOINED" : "OWNED",
-        undefined, // không search keyword
-        undefined, // không dùng cursor
-        50 // size tuỳ bạn
+        undefined, //no search query
+        undefined, // no cursor
+        50 // limit
       );
 
       setTeams(res.teams ?? []);
@@ -294,7 +294,7 @@ export default function Search() {
 
           switch (tab) {
             case "me":
-              router.push("/");
+              router.push("/(me)");
               break;
 
             case "team":

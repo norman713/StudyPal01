@@ -1,7 +1,8 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import addButtonImg from "../../assets/images/Addbutton.png";
+// @ts-ignore: allow runtime require for image assets without type declarations
+const addButtonImg = require("../../assets/images/Addbutton.png");
 
 type Tab = "me" | "team" | "notification" | "trash";
 
@@ -69,7 +70,7 @@ export default function BottomBar({
           </TouchableOpacity>
         </View>
 
-        {/* left group */}
+        {/*right group */}
         <View style={styles.group}>
           {/* Notification */}
           <TouchableOpacity
