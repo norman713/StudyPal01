@@ -1,10 +1,12 @@
 import { FontAwesome } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { Button, IconButton, TextInput } from "react-native-paper";
+import { Appbar, Button, TextInput } from "react-native-paper";
 import TaskItem from "./Task/TaskItem";
 const addButtonImg = require("../../../../assets/images/Addbutton.png");
+const ACCENT = "#90717E";
 
 type TPriority = "high" | "medium" | "low";
 
@@ -61,16 +63,15 @@ export default function SearchTasksScreen() {
   return (
     <View className="flex-1 bg-white">
       {/* HEADER */}
-      <View className="bg-[#90717E] pt-12 pb-3 px-4 flex-row items-center">
-        <IconButton
-          icon={() => <FontAwesome name="angle-left" size={22} color="#fff" />}
+      <Appbar.Header mode="small" style={{ backgroundColor: ACCENT }}>
+        <Appbar.BackAction color="#fff" onPress={() => router.back()} />
+        <Appbar.Content
+          title="Search tasks"
+          titleStyle={{ color: "#fff", fontSize: 18, fontWeight: "600" }}
         />
-        <Text className="text-white text-lg font-semibold ml-1">
-          Search tasks
-        </Text>
-      </View>
+      </Appbar.Header>
 
-      <ScrollView className="flex-1 px-4 py-2">
+      <ScrollView className="flex-1 px-5 py-2">
         {/* Search input */}
         <TextInput
           label="Search by task name"
