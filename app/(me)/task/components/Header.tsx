@@ -11,16 +11,10 @@ export default function HeaderSection() {
 
   const [selected, setSelected] = useState<Date | null>(null);
 
-  // --- Month state --- (YYYY-MM-01)
-  const formatMonth = (d: Date) =>
-    d.toISOString().slice(0, 7) + "-01";
-
-  const [currentMonth, setCurrentMonth] = useState(
-    formatMonth(new Date())
-  );
+  const formatMonth = (d: Date) => d.toISOString().slice(0, 7) + "-01";
+  const [currentMonth, setCurrentMonth] = useState(formatMonth(new Date()));
 
   const today = new Date().toISOString().split("T")[0];
-
   const getDateStr = (d: Date) => d.toISOString().split("T")[0];
 
   const goPrev = () => {
@@ -44,7 +38,7 @@ export default function HeaderSection() {
       </Text>
 
       <View style={styles.calendarWrapper}>
-        {/* ==== NÚT MONTH NAVIGATION ==== */}
+        {/* ==== MONTH NAV BAR ==== */}
         <View style={styles.navRow}>
           <TouchableOpacity onPress={goPrev}>
             <Text style={styles.navBtn}>{"<"}</Text>
@@ -62,41 +56,50 @@ export default function HeaderSection() {
           </TouchableOpacity>
         </View>
 
-        {/* ==== CALENDAR (1 month only) ==== */}
+        {/* ==== CALENDAR ==== */}
         <Calendar
-          key={currentMonth} // ép render lại đúng 1 tháng
+          key={currentMonth}
           numberOfMonths={1}
           startingMonth={currentMonth}
           startDate={selected ?? undefined}
-          onPress={(date: Date) => {
-            setSelected(date);
-          }}
-theme={{
-  monthTitleTextStyle: {
-    display: "none",   // Ẩn title mặc định của calendario
-  },
-  weekColumnTextStyle: {
-    color: "#90717E",
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  dayTextStyle: {
-    color: "#2d4150",
-    fontSize: 15,
-    fontWeight: "400",
-  },
-  todayTextStyle: {
-    color: "#0F0C0D",
-    fontWeight: "700",
-  },
-  activeDayContainerStyle: {
-    backgroundColor: "#90717E",
-  },
-  activeDayTextStyle: {
-    color: "white",
-  },
-}}
+          onPress={(date: Date) => setSelected(date)}
+          theme={{
+            monthTitleTextStyle: { display: "none" },
 
+            weekColumnTextStyle: {
+              color: "#90717E",
+              fontSize: 12,
+              fontWeight: "500",
+            },
+
+            dayTextStyle: {
+              color: "#2d4150",
+              fontSize: 15,
+            },
+
+            todayTextStyle: {
+              color: "#0F0C0D",
+              fontWeight: "700",
+            },
+
+            // ⭐ XOÁ TOÀN BỘ LỚP SELECTED MẶC ĐỊNH
+            dayContainerStyle: {
+              backgroundColor: "transparent",
+              padding: 0,
+              margin: 0,
+            },
+
+            activeDayContainerStyle: {
+              backgroundColor: "transparent",
+              padding: 0,
+              margin: 0,
+              borderRadius: 0,
+            },
+
+            activeDayTextStyle: {
+              color: "#000",
+            },
+          }}
           renderDayContent={({ date }) => {
             const dateStr = getDateStr(date);
 
@@ -108,15 +111,17 @@ theme={{
             let color = "#000";
 
             if (isTaskDay) {
-              bg = "#FF6B6B";
+              bg = "#FF6B6B"; // đỏ
               color = "white";
             }
+
             if (isSelected) {
-              bg = "#90717E";
+              bg = "#90717E"; // nâu pastel
               color = "white";
             }
-            if (isToday && !isSelected && !isTaskDay) {
-              bg = "#B8C6B6";
+
+            if (isToday && !isTaskDay && !isSelected) {
+              bg = "#B8C6B6"; // xanh today
               color = "white";
             }
 
@@ -125,10 +130,10 @@ theme={{
                 style={{
                   width: 40,
                   height: 40,
-                  borderRadius: 8,
+                  borderRadius: 10,
+                  backgroundColor: bg,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: bg,
                 }}
               >
                 <Text style={{ color, fontWeight: "700" }}>

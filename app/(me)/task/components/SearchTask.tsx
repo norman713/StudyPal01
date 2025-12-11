@@ -90,7 +90,7 @@ export default function SearchTasksScreen() {
               label="From date"
               value={fromDate}
               editable={false}
-              outlineStyle={{ borderRadius: 12 }}
+              outlineStyle={{ borderRadius: 999 }}
               right={
                 <TextInput.Icon
                   icon={() => (
@@ -105,7 +105,7 @@ export default function SearchTasksScreen() {
               <DateTimePicker
                 value={new Date()}
                 mode="date"
-                display="calendar" // UI đẹp & không lag
+                display="calendar"
                 onChange={(event, selectedDate) => {
                   if (event.type === "set" && selectedDate) {
                     setFromDate(formatDate(selectedDate));
@@ -123,7 +123,7 @@ export default function SearchTasksScreen() {
               label="To date"
               value={toDate}
               editable={false}
-              outlineStyle={{ borderRadius: 12 }}
+              outlineStyle={{ borderRadius: 999 }}
               right={
                 <TextInput.Icon
                   icon={() => (

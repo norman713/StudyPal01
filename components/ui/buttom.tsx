@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   centerButton: {
     position: "absolute",
     top: -CENTER_OFFSET,
-    left: SCREEN_WIDTH / 2 - CENTER_BUTTON_SIZE / 2, // ⭐ center responsive
+    left: SCREEN_WIDTH / 2 - CENTER_BUTTON_SIZE / 2,
     width: CENTER_BUTTON_SIZE,
     height: CENTER_BUTTON_SIZE,
     borderRadius: CENTER_BUTTON_SIZE / 2,
