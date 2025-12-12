@@ -1,36 +1,70 @@
+import authApi from "@/api/authApi";
+import { clearTokens, getUserIdFromToken, readTokens } from "@/api/tokenStore";
+import userApi, { UserProfile } from "@/api/userApi";
 import QuestionModal from "@/components/modal/question";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, { useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
 import { View } from "react-native";
 import { Avatar, Card, IconButton, List, Text } from "react-native-paper";
 
-type UserProfile = {
-  id: string;
-  name: string;
-  avatarUri?: string;
-  birthday?: string;
-  gender?: "Male" | "Female" | "Other";
-  email?: string;
+// Helper mapping gender
+const formatGender = (g?: string | null) => {
+  if (!g) return "Not specified";
+  if (g === "MALE") return "Male";
+  if (g === "FEMALE") return "Female";
+  return g;
 };
 
 type ProfileScreenProps = {
-  userId: string;
+  // userId: string;
 };
 
-export default function ProfileScreen({ userId }: ProfileScreenProps) {
-  // Mock data – sau này bạn có thể fetch từ API
-  const mockUser: UserProfile = {
-    id: userId,
-    name: "Nguyetlun115",
-    avatarUri:
-      "https://i.pinimg.com/originals/52/03/36/5203363dc8ac038c730c6e5b3ac17d26.jpg",
-    birthday: "12-12-1212",
-    gender: "Female",
-    email: "nguyetkhongcao@gmail.com",
+export default function ProfileScreen({}: ProfileScreenProps) {
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      const fetchData = async () => {
+        try {
+          const { accessToken } = await readTokens();
+          if (!accessToken) return;
+
+          const userId = getUserIdFromToken(accessToken);
+          if (userId && !cancelled) {
+            const data = await userApi.getById(userId);
+            if (!cancelled) {
+              setUser(data);
+            }
+          }
+        } catch (e) {
+          console.log("Fetch user error:", e);
+        }
+      };
+      fetchData();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
+
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+    } catch (error) {
+      console.log("Logout error:", error);
+    } finally {
+      await clearTokens();
+      setShowLogoutModal(false);
+      router.replace("/(auth)/login");
+    }
   };
 
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  if (!user) {
+    return <View className="flex-1 bg-[#F2EFF0]" />;
+  }
 
   return (
     <View className="flex-1 bg-[#F2EFF0]">
@@ -71,15 +105,14 @@ export default function ProfileScreen({ userId }: ProfileScreenProps) {
                     borderRadius: 999,
                   }}
                 >
-                  {mockUser.avatarUri ? (
-                    <Avatar.Image
-                      size={120}
-                      source={{ uri: mockUser.avatarUri }}
-                    />
+                  {user.avatarUrl ? (
+                    <Avatar.Image size={120} source={{ uri: user.avatarUrl }} />
                   ) : (
                     <Avatar.Text
                       size={120}
-                      label={mockUser.name.charAt(0)}
+                      label={
+                        user.name ? user.name.charAt(0).toUpperCase() : "U"
+                      }
                       labelStyle={{
                         fontSize: 58,
                         fontWeight: "800",
@@ -101,21 +134,21 @@ export default function ProfileScreen({ userId }: ProfileScreenProps) {
                   fontSize: 20,
                 }}
               >
-                {mockUser.name}
+                {user.name}
               </Text>
             </View>
 
             {/* Info list */}
             <View className="mt-4">
               <List.Item
-                title={mockUser.birthday || "Not set"}
+                title={user.dateOfBirth || "Not set"}
                 left={() => (
                   <MaterialIcons name="calendar-today" size={20} color="#555" />
                 )}
               />
 
               <List.Item
-                title={mockUser.gender || "Not specified"}
+                title={formatGender(user.gender)}
                 left={() => (
                   <MaterialCommunityIcons
                     name="gender-female"
@@ -126,7 +159,7 @@ export default function ProfileScreen({ userId }: ProfileScreenProps) {
               />
 
               <List.Item
-                title={mockUser.email || "No email"}
+                title={user.email || "No email"}
                 left={() => (
                   <MaterialCommunityIcons
                     name="email-outline"
@@ -196,14 +229,7 @@ export default function ProfileScreen({ userId }: ProfileScreenProps) {
         message="Are you sure you want to log out of your account?"
         confirmText="Log out"
         cancelText="Cancel"
-        onConfirm={() => {
-          setShowLogoutModal(false);
-
-          // TODO: clear token / session ở đây
-          // await authStore.logout();
-
-          router.replace("/");
-        }}
+        onConfirm={handleLogout}
         onCancel={() => setShowLogoutModal(false)}
       />
     </View>

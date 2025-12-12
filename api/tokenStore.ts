@@ -1,5 +1,6 @@
 // src/api/tokenStore.ts
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Buffer } from "buffer";
 
 // Sync với key bạn đang dùng
 export const ACCESS_KEY = "accessToken";
@@ -44,6 +45,15 @@ export function expFromJwt(accessToken?: string | null): number | null {
   try {
     const payload = JSON.parse(Buffer.from(accessToken.split(".")[1], "base64").toString());
     if (payload?.exp) return payload.exp * 1000;
-  } catch {}
+  } catch { }
+  return null;
+}
+
+export function getUserIdFromToken(accessToken?: string | null): string | null {
+  if (!accessToken) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(accessToken.split(".")[1], "base64").toString());
+    return payload?.sub || null;
+  } catch { }
   return null;
 }
