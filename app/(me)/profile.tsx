@@ -1,6 +1,7 @@
+import QuestionModal from "@/components/modal/question";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import { View } from "react-native";
 import { Avatar, Card, IconButton, List, Text } from "react-native-paper";
 
@@ -28,6 +29,8 @@ export default function ProfileScreen({ userId }: ProfileScreenProps) {
     gender: "Female",
     email: "nguyetkhongcao@gmail.com",
   };
+
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   return (
     <View className="flex-1 bg-[#F2EFF0]">
@@ -162,20 +165,47 @@ export default function ProfileScreen({ userId }: ProfileScreenProps) {
               // router.push("/(me)/reset-password");
             }}
           />
-
           <List.Item
             title="Log out"
             titleStyle={{ color: "#E53935", fontWeight: "600" }}
-            left={(p) => <List.Icon {...p} icon="logout" color="#E53935" />}
-            right={(p) => (
-              <List.Icon {...p} icon="chevron-right" color="#E53935" />
+            left={() => (
+              <View
+                style={{
+                  width: 48,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <MaterialCommunityIcons
+                  name="logout"
+                  size={22}
+                  color="#E53935"
+                />
+              </View>
             )}
-            onPress={() => {
-              // handleLogout();
-            }}
+            right={() => (
+              <MaterialIcons name="chevron-right" size={22} color="#E53935" />
+            )}
+            onPress={() => setShowLogoutModal(true)}
           />
         </Card>
       </View>
+      <QuestionModal
+        visible={showLogoutModal}
+        title="Log out?"
+        message="Are you sure you want to log out of your account?"
+        confirmText="Log out"
+        cancelText="Cancel"
+        onConfirm={() => {
+          setShowLogoutModal(false);
+
+          // TODO: clear token / session ở đây
+          // await authStore.logout();
+
+          router.replace("/");
+        }}
+        onCancel={() => setShowLogoutModal(false)}
+      />
     </View>
   );
 }
