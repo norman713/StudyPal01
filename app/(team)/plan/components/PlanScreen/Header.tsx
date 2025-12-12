@@ -1,6 +1,10 @@
+import dayjs from "dayjs";
 import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Calendar } from "react-native-calendario";
+
+const DAY_SIZE = 40;
+const DAY_RADIUS = 10;
 
 export default function HeaderSection() {
   const name = "Nguyetlun115";
@@ -11,22 +15,21 @@ export default function HeaderSection() {
 
   const [selected, setSelected] = useState<Date | null>(null);
 
-  const formatMonth = (d: Date) => d.toISOString().slice(0, 7) + "-01";
+  const formatMonth = (d: Date) => dayjs(d).format("YYYY-MM-01");
   const [currentMonth, setCurrentMonth] = useState(formatMonth(new Date()));
 
-  const today = new Date().toISOString().split("T")[0];
-  const getDateStr = (d: Date) => d.toISOString().split("T")[0];
+  // ✅ LOCAL timezone
+  const today = dayjs().format("YYYY-MM-DD");
+  const getDateStr = (d: Date) => dayjs(d).format("YYYY-MM-DD");
 
   const goPrev = () => {
-    const d = new Date(currentMonth);
-    d.setMonth(d.getMonth() - 1);
-    setCurrentMonth(formatMonth(d));
+    setCurrentMonth(
+      dayjs(currentMonth).subtract(1, "month").format("YYYY-MM-01")
+    );
   };
 
   const goNext = () => {
-    const d = new Date(currentMonth);
-    d.setMonth(d.getMonth() + 1);
-    setCurrentMonth(formatMonth(d));
+    setCurrentMonth(dayjs(currentMonth).add(1, "month").format("YYYY-MM-01"));
   };
 
   return (
@@ -45,10 +48,7 @@ export default function HeaderSection() {
           </TouchableOpacity>
 
           <Text style={styles.monthTitle}>
-            {new Date(currentMonth).toLocaleString("en-US", {
-              month: "long",
-              year: "numeric",
-            })}
+            {dayjs(currentMonth).format("MMMM YYYY")}
           </Text>
 
           <TouchableOpacity onPress={goNext}>
@@ -72,32 +72,22 @@ export default function HeaderSection() {
               fontWeight: "500",
             },
 
-            dayTextStyle: {
-              color: "#2d4150",
-              fontSize: 15,
-            },
-
-            todayTextStyle: {
-              color: "#0F0C0D",
-              fontWeight: "700",
-            },
-
-            // ⭐ XOÁ TOÀN BỘ LỚP SELECTED MẶC ĐỊNH
+            // 👇 giữ wrapper gốc, KHÔNG ép size
             dayContainerStyle: {
+              margin: 2,
               backgroundColor: "transparent",
-              padding: 0,
-              margin: 0,
             },
 
+            // 🚨 BẮT BUỘC: phá active wrapper
             activeDayContainerStyle: {
+              margin: 2,
               backgroundColor: "transparent",
+              borderRadius: 10,
               padding: 0,
-              margin: 0,
-              borderRadius: 0,
             },
 
             activeDayTextStyle: {
-              color: "#000",
+              color: "transparent",
             },
           }}
           renderDayContent={({ date }) => {
@@ -109,7 +99,12 @@ export default function HeaderSection() {
 
             let bg = "transparent";
             let color = "#000";
-            let radius = 10;
+
+            // 🔽 ưu tiên thấp → cao
+            if (isToday) {
+              bg = "#B8C6B6";
+              color = "white";
+            }
 
             if (isTaskDay) {
               bg = "#FF6B6B";
@@ -121,17 +116,12 @@ export default function HeaderSection() {
               color = "white";
             }
 
-            if (isToday && !isTaskDay && !isSelected) {
-              bg = "#B8C6B6";
-              color = "white";
-            }
-
             return (
               <View
                 style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: radius,
+                  width: DAY_SIZE,
+                  height: DAY_SIZE,
+                  borderRadius: DAY_RADIUS,
                   backgroundColor: bg,
                   alignItems: "center",
                   justifyContent: "center",

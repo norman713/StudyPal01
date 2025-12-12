@@ -457,12 +457,9 @@ export default function TeamInfoScreen({
                     <>
                       <List.Item
                         title="QR code"
+                        titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
                         left={(p) => (
-                          <Ionicons
-                            name="qr-code-outline"
-                            size={24}
-                            color="#49454F"
-                          />
+                          <Ionicons name="qr-code" size={24} color="#49454F" />
                         )}
                         right={(p) => (
                           <Ionicons
@@ -477,9 +474,10 @@ export default function TeamInfoScreen({
 
                       <List.Item
                         title="Invite user"
+                        titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
                         left={(p) => (
                           <Ionicons
-                            name="person-add-outline"
+                            name="person-add"
                             size={24}
                             color="#49454F"
                           />
@@ -499,12 +497,9 @@ export default function TeamInfoScreen({
 
                   <List.Item
                     title={`Show members (${team?.totalMembers ?? 0})`}
+                    titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
                     left={(p) => (
-                      <Ionicons
-                        name="people-outline"
-                        size={24}
-                        color="#49454F"
-                      />
+                      <Ionicons name="people" size={24} color="#49454F" />
                     )}
                     right={(p) => (
                       <Ionicons
@@ -534,6 +529,7 @@ export default function TeamInfoScreen({
               >
                 <List.Item
                   title="Plans"
+                  titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
                   left={(p) => (
                     <MaterialIcons
                       name="track-changes"
@@ -548,18 +544,24 @@ export default function TeamInfoScreen({
                       color="#49454F"
                     />
                   )}
-                  onPress={() => console.log("Plans clicked")}
+                  onPress={() => {
+                    router.push({
+                      pathname: "/(team)/plan",
+                      params: {
+                        teamId: id,
+                        role: team?.role || "MEMBER",
+                        teamName: team?.name || "",
+                      },
+                    });
+                  }}
                   style={{ paddingRight: 0, paddingLeft: 0 }}
                 />
 
                 <List.Item
                   title="Documents"
+                  titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
                   left={(p) => (
-                    <Ionicons
-                      name="folder-open-outline"
-                      size={24}
-                      color="#49454F"
-                    />
+                    <Ionicons name="folder-open" size={24} color="#49454F" />
                   )}
                   right={(p) => (
                     <Ionicons
@@ -574,12 +576,9 @@ export default function TeamInfoScreen({
 
                 <List.Item
                   title="Statistic"
+                  titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
                   left={(p) => (
-                    <Ionicons
-                      name="stats-chart-outline"
-                      size={24}
-                      color="#49454F"
-                    />
+                    <Ionicons name="stats-chart" size={24} color="#49454F" />
                   )}
                   right={(p) => (
                     <Ionicons
@@ -588,19 +587,21 @@ export default function TeamInfoScreen({
                       color="#49454F"
                     />
                   )}
-                  onPress={() => console.log("Statistic clicked")}
+                  onPress={() => {
+                    router.push({
+                      pathname: "/(team)/statistic",
+                      params: { teamId: id },
+                    });
+                  }}
                   style={{ paddingRight: 0, paddingLeft: 0 }}
                 />
 
                 {canManage && (
                   <List.Item
                     title="Recover"
+                    titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
                     left={(p) => (
-                      <Ionicons
-                        name="reload-outline"
-                        size={24}
-                        color="#49454F"
-                      />
+                      <Ionicons name="reload" size={24} color="#49454F" />
                     )}
                     right={(p) => (
                       <Ionicons
@@ -630,12 +631,9 @@ export default function TeamInfoScreen({
               >
                 <List.Item
                   title="Notification settings"
+                  titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
                   left={(props) => (
-                    <Ionicons
-                      name="notifications-outline"
-                      size={24}
-                      color="#49454F"
-                    />
+                    <Ionicons name="notifications" size={24} color="#49454F" />
                   )}
                   right={(p) => (
                     <Ionicons
@@ -653,7 +651,7 @@ export default function TeamInfoScreen({
                   title="Leave team"
                   titleStyle={{ color: "#FF5F57", fontWeight: "600" }}
                   left={(p) => (
-                    <Ionicons name="exit-outline" size={24} color="#FF5F57" />
+                    <Ionicons name="exit" size={24} color="#FF5F57" />
                   )}
                   right={(p) => (
                     <Ionicons
@@ -672,11 +670,7 @@ export default function TeamInfoScreen({
                     title="Delete team"
                     titleStyle={{ color: "#FF5F57", fontWeight: "600" }}
                     left={(p) => (
-                      <Ionicons
-                        name="trash-outline"
-                        size={24}
-                        color="#FF5F57"
-                      />
+                      <Ionicons name="trash" size={24} color="#FF5F57" />
                     )}
                     right={(p) => (
                       <Ionicons

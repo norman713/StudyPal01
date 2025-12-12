@@ -92,7 +92,12 @@ export default function ForgotPage() {
           mode="outlined"
           value={email}
           onChangeText={setEmail}
-          theme={{ roundness: 30 }}
+          theme={{
+            roundness: 30,
+            colors: {
+              background: "#FFFFFF",
+            },
+          }}
         />
       </View>
 
@@ -104,8 +109,13 @@ export default function ForgotPage() {
       <Button
         className="mt-6"
         mode="contained"
+        buttonColor="#90717E"
         contentStyle={{ height: 44 }}
-        labelStyle={{ fontSize: 16, fontFamily: "PoppinsRegular" }}
+        labelStyle={{
+          fontSize: 16,
+          fontFamily: "PoppinsRegular",
+          color: "#fff",
+        }}
         theme={{ roundness: 100 }}
         onPress={handleSendCode}
       >
