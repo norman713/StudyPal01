@@ -1,68 +1,3 @@
-// import AsyncStorage from "@react-native-async-storage/async-storage";
-// import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "axios";
-
-// const apiUrl = process.env.EXPO_PUBLIC_API_URL;
-
-// const axiosInstance: AxiosInstance = axios.create({
-//   baseURL: apiUrl,            
-//   withCredentials: true,
-//   headers: {
-//     "Content-Type": "application/json",
-//     Accept: "application/json",
-//   },
-// });
-
-// axiosInstance.interceptors.request.use(
-//   async (config: InternalAxiosRequestConfig) => {
-//     const url = (config.url || "").toLowerCase();
-
-//     // endpoint for auth public (no Bearer)
-//     const isAuthPublic =
-//       url.includes("/auth/cred") ||
-//       url.includes("/auth/register") ||
-//       url.includes("/auth/verify/register") ||
-//       url.includes("/auth/verify/reset") ||
-//       url.includes("/auth/reset") ||
-//       url.includes("/auth/validate") ||
-//       url.includes("/auth/code") ||
-//       url.includes("/auth/prov");
-
-//     if (!isAuthPublic) {
-//       const accessToken = await AsyncStorage.getItem("accessToken");
-//       if (accessToken) {
-//         config.headers = config.headers ?? {};
-//         (config.headers as Record<string, string>)["Authorization"] = `Bearer ${accessToken}`;
-//       }
-//     } else {
-
-//       if (config.headers && "Authorization" in config.headers) {
-//         delete (config.headers as Record<string, unknown>)["Authorization"];
-//       }
-//     }
-
-//     console.log(
-//       "Request:",
-//       config.method?.toUpperCase(),
-//       (config.baseURL || "") + (config.url || ""),
-//       "Auth:",
-//       (config.headers as any)?.Authorization ? "Bearer..." : "none",
-//       "withCredentials:",
-//       config.withCredentials
-//     );
-
-//     return config;
-//   },
-//   (error: AxiosError) => Promise.reject(error)
-// );
-
-// // return data
-// axiosInstance.interceptors.response.use(
-//   (response) => response.data,
-//   (error: AxiosError) => Promise.reject(error)
-// );
-
-// export default axiosInstance;
-
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "axios";
@@ -103,7 +38,7 @@ function isAuthPublic(url?: string | null) {
     u.includes("/auth/validate") ||
     u.includes("/auth/code") ||
     u.includes("/auth/prov") ||
-    u.includes("/auth/access") 
+    u.includes("/auth/access")
   );
 }
 
@@ -198,30 +133,24 @@ axiosInstance.interceptors.response.use(
         throw new Error("No refresh token");
       }
 
-      // Gọi /auth/refresh bằng refreshClient (không interceptor) — payload tuỳ backend
-      // Giả sử backend trả { success, data: { accessToken, refreshToken?, expiresIn? } }
+      // Gọi /auth/access bằng refreshClient (không interceptor)
       const res = await refreshClient.post("/auth/access", { refreshToken });
 
-      // Chuẩn hoá data (tuỳ backend). Nếu bạn luôn trả response.data, thì ở đây là res.data
-      const payload = (res as any).data?.data ?? (res as any).data ?? res; 
+      // Chuẩn hoá data
+      // API response: { accessToken: "..." }
+      const payload = (res as any).data ?? res;
       const newAccess: string = payload.accessToken;
-      const newRefresh: string | undefined = payload.refreshToken;
-      const expiresIn: number | undefined = payload.expiresIn; // giây
 
       if (!newAccess) {
         throw new Error("Refresh response missing accessToken");
       }
 
-      // Tính expiresAt
-      const expAt =
-        typeof expiresIn === "number"
-          ? Date.now() + expiresIn * 1000
-          : expFromJwt(newAccess) ?? Date.now() + 10 * 60 * 1000; // fallback 10 phút
+      // Tính expiresAt từ JWT (vì API này không trả expiresIn)
+      const expAt = expFromJwt(newAccess) ?? Date.now() + 10 * 60 * 1000; // fallback 10 phút
 
-      // Lưu lại token
+      // Lưu lại token (giữ nguyên refreshToken cũ)
       await saveTokens({
         accessToken: newAccess,
-        refreshToken: newRefresh, // có thể undefined nếu backend không rotate
         expiresAt: expAt,
       });
 
