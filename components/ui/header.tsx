@@ -1,4 +1,5 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -24,7 +25,6 @@ type Props = {
   bg?: string; // background color
   tint?: string; // icon/text color
   avatarLabel?: string; // right circle text
-  onAvatarPress?: () => void;
 
   // Menu
   items: Item[];
@@ -37,7 +37,7 @@ export default function Header({
   bg = "#90717E",
   tint = "#FFFFFF",
   avatarLabel = "A",
-  onAvatarPress,
+
   items,
   activeKey,
   onSelect,
@@ -74,7 +74,7 @@ export default function Header({
 
         {/* right: round avatar with letter */}
         <Pressable
-          onPress={onAvatarPress}
+          onPress={() => router.push("/(me)/profile")}
           hitSlop={10}
           style={{
             width: 32,
