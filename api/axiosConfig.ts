@@ -103,7 +103,7 @@ function isAuthPublic(url?: string | null) {
     u.includes("/auth/validate") ||
     u.includes("/auth/code") ||
     u.includes("/auth/prov") ||
-    u.includes("/auth/refresh") 
+    u.includes("/auth/access") 
   );
 }
 
@@ -200,7 +200,7 @@ axiosInstance.interceptors.response.use(
 
       // Gọi /auth/refresh bằng refreshClient (không interceptor) — payload tuỳ backend
       // Giả sử backend trả { success, data: { accessToken, refreshToken?, expiresIn? } }
-      const res = await refreshClient.post("/auth/refresh", { refreshToken });
+      const res = await refreshClient.post("/auth/access", { refreshToken });
 
       // Chuẩn hoá data (tuỳ backend). Nếu bạn luôn trả response.data, thì ở đây là res.data
       const payload = (res as any).data?.data ?? (res as any).data ?? res; 
