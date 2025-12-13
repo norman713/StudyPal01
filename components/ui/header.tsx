@@ -1,4 +1,6 @@
+import { useUser } from "@/context/userContext";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -10,6 +12,8 @@ import {
 } from "react-native";
 import { Drawer, Portal } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "react-native";
+
 
 type Item = { key: string; label: string; icon: string; badge?: number };
 
@@ -37,15 +41,16 @@ export default function Header({
   bg = "#90717E",
   tint = "#FFFFFF",
   avatarLabel = "A",
-  onAvatarPress,
   items,
   activeKey,
   onSelect,
   drawerWidth = responsiveWidth,
 }: Props) {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const tx = useRef(new Animated.Value(-drawerWidth)).current;
+  const { user } = useUser();
 
   useEffect(() => {
     Animated.timing(tx, {
@@ -54,6 +59,11 @@ export default function Header({
       useNativeDriver: true,
     }).start();
   }, [open, drawerWidth]);
+
+  const handleProfile = () => {
+    router.push("/(team)/profile/profile");
+    console.log(user);
+  }
 
   return (
     <View style={{ backgroundColor: bg, paddingTop: insets.top }}>
@@ -74,7 +84,7 @@ export default function Header({
 
         {/* right: round avatar with letter */}
         <Pressable
-          onPress={onAvatarPress}
+          onPress={() => handleProfile()}
           hitSlop={10}
           style={{
             width: 32,
@@ -85,9 +95,17 @@ export default function Header({
             justifyContent: "center",
           }}
         >
-          <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>
-            {avatarLabel}
-          </Text>
+          {user?.avatarUrl ? (
+            <Image
+              source={{ uri: user.avatarUrl }}
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>
+              {user?.name?.[0] ?? "?"}
+            </Text>
+          )}
         </Pressable>
       </View>
 

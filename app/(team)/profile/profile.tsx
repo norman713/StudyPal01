@@ -1,16 +1,8 @@
+import { useUser } from "@/context/userContext";
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect } from "react";
 import { View } from "react-native";
 import { Avatar, Card, IconButton, List, Text } from "react-native-paper";
-
-type UserProfile = {
-  id: string;
-  name: string;
-  avatarUri?: string;
-  birthday?: string;
-  gender?: "Male" | "Female" | "Other";
-  email?: string;
-};
 
 type ProfileScreenProps = {
   userId: string;
@@ -18,15 +10,7 @@ type ProfileScreenProps = {
 
 export default function ProfileScreen({ userId }: ProfileScreenProps) {
   // Mock data – sau này bạn có thể fetch từ API
-  const mockUser: UserProfile = {
-    id: userId,
-    name: "Nguyetlun115",
-    avatarUri:
-      "https://i.pinimg.com/originals/52/03/36/5203363dc8ac038c730c6e5b3ac17d26.jpg",
-    birthday: "12-12-1212",
-    gender: "Female",
-    email: "nguyetkhongcao@gmail.com",
-  };
+  const { user } = useUser();
 
   return (
     <View className="flex-1 bg-[#F2EFF0]">
@@ -65,17 +49,18 @@ export default function ProfileScreen({ userId }: ProfileScreenProps) {
                     borderWidth: 6,
                     borderColor: "#fff",
                     borderRadius: 999,
+                    overflow: "hidden"
                   }}
                 >
-                  {mockUser.avatarUri ? (
+                  {user?.avatarUrl ? (
                     <Avatar.Image
                       size={120}
-                      source={{ uri: mockUser.avatarUri }}
+                      source={{ uri: user.avatarUrl }}
                     />
                   ) : (
                     <Avatar.Text
                       size={120}
-                      label={mockUser.name.charAt(0)}
+                      label={user?.name.charAt(0) || ""}
                       labelStyle={{
                         fontSize: 58,
                         fontWeight: "800",
@@ -97,22 +82,22 @@ export default function ProfileScreen({ userId }: ProfileScreenProps) {
                   fontSize: 20,
                 }}
               >
-                {mockUser.name}
+                {user?.name}
               </Text>
             </View>
 
             {/* Info list */}
             <View className="mt-4">
               <List.Item
-                title={mockUser.birthday || "Not set"}
+                title={user?.dateOfBirth || "Not set"}
                 left={(p) => <List.Icon {...p} icon="calendar" />}
               />
               <List.Item
-                title={mockUser.gender || "Not specified"}
+                title={user?.gender || "Not specified"}
                 left={(p) => <List.Icon {...p} icon="gender-female" />}
               />
               <List.Item
-                title={mockUser.email || "No email"}
+                title={user?.email || "No email"}
                 left={(p) => <List.Icon {...p} icon="email-outline" />}
               />
             </View>

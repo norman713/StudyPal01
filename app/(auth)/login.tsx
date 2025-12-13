@@ -2,10 +2,13 @@ import authApi from "@/api/authApi";
 import Loading from "@/components/loading";
 import { isValidEmail } from "@/utils/validator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getAuth, GoogleAuthProvider, signInWithCredential } from '@react-native-firebase/auth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Buffer } from "buffer";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
+import { jwtDecode } from 'jwt-decode';
 import {
   BackHandler,
   Image,
@@ -17,6 +20,8 @@ import {
 import { Button, TextInput } from "react-native-paper";
 import ErrorModal from "../../components/modal/error";
 import "../../global.css";
+import { useUser } from "@/context/userContext";
+import userApi from "@/api/userApi";
 
 // ===== Helper decode exp từ JWT (ms) =====
 function getJwtExpMs(token: string): number | null {
@@ -61,7 +66,7 @@ export default function LoginPage() {
   /**
    * States & Variables
    */
-
+  const { setUser } = useUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -110,6 +115,19 @@ export default function LoginPage() {
   /**
    *  Handlers
    */
+  const handleSaveUser = async(token: string) => {
+    const decoded = jwtDecode<any>(token);
+    const userId = decoded?.sub;
+    if(userId){
+      try{
+        const user = await userApi.getUserById(userId);
+        setUser(user);
+      }catch(error){
+        console.error(error);
+      }
+    }
+  }
+
   const handleForgotPassword = () => {
     router.push("/(auth)/(flow)/forgot");
   };
@@ -151,7 +169,7 @@ export default function LoginPage() {
       } else {
         await AsyncStorage.removeItem(EXP_KEY);
       }
-
+      await handleSaveUser(accessToken);
       setShowError(false);
       setErrorMessage("");
       router.replace("/(team)/search");
@@ -164,6 +182,56 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  async function googleLogin() {
+    setShowError(false);
+    setErrorMessage(""); 
+    setMessage({ title: "", description: "" });
+
+    setLoading(true);
+    try{
+      const auth = getAuth();
+      GoogleSignin.configure({
+        offlineAccess: false,
+        webClientId: '541415516105-pfldjms5lhebobt435njrmq0lrrnb27o.apps.googleusercontent.com',
+        scopes: ['profile', 'email']
+      })
+      
+      GoogleSignin.hasPlayServices();
+      const signInResult = await GoogleSignin.signIn();
+      const idToken = signInResult.data?.idToken;
+      const googleCredentials = GoogleAuthProvider.credential(idToken);
+      const userCredentials = await signInWithCredential(auth, googleCredentials);
+      const user = userCredentials.user;
+
+      const firebaseIdToken = await user.getIdToken();
+      if(firebaseIdToken){
+        const { accessToken, refreshToken } = await authApi.gglogin("GOOGLE", firebaseIdToken);
+        // Calculate expiresAt từ JWT
+        const expMs = getJwtExpMs(accessToken);
+        await AsyncStorage.setItem(ACCESS_KEY, accessToken);
+        await AsyncStorage.setItem(REFRESH_KEY, refreshToken);
+        if (expMs) {
+          await AsyncStorage.setItem(EXP_KEY, String(expMs));
+        } else {
+          await AsyncStorage.removeItem(EXP_KEY);
+        }
+        await handleSaveUser(accessToken);
+        setShowError(false);
+        setErrorMessage("");
+        router.replace("/(team)/search");
+      }
+      else{
+        setShowError(true);
+        setErrorMessage("Can't get user idToken");
+      }
+    }catch (err: any) {
+      setShowError(true);
+      setErrorMessage(err?.response?.data?.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <ScrollView
@@ -270,7 +338,7 @@ export default function LoginPage() {
                 color: "#0F0C0D",
               }}
               theme={{ roundness: 100 }}
-              onPress={() => console.log("Pressed")}
+              onPress={() => googleLogin()}
             >
               Login with Google
             </Button>

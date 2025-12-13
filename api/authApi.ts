@@ -16,6 +16,11 @@ const authApi = {
     const body = { email, password };
     return axiosInstance.post(url, body);
   },
+  gglogin(provider = "GOOGLE",accessToken: string): Promise<LoginResponse> {
+    const url = "/auth/prov";
+    const body = { provider, accessToken };
+    return axiosInstance.post(url, body);
+  },
   logout() {
     const url = "/auth/logout";
     return axiosInstance.post(url);
