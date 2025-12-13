@@ -1,12 +1,10 @@
 import planApi, { Task } from "@/api/planApi";
 import { Ionicons } from "@expo/vector-icons";
-import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,76 +14,43 @@ import {
 } from "react-native";
 import { Appbar, TextInput } from "react-native-paper";
 
+import TaskItem from "./components/TaskItem";
+
 const ACCENT = "#90717E";
 
 type Role = "OWNER" | "ADMIN" | "MEMBER";
 
-/**
- * Status color
- */
-function getStatusColor(status: Task["status"]) {
-  switch (status) {
-    case "COMPLETED":
-      return "#27C840";
-    case "IN_PROGRESS":
-      return "#FEBC2F";
-    case "OVERDUE":
-      return "#FF5F57";
-    default:
-      return "#B8C6B6";
-  }
-}
-
-/**
- * TaskItem – NativeWind
- */
-function TaskItem({ task }: { task: Task }) {
-  const formatDate = (dateStr: string) =>
-    dayjs(dateStr).format("HH:mm DD MMM, YYYY");
-
-  const statusColor = getStatusColor(task.status);
-
-  return (
-    <View className="flex-row bg-[#F2EFF0] p-3 rounded mb-2 items-center">
-      {/* Status bar */}
-      <View
-        className="w-1.5 mr-3 rounded"
-        style={{ backgroundColor: statusColor }}
-      />
-
-      {/* Content */}
-      <View className="flex-1">
-        <Text className="text-[16px] font-semibold text-[#0F0C0D]">
-          {task.name}
-        </Text>
-
-        <Text className="text-[12px] text-[#0F0C0D] mt-0.5">
-          {formatDate(task.startDate)} - {formatDate(task.dueDate)}
-        </Text>
-
-        {task.assignee && (
-          <View className="flex-row items-center mt-1">
-            {task.assignee.avatarUrl ? (
-              <Image
-                source={{ uri: task.assignee.avatarUrl }}
-                className="w-5 h-5 rounded-full mr-1.5"
-              />
-            ) : (
-              <View className="w-5 h-5 rounded-full bg-[#90717E] items-center justify-center mr-1.5">
-                <Text className="text-[10px] text-white font-semibold">
-                  {task.assignee.name.charAt(0)}
-                </Text>
-              </View>
-            )}
-            <Text className="text-[12px] text-[#49454F]">
-              {task.assignee.name}
-            </Text>
-          </View>
-        )}
-      </View>
-    </View>
-  );
-}
+// Mock tasks for demo
+const MOCK_TASKS: Task[] = [
+  {
+    id: "1",
+    name: "Task 1",
+    startDate: "2025-10-27T12:00:00Z",
+    dueDate: "2025-10-29T24:00:00Z",
+    status: "PENDING",
+    priority: "HIGH", // 🔴 Red
+    assignee: {
+      id: "1",
+      name: "Minh Huy",
+      avatarUrl: "https://i.pravatar.cc/40?img=1",
+    },
+    planId: "1",
+  },
+  {
+    id: "2",
+    name: "Task 2",
+    startDate: "2025-10-27T12:00:00Z",
+    dueDate: "2025-10-29T24:00:00Z",
+    status: "PENDING",
+    priority: "MEDIUM", // 🟡 Yellow
+    assignee: {
+      id: "2",
+      name: "Me",
+      avatarUrl: "https://i.pravatar.cc/40?img=2",
+    },
+    planId: "1",
+  },
+];
 
 /**
  * Plan Create / Edit Screen
@@ -107,14 +72,17 @@ export default function PlanCreateScreen() {
   const role: Role = (roleParam as Role) || "MEMBER";
   const canManage = role === "OWNER" || role === "ADMIN";
 
-  const [planName, setPlanName] = useState("");
-  const [planDescription, setPlanDescription] = useState("");
-  const [tasks, setTasks] = useState<Task[]>([]);
+  // Initialize with mock data for demo
+  const [planName, setPlanName] = useState("Plan 1");
+  const [planDescription, setPlanDescription] = useState(
+    "This is plan 1 description"
+  );
+  const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const fetchPlanData = useCallback(async () => {
-    if (!isEditMode || !teamId || !planId) return;
+    if (!teamId || !planId) return;
 
     setLoading(true);
     try {
@@ -126,13 +94,12 @@ export default function PlanCreateScreen() {
       setPlanDescription(planData.description || "");
       setTasks(tasksData.tasks || []);
     } catch {
-      setPlanName("Plan 1");
-      setPlanDescription("This is plan 1 description");
-      setTasks([]);
+      // Keep mock data if API fails
+      console.log("Using mock data for demo");
     } finally {
       setLoading(false);
     }
-  }, [isEditMode, teamId, planId]);
+  }, [teamId, planId]);
 
   useEffect(() => {
     if (isEditMode) fetchPlanData();

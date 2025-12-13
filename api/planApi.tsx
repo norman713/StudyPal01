@@ -20,6 +20,8 @@ export interface Plan {
   };
 }
 
+export type TaskPriority = "HIGH" | "MEDIUM" | "LOW";
+
 export interface Task {
   id: string;
   name: string;
@@ -27,6 +29,7 @@ export interface Task {
   startDate: string;
   dueDate: string;
   status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "OVERDUE";
+  priority?: TaskPriority;
   assignee?: {
     id: string;
     name: string;
