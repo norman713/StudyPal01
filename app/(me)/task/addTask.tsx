@@ -6,14 +6,11 @@ import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { Appbar, Button, TextInput } from "react-native-paper";
@@ -236,7 +233,7 @@ export default function AddTaskScreen() {
             {/* Task Note */}
             <TextInput
               mode="outlined"
-              label="Task note"
+              label="Task note (optional)"
               value={taskNote}
               onChangeText={setTaskNote}
               style={styles.inputMultiline}
@@ -358,118 +355,6 @@ export default function AddTaskScreen() {
                 )}
               </View>
             </View>
-          </View>
-
-          {/* Assignee Section */}
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Assignee</Text>
-
-            <TouchableOpacity
-              style={styles.assigneeSelector}
-              onPress={() => setShowAssigneePicker(!showAssigneePicker)}
-            >
-              {loadingMembers ? (
-                <ActivityIndicator size="small" color={ACCENT} />
-              ) : selectedAssignee ? (
-                <>
-                  {selectedAssignee.avatarUrl ? (
-                    <Image
-                      source={{ uri: selectedAssignee.avatarUrl }}
-                      style={styles.assigneeAvatar}
-                    />
-                  ) : (
-                    <View style={styles.assigneeAvatarPlaceholder}>
-                      <Text style={styles.assigneeAvatarText}>
-                        {selectedAssignee.name.charAt(0)}
-                      </Text>
-                    </View>
-                  )}
-                  <Text style={styles.assigneeName}>
-                    {selectedAssignee.name}
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.assigneePlaceholder}>Select assignee</Text>
-              )}
-              <Ionicons
-                name={showAssigneePicker ? "chevron-up" : "chevron-down"}
-                size={24}
-                color={ACCENT}
-              />
-            </TouchableOpacity>
-            {/* Priority Section */}
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Priority</Text>
-
-              <View style={styles.priorityRow}>
-                {[
-                  { label: "High", value: "HIGH", color: "#FF5F57" },
-                  { label: "Medium", value: "MEDIUM", color: "#F5A623" },
-                  { label: "Low", value: "LOW", color: "#2ECC71" },
-                ].map((item) => {
-                  const selected = priority === item.value;
-
-                  return (
-                    <TouchableOpacity
-                      key={item.value}
-                      style={styles.priorityItem}
-                      onPress={() => setPriority(item.value as Priority)}
-                      activeOpacity={0.8}
-                    >
-                      <View
-                        style={[
-                          styles.priorityCircle,
-                          {
-                            borderColor: item.color,
-                            backgroundColor: selected
-                              ? item.color
-                              : "transparent",
-                          },
-                        ]}
-                      />
-                      <Text style={styles.priorityLabel}>{item.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* Assignee Dropdown */}
-            {showAssigneePicker && (
-              <View style={styles.assigneeDropdown}>
-                {members.map((member) => (
-                  <TouchableOpacity
-                    key={member.id}
-                    style={[
-                      styles.assigneeOption,
-                      selectedAssignee?.id === member.id &&
-                        styles.assigneeOptionSelected,
-                    ]}
-                    onPress={() => {
-                      setSelectedAssignee(member);
-                      setShowAssigneePicker(false);
-                    }}
-                  >
-                    {member.avatarUrl ? (
-                      <Image
-                        source={{ uri: member.avatarUrl }}
-                        style={styles.optionAvatar}
-                      />
-                    ) : (
-                      <View style={styles.optionAvatarPlaceholder}>
-                        <Text style={styles.optionAvatarText}>
-                          {member.name.charAt(0)}
-                        </Text>
-                      </View>
-                    )}
-                    <Text style={styles.optionName}>{member.name}</Text>
-                    {selectedAssignee?.id === member.id && (
-                      <Ionicons name="checkmark" size={20} color={ACCENT} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
           </View>
         </ScrollView>
 

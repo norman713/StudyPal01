@@ -6,6 +6,7 @@ export interface Plan {
   id: string;
   code: string; // PLN-1, PLN-2, etc.
   name: string;
+  title?: string; // Some APIs return title instead of name
   description?: string;
   startDate: string; // ISO date
   dueDate: string; // ISO date
@@ -72,6 +73,22 @@ export interface CreateTaskRequest {
   assigneeId?: string;
 }
 
+export interface SearchPlanRequest {
+  keyword?: string;
+  fromDate?: string; // yyyy-MM-dd HH:mm:ss
+  toDate?: string; // yyyy-MM-dd HH:mm:ss
+  cursor?: string;
+  size?: number;
+}
+
+export interface TaskStatistics {
+  total: number;
+  unfinished: number;
+  low: number;
+  medium: number;
+  high: number;
+}
+
 const planApi = {
   /**
    * Get list of plans for a team
@@ -79,6 +96,7 @@ const planApi = {
    * @param keyword - Search keyword (optional)
    * @param fromDate - Filter from date (optional)
    * @param toDate - Filter to date (optional)
+   * @param date - Filter by specific date (optional)
    * @param cursor - Pagination cursor (optional)
    * @param size - Page size (default: 20)
    */
@@ -87,12 +105,64 @@ const planApi = {
     keyword?: string,
     fromDate?: string,
     toDate?: string,
+    date?: string,
     cursor?: string,
     size: number = 20
   ): Promise<PlanListResponse> {
     const url = `/teams/${teamId}/plans`;
-    const params = { keyword, fromDate, toDate, cursor, size };
+    const params = { keyword, fromDate, toDate, date, cursor, size };
     const data: PlanListResponse = await axiosInstance.get(url, { params });
+    return data;
+  },
+
+  /**
+   * Search plans (POST)
+   */
+  async searchPlans(
+    teamId: string,
+    data: SearchPlanRequest
+  ): Promise<PlanListResponse> {
+    const url = `/teams/${teamId}/plans/search`;
+    const res: PlanListResponse = await axiosInstance.post(url, data);
+    return res;
+  },
+
+  /**
+   * Get list of plans for a specific date (returns array)
+   */
+  async getPlansByDate(teamId: string, date: string): Promise<Plan[]> {
+    const url = `/teams/${teamId}/plans`;
+    const params = { date };
+    const data: Plan[] = await axiosInstance.get(url, { params });
+    return data;
+  },
+
+  /**
+   * Get dates that have plans/deadlines
+   */
+  async getPlanDates(
+    teamId: string,
+    month: number,
+    year: number
+  ): Promise<string[]> {
+    const url = `/teams/${teamId}/plans/dates`;
+    const params = { month, year };
+    const data: string[] = await axiosInstance.get(url, { params });
+    return data;
+  },
+
+  /**
+   * Get task statistics for a member
+   */
+  async getTaskStatistics(
+    teamId: string,
+    memberId: string,
+    fromDate: string,
+    toDate: string
+  ): Promise<TaskStatistics> {
+    const url = `/teams/${teamId}/tasks/statistics`;
+    const body = { memberId, fromDate, toDate };
+    const data: TaskStatistics = await axiosInstance.post(url, body);
     return data;
   },
 

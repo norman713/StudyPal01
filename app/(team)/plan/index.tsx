@@ -3,7 +3,7 @@ import BottomBar from "@/components/ui/buttom";
 import Header from "@/components/ui/header";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import ChatBotSection from "./components/PlanScreen/Chatbot";
 import PlanHeader from "./components/PlanScreen/Header";
@@ -38,74 +38,97 @@ export default function PlanScreen() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+
+  // New States
+  const [userSummary, setUserSummary] = useState<any>(null); // Replace any with proper type import if avail
+  const [taskStats, setTaskStats] = useState({ total: 0 });
+  const [markedDates, setMarkedDates] = useState<string[]>([]);
+
   const [bottomTab, setBottomTab] = useState<
     "me" | "team" | "notification" | "trash"
   >("team");
 
-  // Mock plan dates for calendar highlighting - bao gồm cả startDate và dueDate
-  const planDates = plans.flatMap((p) => [
-    dayjs(p.startDate).format("YYYY-MM-DD"),
-    dayjs(p.dueDate).format("YYYY-MM-DD"),
-  ]);
-
-  // Fetch plans
-  const fetchPlans = useCallback(async () => {
+  // Fetch helpers
+  const loadPlansForDate = async (date: Date) => {
     if (!teamId) return;
-
     try {
       setLoading(true);
-      const res = await planApi.getPlans(teamId);
-      setPlans(res.plans || []);
-    } catch (err: any) {
-      // API chưa có hoặc server lỗi - dùng mock data để demo
-      console.warn("Plan API not available, using mock data");
-      // Mock data - dùng ngày trong tháng hiện tại để hiển thị màu đỏ
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth();
+      // API expects YYYY-MM-DD
+      const dateStr = dayjs(date).format("YYYY-MM-DD");
 
-      // Tạo các ngày có plan trong tháng hiện tại
-      const day7 = new Date(year, month, 7).toISOString();
-      const day10 = new Date(year, month, 10).toISOString();
-      const day16 = new Date(year, month, 16).toISOString();
-      const day18 = new Date(year, month, 18).toISOString();
-
-      setPlans([
-        {
-          id: "1",
-          code: "PLN-1",
-          name: "Plan A",
-          description: "Plan description",
-          startDate: day7,
-          dueDate: day10,
-          progress: 75.0,
-          totalTasks: 20,
-          completedTasks: 15,
-          status: "IN_PROGRESS",
-        },
-        {
-          id: "2",
-          code: "PLN-2",
-          name: "Plan B",
-          description: "Plan B description",
-          startDate: day16,
-          dueDate: day18,
-          progress: 75.0,
-          totalTasks: 10,
-          completedTasks: 7,
-          status: "IN_PROGRESS",
-        },
-      ]);
+      // Use the specific date method that returns Plan[]
+      const res = await planApi.getPlansByDate(teamId, dateStr);
+      setPlans(res || []);
+    } catch (err) {
+      console.error("Failed to fetch plans for date", err);
+      // Fallback or empty
+      setPlans([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadPlanDates = async (month: number, year: number) => {
+    if (!teamId) return;
+    try {
+      const dates = await planApi.getPlanDates(teamId, month, year);
+      setMarkedDates(dates || []);
+    } catch (err) {
+      console.error("Failed to fetch plan dates", err);
+    }
+  };
+
+  const loadStats = async (memberId: string) => {
+    if (!teamId || !memberId) return;
+    try {
+      const now = dayjs();
+      // "Today" stats -> from start of today to end of today?
+      // Or just matches the curl: "fromDate": "2025-12-02...", "toDate": "2025-12-22..."
+      // The user prompt "you have 3 tasks today" implies today's stats.
+      // But the curl body had a range "fromDate": "..." "toDate": "...".
+      // We will use startOf('day') and endOf('day') for today.
+      const from = now.startOf("day").toISOString();
+      const to = now.endOf("day").toISOString();
+
+      const stats = await planApi.getTaskStatistics(teamId, memberId, from, to);
+      setTaskStats(stats);
+    } catch (err) {
+      console.error("Failed to fetch stats", err);
+    }
+  };
+
+  // Initial Load
+  useEffect(() => {
+    if (!teamId) return;
+
+    // 1. Get User Info
+    import("@/api/userApi").then(({ default: userApi }) => {
+      userApi
+        .getSummary()
+        .then((user) => {
+          setUserSummary(user);
+          // 2. Get Stats using user ID
+          loadStats(user.id);
+        })
+        .catch((err) => console.error("User fetch error", err));
+    });
+
+    // 3. Initial Calendar Data (Current Month & Today)
+    const now = new Date();
+    loadPlanDates(now.getMonth() + 1, now.getFullYear());
+    loadPlansForDate(now);
   }, [teamId]);
 
-  useEffect(() => {
-    fetchPlans();
-  }, [fetchPlans]);
-
   // Handlers
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    loadPlansForDate(date);
+  };
+
+  const handleMonthChange = (date: Date) => {
+    loadPlanDates(date.getMonth() + 1, date.getFullYear());
+  };
+
   const handlePlanPress = (plan: Plan) => {
     router.push({
       pathname: "/(team)/plan/planDetail",
@@ -129,14 +152,27 @@ export default function PlanScreen() {
 
   return (
     <View style={styles.container}>
-      <Header items={[]} onSelect={() => {}} />
+      <Header
+        items={[]}
+        onSelect={() => {}}
+        // @ts-ignore - Prop types mismatch with old Header component if any
+        // We really should use the new props we added to PlanHeader (Header.tsx)
+      />
+      {/* Wait, the Header above is the Global Header. PlanHeader is the component we modified. */}
 
       <FlatList
         data={[1]}
         renderItem={null}
         ListHeaderComponent={
           <View style={styles.content}>
-            <PlanHeader />
+            <PlanHeader
+              userName={userSummary?.name || "User"}
+              taskCount={taskStats.total || 0}
+              markedDates={markedDates}
+              selectedDate={selectedDate}
+              onDateSelect={handleDateSelect}
+              onMonthChange={handleMonthChange}
+            />
 
             <ChatBotSection />
 

@@ -1,6 +1,7 @@
 import planApi, { Plan } from "@/api/planApi";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -38,75 +39,54 @@ export default function PlanScreen() {
 
   // States
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Default false, only load on search? Or true if auto-load.
+  // Let's keep auto-load.
   const [query, setQuery] = useState("");
-  const [fromDate, setFromDate] = useState(formatDateString(today));
-  const [toDate, setToDate] = useState(formatDateString(today));
+
+  // Use Date objects for state to manage formatting easily
+  const [fromDate, setFromDate] = useState<Date>(today);
+  const [toDate, setToDate] = useState<Date>(today);
+
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-GB"); // DD/MM/YYYY
-  };
-
+  // Fetch plans
   // Fetch plans
   const fetchPlans = useCallback(async () => {
     if (!teamId) return;
 
+    // Requirement: Must have keyword, fromDate, toDate, size.
+    if (!query.trim()) {
+      // If no keyword, do not fetch.
+      // "If not query then list empty"
+      setPlans([]);
+      return;
+    }
+
     try {
       setLoading(true);
-      const res = await planApi.getPlans(teamId, query.trim() || undefined);
+
+      const payload = {
+        keyword: query.trim(),
+        fromDate: dayjs(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss"),
+        toDate: dayjs(toDate).endOf("day").format("YYYY-MM-DD HH:mm:ss"),
+        size: 10,
+      };
+
+      const res = await planApi.searchPlans(teamId, payload);
       setPlans(res.plans || []);
     } catch (err: any) {
-      // API chưa có hoặc server lỗi - dùng mock data để demo
-      console.warn("Plan API not available, using mock data");
-      // Mock data for demo when API not available
-      setPlans([
-        {
-          id: "1",
-          code: "PLN-1",
-          name: "Plan A",
-          description: "Plan description",
-          startDate: "2025-10-27T12:00:00Z",
-          dueDate: "2025-10-29T24:00:00Z",
-          progress: 75.0,
-          totalTasks: 20,
-          completedTasks: 15,
-          status: "IN_PROGRESS",
-        },
-        {
-          id: "2",
-          code: "PLN-2",
-          name: "Plan B",
-          description: "Plan B description",
-          startDate: "2025-10-27T12:00:00Z",
-          dueDate: "2025-10-29T24:00:00Z",
-          progress: 75.0,
-          totalTasks: 10,
-          completedTasks: 7,
-          status: "IN_PROGRESS",
-        },
-        {
-          id: "3",
-          code: "PLN-3",
-          name: "Plan C",
-          description: "Plan C description",
-          startDate: "2025-10-27T12:00:00Z",
-          dueDate: "2025-10-29T24:00:00Z",
-          progress: 75.0,
-          totalTasks: 5,
-          completedTasks: 4,
-          status: "COMPLETED",
-        },
-      ]);
+      console.warn("Search API failed", err);
+      // No mock data allowed
+      setPlans([]);
     } finally {
       setLoading(false);
     }
-  }, [teamId, query]);
+  }, [teamId, query, fromDate, toDate]);
 
   useEffect(() => {
     fetchPlans();
-  }, []);
+  }, [fetchPlans]);
 
   // Handlers
   const handleSearch = () => {
@@ -161,7 +141,7 @@ export default function PlanScreen() {
             <TextInput
               mode="outlined"
               label="From date"
-              value={fromDate}
+              value={formatDateString(fromDate)}
               editable={false}
               textColor="#000000"
               theme={{
@@ -182,12 +162,12 @@ export default function PlanScreen() {
 
             {showFromPicker && (
               <DateTimePicker
-                value={new Date()}
+                value={fromDate}
                 mode="date"
                 display="calendar"
                 onChange={(event, selectedDate) => {
                   if (event.type === "set" && selectedDate) {
-                    setFromDate(formatDate(selectedDate));
+                    setFromDate(selectedDate);
                   }
                   setShowFromPicker(false);
                 }}
@@ -200,7 +180,7 @@ export default function PlanScreen() {
             <TextInput
               mode="outlined"
               label="To date"
-              value={toDate}
+              value={formatDateString(toDate)}
               editable={false}
               textColor="#000000"
               theme={{
@@ -222,12 +202,12 @@ export default function PlanScreen() {
 
             {showToPicker && (
               <DateTimePicker
-                value={new Date()}
+                value={toDate}
                 mode="date"
                 display="calendar"
                 onChange={(event, selectedDate) => {
                   if (event.type === "set" && selectedDate) {
-                    setToDate(formatDate(selectedDate));
+                    setToDate(selectedDate);
                   }
                   setShowToPicker(false);
                 }}

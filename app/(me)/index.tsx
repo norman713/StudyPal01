@@ -45,6 +45,9 @@ export default function TaskScreen() {
               break;
           }
         }}
+        onCenterPress={() => {
+          router.push("/(me)/task/addTask");
+        }}
       />
     </View>
   );

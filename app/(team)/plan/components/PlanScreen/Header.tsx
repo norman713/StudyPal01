@@ -6,14 +6,24 @@ import { Calendar } from "react-native-calendario";
 const DAY_SIZE = 40;
 const DAY_RADIUS = 10;
 
-export default function HeaderSection() {
-  const name = "Nguyetlun115";
-  const taskCount = 3;
+interface HeaderApiProps {
+  userName: string;
+  taskCount: number;
+  markedDates: string[];
+  selectedDate: Date | null;
+  onDateSelect: (date: Date) => void;
+  onMonthChange: (date: Date) => void;
+}
 
-  const taskDates = ["2025-12-16", "2025-12-18", "2025-12-07"];
-  const taskSet = new Set(taskDates);
-
-  const [selected, setSelected] = useState<Date | null>(null);
+export default function HeaderSection({
+  userName,
+  taskCount,
+  markedDates,
+  selectedDate,
+  onDateSelect,
+  onMonthChange,
+}: HeaderApiProps) {
+  const taskSet = new Set(markedDates);
 
   const formatMonth = (d: Date) => dayjs(d).format("YYYY-MM-01");
   const [currentMonth, setCurrentMonth] = useState(formatMonth(new Date()));
@@ -23,19 +33,23 @@ export default function HeaderSection() {
   const getDateStr = (d: Date) => dayjs(d).format("YYYY-MM-DD");
 
   const goPrev = () => {
-    setCurrentMonth(
-      dayjs(currentMonth).subtract(1, "month").format("YYYY-MM-01")
-    );
+    const prev = dayjs(currentMonth).subtract(1, "month").toDate();
+    const prevStr = dayjs(prev).format("YYYY-MM-01");
+    setCurrentMonth(prevStr);
+    onMonthChange(new Date(prevStr));
   };
 
   const goNext = () => {
-    setCurrentMonth(dayjs(currentMonth).add(1, "month").format("YYYY-MM-01"));
+    const next = dayjs(currentMonth).add(1, "month").toDate();
+    const nextStr = dayjs(next).format("YYYY-MM-01");
+    setCurrentMonth(nextStr);
+    onMonthChange(new Date(nextStr));
   };
 
   return (
     <View style={styles.container}>
       <Text className="text-center text-[16px] mb-2">
-        Hi {name}, you have{" "}
+        Hi {userName}, you have{" "}
         <Text className="text-[#90717E] font-bold">{taskCount}</Text>{" "}
         {taskCount > 1 ? "tasks" : "task"} today.
       </Text>
@@ -61,8 +75,8 @@ export default function HeaderSection() {
           key={currentMonth}
           numberOfMonths={1}
           startingMonth={currentMonth}
-          startDate={selected ?? undefined}
-          onPress={(date: Date) => setSelected(date)}
+          startDate={selectedDate ?? undefined}
+          onPress={(date: Date) => onDateSelect(date)}
           theme={{
             monthTitleTextStyle: { display: "none" },
 
@@ -95,24 +109,30 @@ export default function HeaderSection() {
 
             const isToday = dateStr === today;
             const isTaskDay = taskSet.has(dateStr);
-            const isSelected = selected && dateStr === getDateStr(selected);
+            const isSelected =
+              selectedDate && dateStr === getDateStr(selectedDate);
+
+            // Priority: Selected (Brown) > TaskDay (Red) > Today (Green)
+            // Wait, requirement says:
+            // Green = Today
+            // Red = Deadline
+            // Brown = Selected
 
             let bg = "transparent";
-            let color = "#000";
+            let color = "#0F0C0D"; // Default black
 
-            // 🔽 ưu tiên thấp → cao
             if (isToday) {
-              bg = "#B8C6B6";
+              bg = "#B8C6B6"; // Green
               color = "white";
             }
 
             if (isTaskDay) {
-              bg = "#FF6B6B";
+              bg = "#FF6B6B"; // Red
               color = "white";
             }
 
             if (isSelected) {
-              bg = "#90717E";
+              bg = "#90717E"; // Brown
               color = "white";
             }
 

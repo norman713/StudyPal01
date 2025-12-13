@@ -21,7 +21,7 @@ export default function PlanItem({ plan, onPress }: PlanItemProps) {
       activeOpacity={0.7}
     >
       <View style={styles.planInfo}>
-        <Text style={styles.planName}>{plan.name}</Text>
+        <Text style={styles.planName}>{plan.title || plan.name}</Text>
         <Text style={styles.planDate}>
           {formatDate(plan.startDate)} - {formatDate(plan.dueDate)}
         </Text>
