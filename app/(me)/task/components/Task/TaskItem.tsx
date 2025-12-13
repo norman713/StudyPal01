@@ -1,10 +1,10 @@
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 type TPriority = "high" | "medium" | "low";
 
-type TTask = {
+export type TTask = {
   id: number;
   name: string;
   start: string;
@@ -16,9 +16,11 @@ type TTask = {
 
 type TaskItemProps = {
   task: TTask;
+  onPress: () => void;
+  onToggle: () => void;
 };
 
-export default function TaskItem({ task }: TaskItemProps) {
+export default function TaskItem({ task, onPress, onToggle }: TaskItemProps) {
   const getPriorityColor = (priority: TPriority) => {
     switch (priority) {
       case "high":
@@ -33,7 +35,7 @@ export default function TaskItem({ task }: TaskItemProps) {
   };
 
   return (
-    <View style={styles.container}>
+    <Pressable onPress={onPress} style={styles.container}>
       {/* Priority bar */}
       <View
         style={[
@@ -53,7 +55,6 @@ export default function TaskItem({ task }: TaskItemProps) {
               style={{ marginRight: 10 }}
             />
           )}
-
           <Text style={styles.name}>{task.name}</Text>
         </View>
 
@@ -63,7 +64,11 @@ export default function TaskItem({ task }: TaskItemProps) {
       </View>
 
       {/* Check icon */}
-      <View
+      <Pressable
+        onPress={(e) => {
+          e.stopPropagation?.(); // 🚫 chặn route khi bấm check
+          onToggle();
+        }}
         style={[
           styles.checkButton,
           task.completed ? styles.checkButtonDone : styles.checkButtonIdle,
@@ -74,8 +79,8 @@ export default function TaskItem({ task }: TaskItemProps) {
           size={18}
           color={task.completed ? "#fff" : "#7D8B91"}
         />
-      </View>
-    </View>
+      </Pressable>
+    </Pressable>
   );
 }
 
@@ -86,6 +91,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
     alignItems: "center",
+    borderRadius: 6,
   },
 
   colorBar: {
@@ -102,10 +108,13 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: "600",
+    color: "#0F0C0D",
   },
+
   time: {
     fontSize: 12,
     marginTop: 2,
+    color: "#49454F",
   },
 
   checkButton: {

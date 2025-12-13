@@ -100,7 +100,17 @@ export default function TaskListSection() {
         <FontAwesome5 name="arrow-right" size={24} color="#79747E" />
       </Pressable>
       {tasks.map((t) => (
-        <TaskItem key={t.id} task={t} />
+        <TaskItem
+          key={t.id}
+          task={t}
+          onPress={() => {
+            router.push({
+              pathname: "/(me)/task/taskDetail",
+              params: { taskId: t.id.toString() },
+            });
+          }}
+          onToggle={() => toggleComplete(t.id)}
+        />
       ))}
     </View>
   );
