@@ -51,7 +51,7 @@ export default function HeaderSection({
       <Text className="text-center text-[16px] mb-2">
         Hi {userName}, you have{" "}
         <Text className="text-[#90717E] font-bold">{taskCount}</Text>{" "}
-        {taskCount > 1 ? "tasks" : "task"} today.
+        {taskCount > 1 ? "plans" : "plan"} today.
       </Text>
 
       <View style={styles.calendarWrapper}>
