@@ -245,7 +245,7 @@ export default function TaskDetail() {
         <Pressable
           style={styles.menuItem}
           onPress={() =>
-            router.push({ pathname: "/(me)/reminders", params: { taskId } })
+            router.push({ pathname: "/(me)/recurrence", params: { taskId } })
           }
         >
           <Text style={styles.menuText}>Recurrence</Text>

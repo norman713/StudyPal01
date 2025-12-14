@@ -1,7 +1,9 @@
+import inviteApi from "@/api/inviteApi";
+import userApi from "@/api/userApi";
 import QuestionModal from "@/components/modal/question";
 import SuccessModal from "@/components/modal/success";
-import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import {
   Appbar,
@@ -11,43 +13,89 @@ import {
   TouchableRipple,
 } from "react-native-paper";
 
-type User = { id: string; name: string; email: string; avatar?: string };
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+};
 
 const ACCENT = "#90717E";
 
-const MOCK_USERS: User[] = [
-  { id: "1", name: "Sienna", email: "abc@gmail.com" },
-  { id: "2", name: "John Carter", email: "john@acme.com" },
-  { id: "3", name: "Jenny Doe", email: "jenny@hello.io" },
-  { id: "4", name: "Sienna Park", email: "sienna@studio.dev" },
-];
-
 export default function InviteUserScreen() {
   const router = useRouter();
+  const { teamId } = useLocalSearchParams<{ teamId: string }>();
+
+  /* =======================
+     Search state
+  ======================= */
   const [query, setQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  /* =======================
+     Invite flow state
+  ======================= */
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return MOCK_USERS;
-    return MOCK_USERS.filter(
-      (u) =>
-        u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-    );
+  useEffect(() => {
+    console.log("Invite screen teamId:", teamId);
+  }, [teamId]);
+
+  /* =========================================================
+     🔍 SEARCH USERS (debounce 300ms)
+  ========================================================= */
+  useEffect(() => {
+    const run = async () => {
+      if (!query.trim()) {
+        setUsers([]);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const res = await userApi.searchUsers({
+          keyword: query.trim(),
+          size: 20,
+        });
+        setUsers(res.users ?? []);
+      } catch (err) {
+        console.error("[searchUsers] Error:", err);
+        setUsers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const timeout = setTimeout(run, 300);
+    return () => clearTimeout(timeout);
   }, [query]);
 
+  /* =========================================================
+     Invite handlers
+  ========================================================= */
   const openConfirm = (user: User) => {
     setSelectedUser(user);
     setConfirmOpen(true);
   };
 
   const handleConfirmInvite = async () => {
-    if (selectedUser) {
+    if (!selectedUser || !teamId) return;
+
+    try {
       setConfirmOpen(false);
+
+      await inviteApi.inviteUser({
+        teamId,
+        inviteeId: selectedUser.id,
+      });
+
       setSuccessOpen(true);
+    } catch (err) {
+      console.error("[inviteUser] Error:", err);
     }
   };
 
@@ -56,6 +104,9 @@ export default function InviteUserScreen() {
     setSelectedUser(null);
   };
 
+  /* =========================================================
+     Render item
+  ========================================================= */
   const renderItem = ({ item }: { item: User }) => (
     <TouchableRipple
       onPress={() => openConfirm(item)}
@@ -63,16 +114,16 @@ export default function InviteUserScreen() {
     >
       <List.Item
         title={() => (
-          <Text style={{ fontSize: 16, fontWeight: "700", color: "#0F0C0D" }}>
+          <Text className="text-base font-bold text-[#0F0C0D]">
             {item.name}
           </Text>
         )}
         description={() => (
-          <Text style={{ fontSize: 13, color: "#8A8F93" }}>{item.email}</Text>
+          <Text className="text-[13px] text-[#8A8F93]">{item.email}</Text>
         )}
         left={() =>
-          item.avatar ? (
-            <Avatar.Image size={40} source={{ uri: item.avatar }} />
+          item.avatarUrl ? (
+            <Avatar.Image size={40} source={{ uri: item.avatarUrl }} />
           ) : (
             <Avatar.Text
               size={40}
@@ -88,73 +139,101 @@ export default function InviteUserScreen() {
 
   return (
     <View className="flex-1 bg-[#EFE7EA]">
+      {/* =======================
+          Header
+      ======================= */}
       <Appbar.Header mode="small" style={{ backgroundColor: ACCENT }}>
-        <Appbar.BackAction color="#fff" onPress={() => router.back()} />
-        <Appbar.Content
-          title="Invite user"
-          titleStyle={{ color: "#fff", fontSize: 18, fontWeight: "600" }}
-        />
-        <Appbar.Action
-          icon={showSearch ? "close" : "magnify"}
+        {/* Back */}
+        <Appbar.BackAction
           color="#fff"
           onPress={() => {
-            setShowSearch((v) => !v);
-            if (showSearch) setQuery("");
+            if (showSearch) {
+              setShowSearch(false);
+              setQuery("");
+              setUsers([]);
+            } else {
+              router.back();
+            }
           }}
         />
-      </Appbar.Header>
 
-      {/* Searchbar */}
-      {showSearch && (
-        <View style={{ paddingHorizontal: 12, paddingTop: 10 }}>
+        {/* Title OR Search */}
+        {!showSearch ? (
+          <Appbar.Content
+            title="Invite user"
+            titleStyle={{ color: "#fff", fontSize: 18, fontWeight: "600" }}
+          />
+        ) : (
           <Searchbar
             placeholder="Search by name or email"
             value={query}
             onChangeText={setQuery}
             autoFocus
             style={{
+              flex: 1,
+              marginRight: 8,
               backgroundColor: "#fff",
               elevation: 0,
               borderRadius: 8,
             }}
             inputStyle={{ fontSize: 15 }}
-            iconColor="#6B7280"
-            clearIcon="close"
+            icon={() => null} // ❌ bỏ icon search
+            clearIcon={() => null} // ❌ bỏ dấu X trong input
           />
+        )}
+
+        {/* Right action */}
+        <Appbar.Action
+          icon={showSearch ? "close" : "magnify"}
+          color="#fff"
+          onPress={() => {
+            setShowSearch((v) => !v);
+            if (showSearch) {
+              setQuery("");
+              setUsers([]);
+            }
+          }}
+        />
+      </Appbar.Header>
+
+      {/* =======================
+          Loading
+      ======================= */}
+      {loading && (
+        <View className="pt-6 items-center">
+          <Text className="text-[#6B7280]">Searching…</Text>
         </View>
       )}
 
-      {/* Content */}
-      {filtered.length > 0 ? (
-        <View style={{ margin: 12, backgroundColor: "#fff" }}>
+      {/* =======================
+          Result list
+      ======================= */}
+      {!loading && users.length > 0 && (
+        <View className="m-3 bg-white rounded-lg">
           <FlatList
-            data={filtered}
+            data={users}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             contentContainerStyle={{ padding: 10 }}
           />
         </View>
-      ) : (
-        // Empty state
-        <View
-          style={{
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "flex-start",
-            paddingTop: 24,
-          }}
-        >
-          <Text style={{ color: "#DF3B27", fontSize: 15, textAlign: "center" }}>
+      )}
+
+      {/* =======================
+          Empty search
+      ======================= */}
+      {!loading && query.trim() && users.length === 0 && (
+        <View className="flex-1 items-center pt-6 px-6">
+          <Text className="text-[#DF3B27] text-[15px] text-center">
             We couldn’t find anyone with the name{" "}
-            <Text style={{ fontWeight: "700" }}>
-              &quot;{query.trim()}&quot;
-            </Text>
-            …
+            <Text className="font-bold">“{query.trim()}”</Text>
           </Text>
         </View>
       )}
 
-      {/* Question Modal for confirming invitation */}
+      {/* =======================
+          Confirm modal
+      ======================= */}
       <QuestionModal
         visible={confirmOpen}
         title="Invite user?"
@@ -172,7 +251,9 @@ export default function InviteUserScreen() {
         }}
       />
 
-      {/* Success Modal */}
+      {/* =======================
+          Success modal
+      ======================= */}
       <SuccessModal
         visible={successOpen}
         title="Success"

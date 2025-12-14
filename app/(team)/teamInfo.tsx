@@ -178,8 +178,16 @@ export default function TeamInfoScreen({
   };
 
   const handleInvite = () => {
-    router.push("/(team)/invite");
+    if (!id) return;
+
+    router.push({
+      pathname: "/(team)/invite",
+      params: {
+        teamId: id,
+      },
+    });
   };
+
   const handleShowMember = () => {
     router.push({
       pathname: "/(team)/member",

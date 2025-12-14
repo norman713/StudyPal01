@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, View } from "react-native";
-import { TextInput } from "react-native-paper";
+import React from "react";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 
 interface DateTimeInputProps {
   label: string;
@@ -15,27 +15,74 @@ export default function DateTimeInput({
   onChangeText,
   icon,
 }: DateTimeInputProps) {
+  const handleChange = (text: string) => {
+    const digits = text.replace(/\D/g, "");
+
+    // =====================
+    // ⏰ TIME: HH:mm
+    // =====================
+    if (icon === "time-outline") {
+      const sliced = digits.slice(0, 4);
+
+      let hh = sliced.slice(0, 2);
+      let mm = sliced.slice(2, 4);
+
+      // Validate hour
+      if (hh.length === 2 && Number(hh) > 23) return;
+
+      // Validate minute
+      if (mm.length === 2 && Number(mm) > 59) return;
+
+      let formatted = hh;
+      if (mm.length > 0) {
+        formatted += `:${mm}`;
+      }
+
+      onChangeText(formatted);
+      return;
+    }
+
+    // =====================
+    // 📅 DATE: DD-MM-YYYY
+    // =====================
+    if (icon === "calendar-outline") {
+      const sliced = digits.slice(0, 8);
+
+      let dd = sliced.slice(0, 2);
+      let mm = sliced.slice(2, 4);
+      let yyyy = sliced.slice(4, 8);
+
+      // Validate day
+      if (dd.length === 2 && Number(dd) > 31) return;
+
+      // Validate month
+      if (mm.length === 2 && Number(mm) > 12) return;
+
+      let formatted = dd;
+      if (mm.length > 0) formatted += `-${mm}`;
+      if (yyyy.length > 0) formatted += `-${yyyy}`;
+
+      onChangeText(formatted);
+      return;
+    }
+
+    onChangeText(text);
+  };
+
   return (
     <View style={styles.container}>
+      {/* Floating label */}
       <Text style={styles.label}>{label}</Text>
+
       <View style={styles.inputWithIcon}>
         <TextInput
-          mode="outlined"
-          label=""
           value={value}
-          onChangeText={onChangeText}
+          onChangeText={handleChange}
+          keyboardType="number-pad"
           style={styles.input}
-          outlineStyle={styles.inputOutline}
-          contentStyle={styles.inputContent}
-          theme={{
-            roundness: 30,
-            colors: {
-              background: "#F8F6F7",
-              outline: "#79747E",
-            },
-          }}
         />
-        <Ionicons name={icon} size={24} color="#49454F" style={styles.icon} />
+
+        <Ionicons name={icon} size={22} color="#49454F" style={styles.icon} />
       </View>
     </View>
   );
@@ -44,39 +91,39 @@ export default function DateTimeInput({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginBottom: 0,
+    marginBottom: 20,
   },
+
   label: {
     position: "absolute",
     top: -10,
-    left: 12,
-    backgroundColor: "#F8F6F7",
+    left: 14,
+    backgroundColor: "#FEF7FF",
     paddingHorizontal: 4,
     fontSize: 12,
     color: "#49454F",
-    fontFamily: "PoppinsBold",
     zIndex: 1,
   },
+
   inputWithIcon: {
     position: "relative",
+    justifyContent: "center",
   },
+
   input: {
-    backgroundColor: "#F8F6F7",
-  },
-  inputOutline: {
-    borderRadius: 30,
     borderWidth: 1,
-  },
-  inputContent: {
-    fontSize: 16,
-    fontFamily: "PoppinsRegular",
-    color: "#0F0C0D",
+    borderColor: "#79747E",
+    borderRadius: 30,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: "#0F0C0D",
+    backgroundColor: "#FEF7FF",
   },
+
   icon: {
     position: "absolute",
     right: 16,
-    top: 8,
+    alignSelf: "center",
   },
 });

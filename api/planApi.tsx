@@ -51,11 +51,20 @@ export interface TaskListResponse {
   nextCursor?: string | null;
 }
 
-export interface CreatePlanRequest {
-  name: string;
-  description?: string;
+export interface TaskDraft {
+  content: string;
   startDate: string;
   dueDate: string;
+  assigneeId?: string;
+  priority: TaskPriority;
+  note?: string;
+}
+
+export interface CreatePlanRequest {
+  teamId: string;
+  title: string;
+  description?: string;
+  tasks: TaskDraft[];
 }
 
 export interface UpdatePlanRequest {
@@ -183,7 +192,7 @@ const planApi = {
    * @param data - Plan data
    */
   async createPlan(teamId: string, data: CreatePlanRequest): Promise<Plan> {
-    const url = `/teams/${teamId}/plans`;
+    const url = `/plans`;
     const res: Plan = await axiosInstance.post(url, data);
     return res;
   },

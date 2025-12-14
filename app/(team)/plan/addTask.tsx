@@ -1,4 +1,6 @@
 import planApi, { TaskPriority } from "@/api/planApi";
+import { planCreationStore } from "@/utils/planCreationStore";
+import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -54,7 +56,7 @@ export default function AddTaskScreen() {
 
   const handleCreate = async () => {
     if (!validate()) return;
-    if (!teamId || !planId) return;
+    if (!teamId) return;
 
     setLoading(true);
     try {
@@ -73,15 +75,31 @@ export default function AddTaskScreen() {
       const [toHour, toMin] = toTime.split(":").map(Number);
       const dueDate = new Date(toYear, toMonth - 1, toDay, toHour, toMin);
 
-      await planApi.createTask(teamId, planId, {
-        name: taskName.trim(),
-        description: taskNote.trim(),
-        startDate: startDate.toISOString(),
-        dueDate: dueDate.toISOString(),
-        assigneeId: assigneeId || undefined,
-      });
+      // Check if we are creating a new plan (planId is "new" or missing)
+      const isNewPlan = !planId || planId === "new";
 
-      router.back();
+      if (isNewPlan) {
+        // Save to local store
+        planCreationStore.addTask({
+          content: taskName.trim(),
+          note: taskNote.trim(),
+          startDate: dayjs(startDate).format("YYYY-MM-DD HH:mm:ss"),
+          dueDate: dayjs(dueDate).format("YYYY-MM-DD HH:mm:ss"),
+          assigneeId: assigneeId || undefined,
+          priority,
+        });
+        router.back();
+      } else {
+        // Direct API call for existing plan
+        await planApi.createTask(teamId, planId, {
+          name: taskName.trim(),
+          description: taskNote.trim(),
+          startDate: dayjs(startDate).format("YYYY-MM-DD HH:mm:ss"),
+          dueDate: dayjs(dueDate).format("YYYY-MM-DD HH:mm:ss"),
+          assigneeId: assigneeId || undefined,
+        });
+        router.back();
+      }
     } catch (err) {
       console.warn("Failed to create task", err);
       Alert.alert("Error", "Failed to create task");
@@ -271,7 +289,6 @@ const styles = StyleSheet.create({
     fontFamily: "PoppinsRegular",
     color: "#0F0C0D",
     paddingHorizontal: 16,
-    paddingVertical: 8,
   },
   textAreaContent: {
     minHeight: 110,
@@ -281,7 +298,6 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     gap: 10,
-    marginBottom: 0,
   },
   createButton: {
     backgroundColor: "#90717E",

@@ -4,7 +4,7 @@ import Header from "@/components/ui/header";
 import dayjs from "dayjs";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { Alert, FlatList, StyleSheet, View } from "react-native";
 import ChatBotSection from "./components/PlanScreen/Chatbot";
 import PlanHeader from "./components/PlanScreen/Header";
 import PlanList from "./components/PlanScreen/PlanList";
@@ -148,6 +148,10 @@ export default function PlanScreen() {
   };
 
   const handleCreatePlan = () => {
+    if (!canManage) {
+      Alert.alert("Permission", "You are not admin or owner");
+      return;
+    }
     router.push({
       pathname: "/(team)/plan/planCreate",
       params: { teamId, role, mode: "create" },
@@ -212,7 +216,7 @@ export default function PlanScreen() {
               break;
           }
         }}
-        onCenterPress={canManage ? handleCreatePlan : undefined}
+        onCenterPress={handleCreatePlan}
       />
     </View>
   );

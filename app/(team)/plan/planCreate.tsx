@@ -1,3 +1,4 @@
+import memberApi, { Member } from "@/api/memberApi";
 import planApi, { Task } from "@/api/planApi";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -14,43 +15,12 @@ import {
 } from "react-native";
 import { Appbar, TextInput } from "react-native-paper";
 
+import { planCreationStore } from "@/utils/planCreationStore";
 import TaskItem from "./components/TaskItem";
 
 const ACCENT = "#90717E";
 
 type Role = "OWNER" | "ADMIN" | "MEMBER";
-
-// Mock tasks for demo
-const MOCK_TASKS: Task[] = [
-  {
-    id: "1",
-    name: "Task 1",
-    startDate: "2025-10-27T12:00:00Z",
-    dueDate: "2025-10-29T24:00:00Z",
-    status: "PENDING",
-    priority: "HIGH", // 🔴 Red
-    assignee: {
-      id: "1",
-      name: "Minh Huy",
-      avatarUrl: "https://i.pravatar.cc/40?img=1",
-    },
-    planId: "1",
-  },
-  {
-    id: "2",
-    name: "Task 2",
-    startDate: "2025-10-27T12:00:00Z",
-    dueDate: "2025-10-29T24:00:00Z",
-    status: "PENDING",
-    priority: "MEDIUM", // 🟡 Yellow
-    assignee: {
-      id: "2",
-      name: "Me",
-      avatarUrl: "https://i.pravatar.cc/40?img=2",
-    },
-    planId: "1",
-  },
-];
 
 /**
  * Plan Create / Edit Screen
@@ -72,15 +42,51 @@ export default function PlanCreateScreen() {
   const role: Role = (roleParam as Role) || "MEMBER";
   const canManage = role === "OWNER" || role === "ADMIN";
 
-  // Initialize with mock data for demo
-  const [planName, setPlanName] = useState("Plan 1");
-  const [planDescription, setPlanDescription] = useState(
-    "This is plan 1 description"
-  );
-  const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
+  // States
+  const [planName, setPlanName] = useState("");
+  const [planDescription, setPlanDescription] = useState("");
+
+  // Mixed tasks: Real tasks (edit mode) or Draft tasks (create mode converted to DisplayTask)
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+
+  useEffect(() => {
+    if (teamId) {
+      memberApi.getAll(teamId).then((res) => {
+        setMembers(res.members || []);
+      });
+    }
+  }, [teamId]);
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Helper to convert draft to display task
+  const draftToTask = useCallback(
+    (draft: any, index: number): Task => {
+      const assignee = members.find((m) => m.userId === draft.assigneeId);
+      return {
+        id: `draft-${index}`,
+        name: draft.content,
+        description: draft.note,
+        startDate: draft.startDate,
+        dueDate: draft.dueDate,
+        status: "PENDING",
+        priority: draft.priority,
+        assignee: assignee
+          ? {
+              id: assignee.userId,
+              name: assignee.name,
+              avatarUrl: assignee.avatarUrl,
+            }
+          : undefined,
+        planId: "new",
+      };
+    },
+    [members]
+  );
+
+  // Load data for Edit Mode
   const fetchPlanData = useCallback(async () => {
     if (!teamId || !planId) return;
 
@@ -94,16 +100,37 @@ export default function PlanCreateScreen() {
       setPlanDescription(planData.description || "");
       setTasks(tasksData.tasks || []);
     } catch {
-      // Keep mock data if API fails
-      console.log("Using mock data for demo");
+      console.log("Failed to load plan data");
     } finally {
       setLoading(false);
     }
   }, [teamId, planId]);
 
+  // Effect: Handle Create Mode (Draft Store) vs Edit Mode
   useEffect(() => {
-    if (isEditMode) fetchPlanData();
-  }, [fetchPlanData, isEditMode]);
+    if (isEditMode) {
+      fetchPlanData();
+    } else {
+      // Create Mode: Subscribe to store
+      const updateState = () => {
+        const drafts = planCreationStore.getTasks();
+        setTasks(drafts.map((d, i) => draftToTask(d, i)));
+      };
+
+      // Initial load
+      updateState();
+
+      // Subscribe
+      return planCreationStore.subscribe(updateState);
+    }
+  }, [fetchPlanData, isEditMode, draftToTask]);
+
+  // Clear store on mount if creating new
+  useEffect(() => {
+    if (!isEditMode) {
+      // Optional: planCreationStore.clearTasks() or similar
+    }
+  }, [isEditMode]);
 
   const handleSave = async () => {
     if (!planName.trim()) {
@@ -114,22 +141,29 @@ export default function PlanCreateScreen() {
     setSaving(true);
     try {
       if (isEditMode && planId) {
+        // Edit Mode
         await planApi.updatePlan(teamId, planId, {
           name: planName.trim(),
           description: planDescription.trim(),
         });
       } else {
+        // Create Mode
+        const drafts = planCreationStore.getTasks();
+
         await planApi.createPlan(teamId, {
-          name: planName.trim(),
+          teamId,
+          title: planName.trim(),
           description: planDescription.trim(),
-          startDate: new Date().toISOString(),
-          dueDate: new Date(Date.now() + 7 * 86400000).toISOString(),
+          tasks: drafts,
         });
+
+        // Clear drafts after success
+        planCreationStore.clearTasks();
       }
       router.back();
-    } catch {
-      Alert.alert("Demo", "Plan saved (mock)");
-      router.back();
+    } catch (err: any) {
+      console.error(err);
+      Alert.alert("Error", "Failed to save plan");
     } finally {
       setSaving(false);
     }
@@ -144,19 +178,26 @@ export default function PlanCreateScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-[#F8F6F7]">
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#F8F6F7",
+        }}
+      >
         <ActivityIndicator size="large" color={ACCENT} />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-[#F8F6F7]">
+    <View style={{ flex: 1, backgroundColor: "#F8F6F7" }}>
       {/* Header */}
       <Appbar.Header mode="small" style={{ backgroundColor: ACCENT }}>
         <Appbar.BackAction color="#fff" onPress={() => router.back()} />
         <Appbar.Content
-          title="Plan create"
+          title={isEditMode ? "Create Plan" : "Create Plan"}
           titleStyle={{ color: "#fff", fontSize: 18, fontWeight: "600" }}
         />
         <Appbar.Action
@@ -169,22 +210,36 @@ export default function PlanCreateScreen() {
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        className="flex-1"
+        style={{ flex: 1 }}
       >
-        <ScrollView className="p-4">
+        <ScrollView contentContainerStyle={{ padding: 16 }}>
           {/* Detail */}
-          <View className="bg-white rounded-xl mb-4 overflow-visible">
-            <Text className="text-xl font-semibold text-[#0F0C0D] p-2">
+          <View
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: 12,
+              marginBottom: 16,
+              overflow: "hidden",
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "600",
+                color: "#0F0C0D",
+                padding: 12,
+              }}
+            >
               Detail
             </Text>
-            <View className="gap-4 p-4">
+            <View style={{ gap: 16, padding: 16, paddingTop: 0 }}>
               <TextInput
                 mode="outlined"
                 label="Plan name"
                 value={planName}
                 onChangeText={(planName) => setPlanName(planName)}
                 theme={{
-                  roundness: 30,
+                  roundness: 10,
                   colors: {
                     background: "#FFFFFF",
                   },
@@ -198,13 +253,13 @@ export default function PlanCreateScreen() {
                 multiline
                 numberOfLines={4}
                 theme={{
-                  roundness: 30,
+                  roundness: 10,
                   colors: {
                     background: "#FFFFFF",
                   },
                 }}
                 contentStyle={{
-                  minHeight: 120,
+                  minHeight: 100,
                   textAlignVertical: "top",
                 }}
               />
@@ -212,9 +267,25 @@ export default function PlanCreateScreen() {
           </View>
 
           {/* Tasks */}
-          <View className="bg-white rounded-xl p-4 mb-4">
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-[16px] font-semibold text-[#0F0C0D]">
+          <View
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 16,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <Text
+                style={{ fontSize: 16, fontWeight: "600", color: "#0F0C0D" }}
+              >
                 Tasks
               </Text>
               {canManage && (
@@ -225,12 +296,19 @@ export default function PlanCreateScreen() {
             </View>
 
             {tasks.length === 0 ? (
-              <View className="items-center py-10">
+              <View style={{ alignItems: "center", paddingVertical: 40 }}>
                 <Ionicons name="checkbox-outline" size={48} color="#E3DBDF" />
-                <Text className="text-[16px] font-semibold text-[#79747E] mt-3">
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: "600",
+                    color: "#79747E",
+                    marginTop: 12,
+                  }}
+                >
                   No tasks yet
                 </Text>
-                <Text className="text-[14px] text-[#9E9E9E] mt-1">
+                <Text style={{ fontSize: 14, color: "#9E9E9E", marginTop: 4 }}>
                   Tap + to add a task
                 </Text>
               </View>
