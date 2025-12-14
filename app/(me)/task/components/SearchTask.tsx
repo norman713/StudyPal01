@@ -1,5 +1,7 @@
+import taskApi, { PersonalTask, SearchTaskRequest } from "@/api/taskApi";
 import { FontAwesome } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import dayjs from "dayjs";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
@@ -8,57 +10,50 @@ import TaskItem from "./Task/TaskItem";
 const addButtonImg = require("../../../../assets/images/Addbutton.png");
 const ACCENT = "#90717E";
 
-type TPriority = "high" | "medium" | "low";
-
-type TTask = {
-  id: number;
-  name: string;
-  start: string;
-  end: string;
-  priority: TPriority;
-  completed: boolean;
-  repeat?: boolean;
-};
-
 export default function SearchTasksScreen() {
   const [taskName, setTaskName] = useState("");
-  const [fromDate, setFromDate] = useState("12-12-1212");
-  const [toDate, setToDate] = useState("12-12-1212");
+  // Default dates: today and 7 days from now, or just empty?
+  // User example: "2025-12-10 00:00:00"
+  // Let's settle on current date for UI, but formatted for API
+  const [fromDate, setFromDate] = useState(new Date());
+  const [toDate, setToDate] = useState(dayjs().add(7, "day").toDate());
 
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-GB"); // DD/MM/YYYY
+  // Search results
+  const [tasks, setTasks] = useState<PersonalTask[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const formatDateDisplay = (date: Date) => {
+    return dayjs(date).format("DD/MM/YYYY");
   };
 
-  const [tasks] = useState<TTask[]>([
-    {
-      id: 1,
-      name: "Task 1",
-      start: "12:00 27 Oct, 2025",
-      end: "24:00 29 Oct, 2025",
-      priority: "high",
-      completed: false,
-      repeat: true,
-    },
-    {
-      id: 2,
-      name: "Task 2",
-      start: "12:00 27 Oct, 2025",
-      end: "24:00 29 Oct, 2025",
-      priority: "medium",
-      completed: true,
-    },
-    {
-      id: 3,
-      name: "Task 3",
-      start: "12:00 27 Oct, 2025",
-      end: "24:00 29 Oct, 2025",
-      priority: "low",
-      completed: true,
-    },
-  ]);
+  const handleSearch = async () => {
+    try {
+      setLoading(true);
+
+      const request: SearchTaskRequest = {
+        keyword: taskName.trim() || undefined,
+        fromDate: dayjs(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss"),
+        toDate: dayjs(toDate).endOf("day").format("YYYY-MM-DD HH:mm:ss"),
+        size: 20,
+      };
+
+      console.log("SEARCH REQUEST", request);
+
+      const response = await taskApi.searchTasks(request);
+
+      console.log("SEARCH RESPONSE", response);
+
+      setTasks(response?.tasks ?? []);
+    } catch (error: any) {
+      console.error("Failed to search tasks");
+      console.error(error?.response?.data || error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View className="flex-1 bg-white">
@@ -88,29 +83,29 @@ export default function SearchTasksScreen() {
             <TextInput
               mode="outlined"
               label="From date"
-              value={fromDate}
+              value={formatDateDisplay(fromDate)}
               editable={false}
-              outlineStyle={{ borderRadius: 12 }}
+              outlineStyle={{ borderRadius: 999 }}
               right={
                 <TextInput.Icon
                   icon={() => (
                     <FontAwesome name="calendar" size={20} color="#555" />
                   )}
-                  onPress={() => setShowFromPicker(!showFromPicker)}
+                  onPress={() => setShowFromPicker(true)}
                 />
               }
             />
 
             {showFromPicker && (
               <DateTimePicker
-                value={new Date()}
+                value={fromDate}
                 mode="date"
-                display="calendar" // UI đẹp & không lag
+                display="default"
                 onChange={(event, selectedDate) => {
-                  if (event.type === "set" && selectedDate) {
-                    setFromDate(formatDate(selectedDate));
-                  }
                   setShowFromPicker(false);
+                  if (event.type === "set" && selectedDate) {
+                    setFromDate(selectedDate);
+                  }
                 }}
               />
             )}
@@ -121,29 +116,29 @@ export default function SearchTasksScreen() {
             <TextInput
               mode="outlined"
               label="To date"
-              value={toDate}
+              value={formatDateDisplay(toDate)}
               editable={false}
-              outlineStyle={{ borderRadius: 12 }}
+              outlineStyle={{ borderRadius: 999 }}
               right={
                 <TextInput.Icon
                   icon={() => (
                     <FontAwesome name="calendar" size={20} color="#555" />
                   )}
-                  onPress={() => setShowToPicker(!showToPicker)}
+                  onPress={() => setShowToPicker(true)}
                 />
               }
             />
 
             {showToPicker && (
               <DateTimePicker
-                value={new Date()}
+                value={toDate}
                 mode="date"
-                display="calendar"
+                display="default"
                 onChange={(event, selectedDate) => {
-                  if (event.type === "set" && selectedDate) {
-                    setToDate(formatDate(selectedDate));
-                  }
                   setShowToPicker(false);
+                  if (event.type === "set" && selectedDate) {
+                    setToDate(selectedDate);
+                  }
                 }}
               />
             )}
@@ -156,6 +151,9 @@ export default function SearchTasksScreen() {
           buttonColor="#90717E"
           className="rounded-full mb-6"
           labelStyle={{ fontSize: 16 }}
+          onPress={handleSearch}
+          loading={loading}
+          disabled={loading}
         >
           Search
         </Button>
@@ -163,14 +161,24 @@ export default function SearchTasksScreen() {
         {/* Filter label */}
         <View className="flex-row items-center mb-2">
           <FontAwesome name="filter" size={20} color="#444" />
-          <Text className="ml-2 text-xl font-bold">Tasks</Text>
+          <Text className="ml-2 text-xl font-bold">Tasks ({tasks.length})</Text>
         </View>
 
         {/* Task list */}
         <View className="mb-10">
           {tasks.map((t) => (
-            <TaskItem key={t.id} task={t} />
+            <TaskItem
+              key={t.id}
+              task={t}
+              onPress={() => console.log("Pressed task", t.id)}
+              onToggle={() => console.log("Toggle task", t.id)}
+            />
           ))}
+          {tasks.length === 0 && !loading && (
+            <Text className="text-gray-500 text-center mt-4">
+              No tasks found
+            </Text>
+          )}
         </View>
       </ScrollView>
 

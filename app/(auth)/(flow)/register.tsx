@@ -94,6 +94,9 @@ export default function RegisterPage() {
           onChangeText={(username) => setUsername(username)}
           theme={{
             roundness: 30,
+            colors: {
+              background: "#FFFFFF",
+            },
           }}
         />
         <TextInput
@@ -103,6 +106,9 @@ export default function RegisterPage() {
           onChangeText={(email) => setEmail(email)}
           theme={{
             roundness: 30,
+            colors: {
+              background: "#FFFFFF",
+            },
           }}
         />
         <TextInput
@@ -119,6 +125,9 @@ export default function RegisterPage() {
           }
           theme={{
             roundness: 30,
+            colors: {
+              background: "#FFFFFF",
+            },
           }}
         />
         <TextInput
@@ -135,14 +144,22 @@ export default function RegisterPage() {
           }
           theme={{
             roundness: 30,
+            colors: {
+              background: "#FFFFFF",
+            },
           }}
         />
       </View>
       <Button
         className="mt-6"
         mode="contained"
+        buttonColor="#90717E"
         contentStyle={{ height: 44 }}
-        labelStyle={{ fontSize: 16, fontFamily: "PoppinsRegular" }}
+        labelStyle={{
+          fontSize: 16,
+          fontFamily: "PoppinsRegular",
+          color: "#fff",
+        }}
         theme={{ roundness: 100 }}
         onPress={handleSignUp}
       >

@@ -1,94 +1,19 @@
+import { PersonalTask } from "@/api/taskApi";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import TaskItem from "./Task/TaskItem";
 
-type TPriority = "high" | "medium" | "low";
+interface TaskListSectionProps {
+  tasks: PersonalTask[];
+  onToggleTask: (id: string) => void;
+}
 
-type TTask = {
-  id: number;
-  name: string;
-  start: string;
-  end: string;
-  priority: TPriority;
-  completed: boolean;
-};
-
-export default function TaskListSection() {
-  const [tasks, setTasks] = useState<TTask[]>([
-    {
-      id: 1,
-      name: "Task 1",
-      start: "12:00 27 Oct, 2025",
-      end: "24:00 29 Oct, 2025",
-      priority: "high",
-      completed: false,
-    },
-    {
-      id: 2,
-      name: "Task 2",
-      start: "12:00 27 Oct, 2025",
-      end: "24:00 29 Oct, 2025",
-      priority: "medium",
-      completed: true,
-    },
-    {
-      id: 3,
-      name: "Task 2",
-      start: "12:00 27 Oct, 2025",
-      end: "24:00 29 Oct, 2025",
-      priority: "low",
-      completed: true,
-    },
-    {
-      id: 4,
-      name: "Task 2",
-      start: "12:00 27 Oct, 2025",
-      end: "24:00 29 Oct, 2025",
-      priority: "low",
-      completed: true,
-    },
-    {
-      id: 5,
-      name: "Task 2",
-      start: "12:00 27 Oct, 2025",
-      end: "24:00 29 Oct, 2025",
-      priority: "low",
-      completed: true,
-    },
-    {
-      id: 6,
-      name: "Task 2",
-      start: "12:00 27 Oct, 2025",
-      end: "24:00 29 Oct, 2025",
-      priority: "low",
-      completed: true,
-    },
-    {
-      id: 7,
-      name: "Task 2",
-      start: "12:00 27 Oct, 2025",
-      end: "24:00 29 Oct, 2025",
-      priority: "low",
-      completed: true,
-    },
-    {
-      id: 8,
-      name: "Task 2",
-      start: "12:00 27 Oct, 2025",
-      end: "24:00 29 Oct, 2025",
-      priority: "high",
-      completed: true,
-    },
-  ]);
-
-  const toggleComplete = (id: number) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
-    );
-  };
-
+export default function TaskListSection({
+  tasks,
+  onToggleTask,
+}: TaskListSectionProps) {
   return (
     <View className="bg-white p-4">
       <Pressable
@@ -99,9 +24,25 @@ export default function TaskListSection() {
 
         <FontAwesome5 name="arrow-right" size={24} color="#79747E" />
       </Pressable>
-      {tasks.map((t) => (
-        <TaskItem key={t.id} task={t} />
-      ))}
+      {tasks.length === 0 ? (
+        <Text style={{ textAlign: "center", color: "#79747E", marginTop: 20 }}>
+          No tasks for this day.
+        </Text>
+      ) : (
+        tasks.map((t) => (
+          <TaskItem
+            key={t.id}
+            task={t}
+            onPress={() => {
+              router.push({
+                pathname: "/(me)/task/taskDetail",
+                params: { taskId: t.id },
+              });
+            }}
+            onToggle={() => onToggleTask(t.id)}
+          />
+        ))
+      )}
     </View>
   );
 }

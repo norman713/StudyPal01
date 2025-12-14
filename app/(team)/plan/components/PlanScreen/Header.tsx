@@ -3,7 +3,10 @@ import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Calendar } from "react-native-calendario";
 
-interface HeaderProps {
+const DAY_SIZE = 40;
+const DAY_RADIUS = 10;
+
+interface HeaderApiProps {
   userName: string;
   taskCount: number;
   markedDates: string[];
@@ -19,32 +22,32 @@ export default function HeaderSection({
   selectedDate,
   onDateSelect,
   onMonthChange,
-}: HeaderProps) {
-  // Normalize dates to YYYY-MM-DD to match local date strings
+}: HeaderApiProps) {
+  // Normalize dates to YYYY-MM-DD
   const taskSet = new Set(
     markedDates.map((date) => dayjs(date).format("YYYY-MM-DD"))
   );
 
+  /* FIX: Use dayjs for LOCAL time dates to avoid UTC offset issues */
   const formatMonth = (d: Date) => dayjs(d).format("YYYY-MM-01");
   const [currentMonth, setCurrentMonth] = useState(formatMonth(new Date()));
 
+  // Local date strings
   const today = dayjs().format("YYYY-MM-DD");
   const getDateStr = (d: Date) => dayjs(d).format("YYYY-MM-DD");
 
   const goPrev = () => {
-    const d = new Date(currentMonth);
-    d.setMonth(d.getMonth() - 1);
-    const newMonth = formatMonth(d);
-    setCurrentMonth(newMonth);
-    onMonthChange(new Date(newMonth));
+    const prev = dayjs(currentMonth).subtract(1, "month").toDate();
+    const prevStr = dayjs(prev).format("YYYY-MM-01");
+    setCurrentMonth(prevStr);
+    onMonthChange(new Date(prevStr));
   };
 
   const goNext = () => {
-    const d = new Date(currentMonth);
-    d.setMonth(d.getMonth() + 1);
-    const newMonth = formatMonth(d);
-    setCurrentMonth(newMonth);
-    onMonthChange(new Date(newMonth));
+    const next = dayjs(currentMonth).add(1, "month").toDate();
+    const nextStr = dayjs(next).format("YYYY-MM-01");
+    setCurrentMonth(nextStr);
+    onMonthChange(new Date(nextStr));
   };
 
   return (
@@ -63,10 +66,7 @@ export default function HeaderSection({
           </TouchableOpacity>
 
           <Text style={styles.monthTitle}>
-            {new Date(currentMonth).toLocaleString("en-US", {
-              month: "long",
-              year: "numeric",
-            })}
+            {dayjs(currentMonth).format("MMMM YYYY")}
           </Text>
 
           <TouchableOpacity onPress={goNext}>
@@ -90,32 +90,22 @@ export default function HeaderSection({
               fontWeight: "500",
             },
 
-            dayTextStyle: {
-              color: "#2d4150",
-              fontSize: 15,
-            },
-
-            todayTextStyle: {
-              color: "#0F0C0D",
-              fontWeight: "700",
-            },
-
-            // ⭐ XOÁ TOÀN BỘ LỚP SELECTED MẶC ĐỊNH
+            // 👇 giữ wrapper gốc, KHÔNG ép size
             dayContainerStyle: {
+              margin: 2,
               backgroundColor: "transparent",
-              padding: 0,
-              margin: 0,
             },
 
+            // 🚨 BẮT BUỘC: phá active wrapper
             activeDayContainerStyle: {
+              margin: 2,
               backgroundColor: "transparent",
+              borderRadius: 10,
               padding: 0,
-              margin: 0,
-              borderRadius: 0,
             },
 
             activeDayTextStyle: {
-              color: "#000",
+              color: "transparent",
             },
           }}
           renderDayContent={({ date }) => {
@@ -126,10 +116,14 @@ export default function HeaderSection({
             const isSelected =
               selectedDate && dateStr === getDateStr(selectedDate);
 
-            // Using similar colors as in Plan
+            // Priority: Selected (Brown) > TaskDay (Red) > Today (Green)
+            // Wait, requirement says:
+            // Green = Today
+            // Red = Deadline
+            // Brown = Selected
+
             let bg = "transparent";
-            let color = "#000";
-            let radius = 10;
+            let color = "#0F0C0D"; // Default black
 
             if (isToday) {
               bg = "#B8C6B6"; // Green
@@ -149,9 +143,9 @@ export default function HeaderSection({
             return (
               <View
                 style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: radius,
+                  width: DAY_SIZE,
+                  height: DAY_SIZE,
+                  borderRadius: DAY_RADIUS,
                   backgroundColor: bg,
                   alignItems: "center",
                   justifyContent: "center",
