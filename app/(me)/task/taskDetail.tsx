@@ -1,7 +1,12 @@
+import taskApi, { PersonalTask, TaskPriority } from "@/api/taskApi";
+import QuestionModal from "@/components/modal/question";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,46 +16,98 @@ import {
 } from "react-native";
 import { Appbar } from "react-native-paper";
 
-type TPriority = "high" | "medium" | "low";
-
 export default function TaskDetail() {
   const params = useLocalSearchParams();
   const taskId = params.taskId as string;
 
-  // Mock data - replace with actual API call
-  const [taskName, setTaskName] = useState("Task A");
-  const [taskNote, setTaskNote] = useState("This is task A note");
-  const [fromTime, setFromTime] = useState("12:00");
-  const [fromDate, setFromDate] = useState("12-12-1212");
-  const [toTime, setToTime] = useState("12:00");
-  const [toDate, setToDate] = useState("12-12-1212");
-  const [priority, setPriority] = useState<TPriority>("high");
+  const [loading, setLoading] = useState(true);
+  const [task, setTask] = useState<PersonalTask | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  const getPriorityColor = (p: TPriority) => {
+  const [taskName, setTaskName] = useState("");
+  const [taskNote, setTaskNote] = useState("");
+  const [fromTime, setFromTime] = useState(dayjs().format("HH:mm"));
+  const [fromDate, setFromDate] = useState(dayjs().format("DD-MM-YYYY"));
+  const [toTime, setToTime] = useState(dayjs().add(1, "hour").format("HH:mm"));
+  const [toDate, setToDate] = useState(dayjs().format("DD-MM-YYYY"));
+  const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
+
+  const getPriorityColor = (p: TaskPriority) => {
     switch (p) {
-      case "high":
+      case "HIGH":
         return "#FF5F57";
-      case "medium":
+      case "MEDIUM":
         return "#FEBC2F";
-      case "low":
+      case "LOW":
         return "#27C840";
+      default:
+        return "#FEBC2F";
     }
   };
 
+  const fetchTaskDetail = useCallback(async () => {
+    if (!taskId) return;
+    try {
+      setLoading(true);
+      const data = await taskApi.getTaskDetail(taskId);
+      setTask(data);
+      setTaskName(data.content);
+      setTaskNote(data.note || "");
+
+      const startDate = new Date(data.startDate);
+      const dueDate = new Date(data.dueDate);
+
+      setFromTime(dayjs(startDate).format("HH:mm"));
+      setFromDate(dayjs(startDate).format("DD-MM-YYYY"));
+      setToTime(dayjs(dueDate).format("HH:mm"));
+      setToDate(dayjs(dueDate).format("DD-MM-YYYY"));
+      setPriority(data.priority);
+    } catch (error) {
+      console.warn("Failed to fetch task detail", error);
+      Alert.alert("Error", "Failed to load task details");
+    } finally {
+      setLoading(false);
+    }
+  }, [taskId]);
+
+  useEffect(() => {
+    fetchTaskDetail();
+  }, [fetchTaskDetail]);
+
+  const handleCheckPress = () => {
+    if (!task?.completedAt) {
+      setShowConfirmModal(true);
+    }
+  };
+
+  const handleConfirmComplete = async () => {
+    if (!taskId) return;
+    try {
+      await taskApi.completeTask(taskId);
+      setShowConfirmModal(false);
+      fetchTaskDetail();
+    } catch (err) {
+      console.warn("Failed to complete task", err);
+      Alert.alert("Error", "Failed to complete task");
+      setShowConfirmModal(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container} className="justify-center items-center">
+        <ActivityIndicator size="large" color="#90717E" />
+      </View>
+    );
+  }
+
   return (
-    <View className="flex-1 bg-white">
+    <View style={styles.container}>
       {/* Header */}
-      <Appbar.Header mode="small" style={{ backgroundColor: "#90717E" }}>
+      <Appbar.Header mode="small" style={styles.header}>
         <Appbar.BackAction color="#F8F6F7" onPress={() => router.back()} />
 
-        <Appbar.Content
-          title="Task detail"
-          titleStyle={{
-            color: "#F8F6F7",
-            fontSize: 18,
-            fontWeight: "600",
-          }}
-        />
+        <Appbar.Content title="Task detail" titleStyle={styles.headerTitle} />
 
         <Appbar.Action
           icon={() => <MaterialIcons name="delete" size={24} color="#F8F6F7" />}
@@ -64,11 +121,31 @@ export default function TaskDetail() {
         {/* Task ID and Check */}
         <View className="bg-white p-4 gap-2">
           <View style={styles.taskHeader}>
-            <Text style={styles.taskId}>TSK-{taskId || "1"}</Text>
-            <View style={styles.checkButton}>
-              <Ionicons name="checkmark" size={18} color="#F8F6F7" />
-            </View>
+            <Text style={styles.taskId}>TSK-{task?.taskCode || "..."}</Text>
+            <Pressable
+              onPress={handleCheckPress}
+              style={[
+                styles.checkButton,
+                task?.completedAt && styles.checkButtonDone,
+              ]}
+            >
+              <Ionicons
+                name="checkmark"
+                size={18}
+                color={task?.completedAt ? "#F8F6F7" : "#F8F6F7"}
+              />
+            </Pressable>
           </View>
+
+          <QuestionModal
+            visible={showConfirmModal}
+            title="Confirm"
+            message="You want to confirm finish this task?"
+            confirmText="Yes"
+            cancelText="Cancel"
+            onConfirm={handleConfirmComplete}
+            onCancel={() => setShowConfirmModal(false)}
+          />
 
           {/* Task Name */}
           <View style={styles.inputContainer}>
@@ -174,20 +251,20 @@ export default function TaskDetail() {
           <View style={styles.priorityContainer}>
             <Pressable
               style={styles.priorityOption}
-              onPress={() => setPriority("high")}
+              onPress={() => setPriority("HIGH")}
             >
               <View
                 style={[
                   styles.radio,
-                  priority === "high" && styles.radioSelected,
-                  { borderColor: getPriorityColor("high") },
+                  priority === "HIGH" && styles.radioSelected,
+                  { borderColor: getPriorityColor("HIGH") },
                 ]}
               >
-                {priority === "high" && (
+                {priority === "HIGH" && (
                   <View
                     style={[
                       styles.radioInner,
-                      { backgroundColor: getPriorityColor("high") },
+                      { backgroundColor: getPriorityColor("HIGH") },
                     ]}
                   />
                 )}
@@ -197,20 +274,20 @@ export default function TaskDetail() {
 
             <Pressable
               style={styles.priorityOption}
-              onPress={() => setPriority("medium")}
+              onPress={() => setPriority("MEDIUM")}
             >
               <View
                 style={[
                   styles.radio,
-                  priority === "medium" && styles.radioSelected,
-                  { borderColor: getPriorityColor("medium") },
+                  priority === "MEDIUM" && styles.radioSelected,
+                  { borderColor: getPriorityColor("MEDIUM") },
                 ]}
               >
-                {priority === "medium" && (
+                {priority === "MEDIUM" && (
                   <View
                     style={[
                       styles.radioInner,
-                      { backgroundColor: getPriorityColor("medium") },
+                      { backgroundColor: getPriorityColor("MEDIUM") },
                     ]}
                   />
                 )}
@@ -220,20 +297,20 @@ export default function TaskDetail() {
 
             <Pressable
               style={styles.priorityOption}
-              onPress={() => setPriority("low")}
+              onPress={() => setPriority("LOW")}
             >
               <View
                 style={[
                   styles.radio,
-                  priority === "low" && styles.radioSelected,
-                  { borderColor: getPriorityColor("low") },
+                  priority === "LOW" && styles.radioSelected,
+                  { borderColor: getPriorityColor("LOW") },
                 ]}
               >
-                {priority === "low" && (
+                {priority === "LOW" && (
                   <View
                     style={[
                       styles.radioInner,
-                      { backgroundColor: getPriorityColor("low") },
+                      { backgroundColor: getPriorityColor("LOW") },
                     ]}
                   />
                 )}
@@ -319,9 +396,15 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "#92AAA5",
+    backgroundColor: "transparent",
+    borderWidth: 2,
+    borderColor: "#A1AEB7",
     justifyContent: "center",
     alignItems: "center",
+  },
+  checkButtonDone: {
+    backgroundColor: "#92AAA5",
+    borderColor: "#92AAA5",
   },
   inputContainer: {
     marginBottom: 20,

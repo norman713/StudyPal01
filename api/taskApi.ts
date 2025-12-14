@@ -8,8 +8,10 @@ export interface PersonalTask {
     priority: TaskPriority;
     startDate: string;
     dueDate: string;
-    taskType: "PERSONAL" | "TEAM"| "CLONED";
+    taskType: "PERSONAL" | "TEAM" | "CLONED";
+    taskCode: string;
     completedAt: string | null;
+    note?: string;
 }
 
 const taskApi = {
@@ -42,6 +44,25 @@ const taskApi = {
     async searchTasks(request: SearchTaskRequest): Promise<SearchTaskResponse> {
         const url = `/tasks/search`;
         const data: SearchTaskResponse = await axiosInstance.post(url, request);
+        return data;
+    },
+    /**
+     * Get task detail generic
+     * GET /api/tasks/{id}
+     */
+    async getTaskDetail(id: string): Promise<PersonalTask> {
+        const url = `/tasks/${id}`;
+        const data: PersonalTask = await axiosInstance.get(url);
+        return data;
+    },
+
+    /**
+     * Mark task as complete generic
+     * PATCH /api/tasks/{id}/complete
+     */
+    async completeTask(id: string): Promise<{ success: boolean; message: string }> {
+        const url = `/tasks/${id}/complete`;
+        const data: { success: boolean; message: string } = await axiosInstance.patch(url);
         return data;
     },
 };

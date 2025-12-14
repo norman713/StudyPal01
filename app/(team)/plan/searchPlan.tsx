@@ -3,7 +3,7 @@ import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -83,10 +83,6 @@ export default function PlanScreen() {
       setLoading(false);
     }
   }, [teamId, query, fromDate, toDate]);
-
-  useEffect(() => {
-    fetchPlans();
-  }, [fetchPlans]);
 
   // Handlers
   const handleSearch = () => {
