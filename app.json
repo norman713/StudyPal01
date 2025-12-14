@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "googleServicesFile": "./android/app/google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -20,7 +21,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.nitb.StudyPal"
+      "package": "com.greenpeas.StudyPal"
     },
     "web": {
       "output": "static",
@@ -29,6 +30,7 @@
     },
     "plugins": [
       "expo-router",
+      ["@react-native-google-signin/google-signin"],
       [
         "expo-splash-screen",
         {
@@ -46,6 +48,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "415c76c4-a125-4788-bc52-38c88821ab19"
+      }
     }
    
   }

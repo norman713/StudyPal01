@@ -1,7 +1,7 @@
-import userApi, { UserSummary } from "@/api/userApi";
+import { useUser } from "@/context/userContext";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -13,6 +13,8 @@ import {
 } from "react-native";
 import { Avatar, Drawer, Portal } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "react-native";
+
 
 type Item = { key: string; label: string; icon: string; badge?: number };
 
@@ -39,15 +41,16 @@ export default function Header({
   bg = "#90717E",
   tint = "#FFFFFF",
   avatarLabel = "A",
-
   items,
   activeKey,
   onSelect,
   drawerWidth = responsiveWidth,
 }: Props) {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const tx = useRef(new Animated.Value(-drawerWidth)).current;
+  const { user } = useUser();
 
   const [user, setUser] = useState<UserSummary | null>(null);
 
@@ -80,6 +83,11 @@ export default function Header({
     }).start();
   }, [open, drawerWidth]);
 
+  const handleProfile = () => {
+    router.push("/(team)/profile/profile");
+    console.log(user);
+  }
+
   return (
     <View style={{ backgroundColor: bg, paddingTop: insets.top }}>
       {/* TOP BAR */}
@@ -98,22 +106,29 @@ export default function Header({
         </Pressable>
 
         {/* right: round avatar with letter */}
-        <Pressable onPress={() => router.push("/(me)/profile")} hitSlop={10}>
+        <Pressable
+          onPress={() => handleProfile()}
+          hitSlop={10}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 999,
+            backgroundColor: "#6750A4",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden"
+          }}
+        >
           {user?.avatarUrl ? (
-            <Avatar.Image size={32} source={{ uri: user.avatarUrl }} />
-          ) : (
-            <Avatar.Text
-              size={32}
-              label={
-                user?.name ? user.name.charAt(0).toUpperCase() : avatarLabel
-              }
-              style={{ backgroundColor: "#6B4EFF" }}
-              labelStyle={{
-                color: "#FFFFFF",
-                fontWeight: "700",
-                lineHeight: 18,
-              }} // adjust lineHeight for center
+            <Image
+              source={{ uri: user.avatarUrl }}
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="cover"
             />
+          ) : (
+            <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>
+              {user?.name?.[0] ?? "?"}
+            </Text>
           )}
         </Pressable>
       </View>
