@@ -1,13 +1,19 @@
 import { Task, TaskPriority } from "@/api/planApi";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
+import { router } from "expo-router";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const ACCENT = "#90717E";
 
+type Role = "OWNER" | "ADMIN" | "MEMBER";
+
 interface TaskItemProps {
   task: Task;
   onToggle?: () => void; // Optional - if not provided, won't show check button
+  teamId?: string;
+  planId?: string;
+  role?: Role;
 }
 
 /**
@@ -34,12 +40,36 @@ function formatDate(dateStr: string): string {
   return dayjs(dateStr).format("HH:mm DD MMM, YYYY");
 }
 
-export default function TaskItem({ task, onToggle }: TaskItemProps) {
+export default function TaskItem({
+  task,
+  onToggle,
+  teamId,
+  planId,
+  role,
+}: TaskItemProps) {
   const priorityColor = getPriorityColor(task.priority);
   const isCompleted = task.status === "COMPLETED";
 
+  const handlePress = () => {
+    if (teamId && planId) {
+      router.push({
+        pathname: "/(team)/plan/taskDetail",
+        params: {
+          teamId,
+          planId,
+          taskId: task.id,
+          role: role || "MEMBER",
+        },
+      });
+    }
+  };
+
   return (
-    <View style={styles.container}>
+    <TouchableOpacity
+      style={styles.container}
+      onPress={handlePress}
+      activeOpacity={0.7}
+    >
       {/* Priority Color Bar */}
       <View style={[styles.colorBar, { backgroundColor: priorityColor }]} />
 
@@ -73,7 +103,10 @@ export default function TaskItem({ task, onToggle }: TaskItemProps) {
       {/* Check Button - only show if onToggle provided */}
       {onToggle && (
         <TouchableOpacity
-          onPress={onToggle}
+          onPress={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
           style={[
             styles.checkBtn,
             isCompleted ? styles.checkBtnDone : styles.checkBtnIdle,
@@ -86,7 +119,7 @@ export default function TaskItem({ task, onToggle }: TaskItemProps) {
           />
         </TouchableOpacity>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
