@@ -12,22 +12,27 @@ type User = {
 type UserContextType = {
   user: User;
   setUser: (u: User) => void;
+  clearUser: () => void;
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User>(null);
+  const [user, setUser] = useState<User>(null);
 
-    return (
-    <UserContext.Provider value={{ user, setUser }}>
-        {children}
-    </UserContext.Provider>
-    );
+  function clearUser() {
+    setUser(null);
+  }
+
+  return (
+  <UserContext.Provider value={{ user, setUser, clearUser }}>
+      {children}
+  </UserContext.Provider>
+  );
 }
 
 export function useUser() {
-    const ctx = useContext(UserContext);
-    if (!ctx) throw new Error("useUser must be used inside UserProvider");
-    return ctx;
+  const ctx = useContext(UserContext);
+  if (!ctx) throw new Error("useUser must be used inside UserProvider");
+  return ctx;
 }

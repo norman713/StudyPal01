@@ -22,6 +22,8 @@ import ErrorModal from "../../components/modal/error";
 import "../../global.css";
 import { useUser } from "@/context/userContext";
 import userApi from "@/api/userApi";
+import deviceTokenApi from "@/api/deviceTokenApi";
+import { useNotification } from "@/context/notificationContext";
 
 // ===== Helper decode exp từ JWT (ms) =====
 function getJwtExpMs(token: string): number | null {
@@ -67,6 +69,7 @@ export default function LoginPage() {
    * States & Variables
    */
   const { setUser } = useUser();
+  const { fcmToken } = useNotification();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -92,6 +95,7 @@ export default function LoginPage() {
         ]);
 
         if (token && isTokenValid(expStr) && !cancelled) {
+          handleSaveUser(token);
           router.replace("/(team)/search");
         } else if (token && !isTokenValid(expStr)) {
           await AsyncStorage.multiRemove([ACCESS_KEY, REFRESH_KEY, EXP_KEY]);
@@ -122,6 +126,12 @@ export default function LoginPage() {
       try{
         const user = await userApi.getUserById(userId);
         setUser(user);
+        if(fcmToken){
+          const mess = await deviceTokenApi.regisDeviceToken({ deviceToken: fcmToken, platform: "ANDROID" });
+          if(!mess.success){
+            throw new Error("Cannot register device token");
+          }
+        }
       }catch(error){
         console.error(error);
       }

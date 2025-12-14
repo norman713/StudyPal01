@@ -89,10 +89,11 @@ export default function Header({
           style={{
             width: 32,
             height: 32,
-            borderRadius: 16,
-            backgroundColor: "#6B4EFF",
+            borderRadius: 999,
+            backgroundColor: "#6750A4",
             alignItems: "center",
             justifyContent: "center",
+            overflow: "hidden"
           }}
         >
           {user?.avatarUrl ? (

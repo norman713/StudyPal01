@@ -21,7 +21,7 @@ const authApi = {
     const body = { provider, accessToken };
     return axiosInstance.post(url, body);
   },
-  logout() {
+  logout(): Promise<{success: boolean, message: string}> {
     const url = "/auth/logout";
     return axiosInstance.post(url);
   },

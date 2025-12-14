@@ -9,6 +9,7 @@ import messaging from '@react-native-firebase/messaging';
 type NotificationContextType = {
   fcmToken: string | null;
   refreshFcmToken: () => Promise<string | null>;
+  clearNotification: () => Promise<void>;
 };
 
 const NotificationContext =
@@ -24,6 +25,15 @@ export function NotificationProvider({
   useEffect(() => {
     getAndSaveToken();
   }, []);
+
+  async function clearNotification() {
+    try {
+      await messaging().deleteToken();
+    } catch (e) {
+      console.log('Delete token error', e);
+    }
+    setFcmToken(null);
+  }
 
   async function getAndSaveToken() {
     const authStatus = await messaging().requestPermission();
@@ -55,7 +65,7 @@ export function NotificationProvider({
 
   return (
     <NotificationContext.Provider
-      value={{ fcmToken, refreshFcmToken }}
+      value={{ fcmToken, refreshFcmToken, clearNotification }}
     >
       {children}
     </NotificationContext.Provider>

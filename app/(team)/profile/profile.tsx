@@ -1,16 +1,81 @@
+import { MenuItem } from "@/components/ui/menuitem";
 import { useUser } from "@/context/userContext";
-import { router } from "expo-router";
-import React, { useEffect } from "react";
+import { router, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import { Avatar, Card, IconButton, List, Text } from "react-native-paper";
+import deviceTokenApi from "@/api/deviceTokenApi";
+import { useNotification } from "@/context/notificationContext";
+import QuestionModal from "@/components/modal/question";
+import ErrorModal from "@/components/modal/error";
+import authApi from "@/api/authApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type ProfileScreenProps = {
   userId: string;
 };
 
+interface ErrorMessage {
+  title: string,
+  content: string
+}
+const ACCESS_KEY = "accessToken";
+const REFRESH_KEY = "refreshToken";
+const EXP_KEY = "accessExpiresAt";
+
 export default function ProfileScreen({ userId }: ProfileScreenProps) {
   // Mock data – sau này bạn có thể fetch từ API
-  const { user } = useUser();
+  const { user, clearUser } = useUser();
+  const { clearNotification, fcmToken } = useNotification();
+  const [ showQuestion, setShowQuestion ] = useState(false);
+  const [ showError, setShowError ] = useState(false);
+  const [ error, setError ] = useState<ErrorMessage | null>(null);
+  const router = useRouter();
+
+  const menuItems = [
+    {
+      title: 'Change Profile',
+      icon: 'cog',
+      onPress: () => console.log('Profile'),
+    },
+    {
+      title: 'Reset Password',
+      icon: 'reload',
+      onPress: () => console.log('Notifications'),
+    },
+    {
+      title: 'Logout',
+      icon: 'logout',
+      onPress: () => setShowQuestion(true),
+      danger: true,
+    },
+  ];
+
+  async function logout() {
+    try{
+      setShowQuestion(false); 
+      clearUser();
+      if(fcmToken){
+        const mess = await deviceTokenApi.delDeviceToken(fcmToken);
+        console.log(1);
+        if (mess.success){
+          clearNotification();
+        }else{
+          throw new Error(mess.message);
+        }
+      }
+      const logMess = await authApi.logout();
+      if(logMess.success){
+        await AsyncStorage.multiRemove([ACCESS_KEY, REFRESH_KEY, EXP_KEY]);
+        router.replace("/(auth)/login");
+      }else{
+        throw new Error(logMess.message);
+      }
+    }catch(err: any){
+      setShowError(true);
+      setError({title: "Logout failed!", content: err?.response?.data?.message});
+    }
+  }
 
   return (
     <View className="flex-1 bg-[#F2EFF0]">
@@ -31,7 +96,7 @@ export default function ProfileScreen({ userId }: ProfileScreenProps) {
       </View>
 
       {/* Content */}
-      <View className="px-4 pb-6">
+      <View className="px-4 pb-4">
         <Card
           mode="contained"
           style={{
@@ -104,6 +169,37 @@ export default function ProfileScreen({ userId }: ProfileScreenProps) {
           </Card.Content>
         </Card>
       </View>
+
+      <View className="px-4">
+        <View className="px-4 py-4  bg-white">
+        {menuItems.map((item, index) => (
+          <MenuItem
+            key={index}
+            title={item.title}
+            icon={item.icon as any}
+            onPress={item.onPress}
+            danger={item.danger}
+          />
+        ))}
+        </View>
+      </View>
+
+      <QuestionModal
+        visible={showQuestion}
+        title="Logout"
+        message="Are you sure you want to logout?"
+        confirmText="OK"
+        onConfirm={() => logout()}
+        onCancel={() => setShowQuestion(false)}
+      />
+
+      <ErrorModal
+        visible={showError}
+        title= {error?.title}
+        message={error?.content}
+        confirmText="Cancel"
+        onConfirm={() => setShowError(false)}
+      />
     </View>
   );
 }
