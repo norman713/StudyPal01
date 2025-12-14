@@ -77,20 +77,15 @@ export default function PlanScreen() {
       console.error("Failed to fetch plan dates", err);
     }
   };
-
   const loadStats = async (memberId: string) => {
     if (!teamId || !memberId) return;
+
     try {
-      const now = dayjs();
-      // "Today" stats -> from start of today to end of today?
-      // Or just matches the curl: "fromDate": "2025-12-02...", "toDate": "2025-12-22..."
-      // The user prompt "you have 3 tasks today" implies today's stats.
-      // But the curl body had a range "fromDate": "..." "toDate": "...".
-      // We will use startOf('day') and endOf('day') for today.
-      const from = now.startOf("day").toISOString();
-      const to = now.endOf("day").toISOString();
+      const from = dayjs().startOf("day").format("YYYY-MM-DD HH:mm:ss");
+      const to = dayjs().endOf("day").format("YYYY-MM-DD HH:mm:ss");
 
       const stats = await planApi.getTaskStatistics(teamId, memberId, from, to);
+
       setTaskStats(stats);
     } catch (err) {
       console.error("Failed to fetch stats", err);
