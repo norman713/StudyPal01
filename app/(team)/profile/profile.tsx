@@ -1,23 +1,24 @@
+import authApi from "@/api/authApi";
+import deviceTokenApi from "@/api/deviceTokenApi";
+import ErrorModal from "@/components/modal/error";
+import QuestionModal from "@/components/modal/question";
 import { MenuItem } from "@/components/ui/menuitem";
+import { useNotification } from "@/context/notificationContext";
 import { useUser } from "@/context/userContext";
-import { router, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
 import { View } from "react-native";
 import { Avatar, Card, IconButton, List, Text } from "react-native-paper";
-import deviceTokenApi from "@/api/deviceTokenApi";
-import { useNotification } from "@/context/notificationContext";
-import QuestionModal from "@/components/modal/question";
-import ErrorModal from "@/components/modal/error";
-import authApi from "@/api/authApi";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type ProfileScreenProps = {
   userId: string;
 };
 
 interface ErrorMessage {
-  title: string,
-  content: string
+  title: string;
+  content: string;
 }
 const ACCESS_KEY = "accessToken";
 const REFRESH_KEY = "refreshToken";
@@ -27,53 +28,62 @@ export default function ProfileScreen({ userId }: ProfileScreenProps) {
   // Mock data – sau này bạn có thể fetch từ API
   const { user, clearUser } = useUser();
   const { clearNotification, fcmToken } = useNotification();
-  const [ showQuestion, setShowQuestion ] = useState(false);
-  const [ showError, setShowError ] = useState(false);
-  const [ error, setError ] = useState<ErrorMessage | null>(null);
+  const [showQuestion, setShowQuestion] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [error, setError] = useState<ErrorMessage | null>(null);
   const router = useRouter();
 
   const menuItems = [
     {
-      title: 'Change Profile',
-      icon: 'cog',
-      onPress: () => console.log('Profile'),
+      title: "Change Profile",
+      icon: "cog",
+      onPress: () => console.log("Profile"),
     },
     {
-      title: 'Reset Password',
-      icon: 'reload',
-      onPress: () => console.log('Notifications'),
+      title: "Reset Password",
+      icon: "reload",
+      onPress: () => console.log("Notifications"),
     },
     {
-      title: 'Logout',
-      icon: 'logout',
+      title: "Logout",
+      icon: "logout",
       onPress: () => setShowQuestion(true),
       danger: true,
     },
   ];
 
   async function logout() {
-    try{
-      setShowQuestion(false); 
+    try {
+      setShowQuestion(false);
       clearUser();
-      if(fcmToken){
+      if (fcmToken) {
         const mess = await deviceTokenApi.delDeviceToken(fcmToken);
         console.log(1);
-        if (mess.success){
+        if (mess.success) {
           clearNotification();
-        }else{
+        } else {
           throw new Error(mess.message);
         }
       }
       const logMess = await authApi.logout();
-      if(logMess.success){
+      if (logMess.success) {
         await AsyncStorage.multiRemove([ACCESS_KEY, REFRESH_KEY, EXP_KEY]);
+        const user = await GoogleSignin.getCurrentUser();
+        if (user) {
+          await GoogleSignin.revokeAccess();
+          await GoogleSignin.signOut();
+        }
+
         router.replace("/(auth)/login");
-      }else{
+      } else {
         throw new Error(logMess.message);
       }
-    }catch(err: any){
+    } catch (err: any) {
       setShowError(true);
-      setError({title: "Logout failed!", content: err?.response?.data?.message});
+      setError({
+        title: "Logout failed!",
+        content: err?.response?.data?.message,
+      });
     }
   }
 
@@ -114,14 +124,11 @@ export default function ProfileScreen({ userId }: ProfileScreenProps) {
                     borderWidth: 6,
                     borderColor: "#fff",
                     borderRadius: 999,
-                    overflow: "hidden"
+                    overflow: "hidden",
                   }}
                 >
                   {user?.avatarUrl ? (
-                    <Avatar.Image
-                      size={120}
-                      source={{ uri: user.avatarUrl }}
-                    />
+                    <Avatar.Image size={120} source={{ uri: user.avatarUrl }} />
                   ) : (
                     <Avatar.Text
                       size={120}
@@ -172,15 +179,15 @@ export default function ProfileScreen({ userId }: ProfileScreenProps) {
 
       <View className="px-4">
         <View className="px-4 py-4  bg-white">
-        {menuItems.map((item, index) => (
-          <MenuItem
-            key={index}
-            title={item.title}
-            icon={item.icon as any}
-            onPress={item.onPress}
-            danger={item.danger}
-          />
-        ))}
+          {menuItems.map((item, index) => (
+            <MenuItem
+              key={index}
+              title={item.title}
+              icon={item.icon as any}
+              onPress={item.onPress}
+              danger={item.danger}
+            />
+          ))}
         </View>
       </View>
 
@@ -195,7 +202,7 @@ export default function ProfileScreen({ userId }: ProfileScreenProps) {
 
       <ErrorModal
         visible={showError}
-        title= {error?.title}
+        title={error?.title}
         message={error?.content}
         confirmText="Cancel"
         onConfirm={() => setShowError(false)}

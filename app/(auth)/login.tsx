@@ -1,14 +1,22 @@
 import authApi from "@/api/authApi";
+import deviceTokenApi from "@/api/deviceTokenApi";
+import userApi from "@/api/userApi";
 import Loading from "@/components/loading";
+import { useNotification } from "@/context/notificationContext";
+import { useUser } from "@/context/userContext";
 import { isValidEmail } from "@/utils/validator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getAuth, GoogleAuthProvider, signInWithCredential } from '@react-native-firebase/auth';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithCredential,
+} from "@react-native-firebase/auth";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { Buffer } from "buffer";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation, useRouter } from "expo-router";
+import { jwtDecode } from "jwt-decode";
 import { useEffect, useState } from "react";
-import { jwtDecode } from 'jwt-decode';
 import {
   BackHandler,
   Image,
@@ -20,10 +28,6 @@ import {
 import { Button, TextInput } from "react-native-paper";
 import ErrorModal from "../../components/modal/error";
 import "../../global.css";
-import { useUser } from "@/context/userContext";
-import userApi from "@/api/userApi";
-import deviceTokenApi from "@/api/deviceTokenApi";
-import { useNotification } from "@/context/notificationContext";
 
 // ===== Helper decode exp từ JWT (ms) =====
 function getJwtExpMs(token: string): number | null {
@@ -119,24 +123,27 @@ export default function LoginPage() {
   /**
    *  Handlers
    */
-  const handleSaveUser = async(token: string) => {
+  const handleSaveUser = async (token: string) => {
     const decoded = jwtDecode<any>(token);
     const userId = decoded?.sub;
-    if(userId){
-      try{
-        const user = await userApi.getUserById(userId);
+    if (userId) {
+      try {
+        const user = await userApi.getById(userId);
         setUser(user);
-        if(fcmToken){
-          const mess = await deviceTokenApi.regisDeviceToken({ deviceToken: fcmToken, platform: "ANDROID" });
-          if(!mess.success){
+        if (fcmToken) {
+          const mess = await deviceTokenApi.regisDeviceToken({
+            deviceToken: fcmToken,
+            platform: "ANDROID",
+          });
+          if (!mess.success) {
             throw new Error("Cannot register device token");
           }
         }
-      }catch(error){
+      } catch (error) {
         console.error(error);
       }
     }
-  }
+  };
 
   const handleForgotPassword = () => {
     router.push("/(auth)/(flow)/forgot");
@@ -195,28 +202,35 @@ export default function LoginPage() {
 
   async function googleLogin() {
     setShowError(false);
-    setErrorMessage(""); 
+    setErrorMessage("");
     setMessage({ title: "", description: "" });
 
     setLoading(true);
-    try{
+    try {
       const auth = getAuth();
       GoogleSignin.configure({
         offlineAccess: false,
-        webClientId: '541415516105-pfldjms5lhebobt435njrmq0lrrnb27o.apps.googleusercontent.com',
-        scopes: ['profile', 'email']
-      })
-      
+        webClientId:
+          "541415516105-pfldjms5lhebobt435njrmq0lrrnb27o.apps.googleusercontent.com",
+        scopes: ["profile", "email"],
+      });
+
       GoogleSignin.hasPlayServices();
       const signInResult = await GoogleSignin.signIn();
       const idToken = signInResult.data?.idToken;
       const googleCredentials = GoogleAuthProvider.credential(idToken);
-      const userCredentials = await signInWithCredential(auth, googleCredentials);
+      const userCredentials = await signInWithCredential(
+        auth,
+        googleCredentials
+      );
       const user = userCredentials.user;
 
       const firebaseIdToken = await user.getIdToken();
-      if(firebaseIdToken){
-        const { accessToken, refreshToken } = await authApi.gglogin("GOOGLE", firebaseIdToken);
+      if (firebaseIdToken) {
+        const { accessToken, refreshToken } = await authApi.gglogin(
+          "GOOGLE",
+          firebaseIdToken
+        );
         // Calculate expiresAt từ JWT
         const expMs = getJwtExpMs(accessToken);
         await AsyncStorage.setItem(ACCESS_KEY, accessToken);
@@ -230,12 +244,11 @@ export default function LoginPage() {
         setShowError(false);
         setErrorMessage("");
         router.replace("/(team)/search");
-      }
-      else{
+      } else {
         setShowError(true);
         setErrorMessage("Can't get user idToken");
       }
-    }catch (err: any) {
+    } catch (err: any) {
       setShowError(true);
       setErrorMessage(err?.response?.data?.message);
     } finally {

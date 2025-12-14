@@ -4,9 +4,9 @@ type User = {
   id: string;
   name: string;
   email: string;
-  dateOfBirth: string;
-  gender: string,
-  avatarUrl: string
+  dateOfBirth: string | null;
+  gender: string | null;
+  avatarUrl: string | null;
 } | null;
 
 type UserContextType = {
@@ -25,9 +25,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-  <UserContext.Provider value={{ user, setUser, clearUser }}>
+    <UserContext.Provider value={{ user, setUser, clearUser }}>
       {children}
-  </UserContext.Provider>
+    </UserContext.Provider>
   );
 }
 

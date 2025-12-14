@@ -5,16 +5,14 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
-  Platform,
+  Image,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { Avatar, Drawer, Portal } from "react-native-paper";
+import { Drawer, Portal } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Image } from "react-native";
-
 
 type Item = { key: string; label: string; icon: string; badge?: number };
 
@@ -29,6 +27,7 @@ type Props = {
   bg?: string; // background color
   tint?: string; // icon/text color
   avatarLabel?: string; // right circle text
+  onAvatarPress?: () => void;
 
   // Menu
   items: Item[];
@@ -52,41 +51,18 @@ export default function Header({
   const tx = useRef(new Animated.Value(-drawerWidth)).current;
   const { user } = useUser();
 
-  const [user, setUser] = useState<UserSummary | null>(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      const fetchData = async () => {
-        try {
-          // Dùng summary để lấy info nhanh cho header (không cần parse token)
-          const data = await userApi.getSummary();
-          if (!cancelled) {
-            setUser(data);
-          }
-        } catch (e) {
-          // silent error
-        }
-      };
-      fetchData();
-      return () => {
-        cancelled = true;
-      };
-    }, [])
-  );
-
   useEffect(() => {
     Animated.timing(tx, {
       toValue: open ? 0 : -drawerWidth,
       duration: 220,
-      useNativeDriver: Platform.OS !== "web",
+      useNativeDriver: true,
     }).start();
   }, [open, drawerWidth]);
 
   const handleProfile = () => {
     router.push("/(team)/profile/profile");
     console.log(user);
-  }
+  };
 
   return (
     <View style={{ backgroundColor: bg, paddingTop: insets.top }}>
@@ -116,7 +92,7 @@ export default function Header({
             backgroundColor: "#6750A4",
             alignItems: "center",
             justifyContent: "center",
-            overflow: "hidden"
+            overflow: "hidden",
           }}
         >
           {user?.avatarUrl ? (
