@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Appbar } from "react-native-paper";
 
 type TPriority = "high" | "medium" | "low";
 
@@ -38,25 +38,27 @@ export default function TaskDetail() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <View className="flex-1 bg-white">
       {/* Header */}
-      <View className="flex-row items-center px-4 h-14 bg-[#90717E]">
-        {/* Left group: Back + Title */}
-        <View className="flex-row items-center gap-2.5">
-          <Pressable onPress={() => router.back()} className="p-1">
-            <Ionicons name="arrow-back" size={24} color="#F8F6F7" />
-          </Pressable>
+      <Appbar.Header mode="small" style={{ backgroundColor: "#90717E" }}>
+        <Appbar.BackAction color="#F8F6F7" onPress={() => router.back()} />
 
-          <Text className="text-lg font-semibold text-[#F8F6F7]">
-            Task detail
-          </Text>
-        </View>
+        <Appbar.Content
+          title="Task detail"
+          titleStyle={{
+            color: "#F8F6F7",
+            fontSize: 18,
+            fontWeight: "600",
+          }}
+        />
 
-        {/* Delete button */}
-        <Pressable className="ml-auto p-1">
-          <MaterialIcons name="delete" size={24} color="#F8F6F7" />
-        </Pressable>
-      </View>
+        <Appbar.Action
+          icon={() => <MaterialIcons name="delete" size={24} color="#F8F6F7" />}
+          onPress={() => {
+            // TODO: handle delete
+          }}
+        />
+      </Appbar.Header>
 
       <ScrollView style={styles.content}>
         {/* Task ID and Check */}
@@ -267,7 +269,7 @@ export default function TaskDetail() {
           <Text style={styles.saveButtonText}>Save</Text>
         </Pressable>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

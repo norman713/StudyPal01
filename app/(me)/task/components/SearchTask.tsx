@@ -32,17 +32,24 @@ export default function SearchTasksScreen() {
   const handleSearch = async () => {
     try {
       setLoading(true);
+
       const request: SearchTaskRequest = {
-        keyword: taskName,
-        fromDate: dayjs(fromDate).format("YYYY-MM-DD 00:00:00"),
-        toDate: dayjs(toDate).format("YYYY-MM-DD 00:00:00"),
-        size: 20, // default size
+        keyword: taskName.trim() || undefined,
+        fromDate: dayjs(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss"),
+        toDate: dayjs(toDate).endOf("day").format("YYYY-MM-DD HH:mm:ss"),
+        size: 20,
       };
 
+      console.log("SEARCH REQUEST", request);
+
       const response = await taskApi.searchTasks(request);
-      setTasks(response.tasks || []);
-    } catch (error) {
-      console.error("Failed to search tasks", error);
+
+      console.log("SEARCH RESPONSE", response);
+
+      setTasks(response?.tasks ?? []);
+    } catch (error: any) {
+      console.error("Failed to search tasks");
+      console.error(error?.response?.data || error);
     } finally {
       setLoading(false);
     }

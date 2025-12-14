@@ -47,7 +47,7 @@ const taskApi = {
 };
 
 export interface SearchTaskRequest {
-    keyword: string;
+    keyword?: string;
     fromDate: string; // "yyyy-MM-dd HH:mm:ss"
     toDate: string;   // "yyyy-MM-dd HH:mm:ss"
     size: number;
