@@ -210,6 +210,9 @@ export default function LoginPage() {
               onChangeText={(email) => setEmail(email)}
               theme={{
                 roundness: 30,
+                colors: {
+                  background: "#FFFFFF",
+                },
               }}
             />
             <TextInput
@@ -226,6 +229,9 @@ export default function LoginPage() {
               }
               theme={{
                 roundness: 30,
+                colors: {
+                  background: "#FFFFFF",
+                },
               }}
             />
           </View>
@@ -238,8 +244,13 @@ export default function LoginPage() {
           <View className="gap-2 py-6">
             <Button
               mode="contained"
+              buttonColor="#90717E"
               contentStyle={{ height: 44 }}
-              labelStyle={{ fontSize: 16, fontFamily: "PoppinsRegular" }}
+              labelStyle={{
+                fontSize: 16,
+                fontFamily: "PoppinsRegular",
+                color: "#fff",
+              }}
               theme={{ roundness: 100 }}
               onPress={handleLogin}
             >

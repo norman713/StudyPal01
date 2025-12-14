@@ -1,19 +1,23 @@
 import memberApi from "@/api/memberApi";
 import teamApi from "@/api/teamApi";
 import ErrorModal from "@/components/modal/error";
-import { FontAwesome } from "@expo/vector-icons";
+import {
+  Ionicons,
+  MaterialCommunityIcons,
+  MaterialIcons,
+} from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Dimensions, View } from "react-native";
 import {
-  Avatar,
-  Card,
-  IconButton,
-  List,
-  Text,
-  TouchableRipple,
-} from "react-native-paper";
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  ScrollView,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Avatar, Card, IconButton, List, Text } from "react-native-paper";
 import TeamQRSheet from "./components/bottomSheet";
 import TeamNameModal from "./components/teamName";
 
@@ -38,15 +42,16 @@ export default function TeamInfoScreen({
   //Router params
   const { id } = useLocalSearchParams();
 
-  const isOwner = role === "OWNER";
-  const isAdmin = role === "ADMIN";
-  const canManage = isOwner || isAdmin;
-
   //States
   const [qrVisible, setQrVisible] = useState(false);
   const [team, setTeam] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Tính isOwner, isAdmin từ team.role (data từ API)
+  const isOwner = team?.role === "OWNER";
+  const isAdmin = team?.role === "ADMIN";
+  const canManage = isOwner || isAdmin;
   const openQR = () => setQrVisible(true);
   const closeQR = () => setQrVisible(false);
   const qrImage = {
@@ -60,28 +65,60 @@ export default function TeamInfoScreen({
   const [qrBase64, setQrBase64] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
 
-  const fetchTeamInfo = async () => {
+  const fetchTeamInfo = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
       const data = await teamApi.getInfo(id as string);
+      console.log("=== Team Info Response ===");
+      console.log("Full data:", JSON.stringify(data, null, 2));
+      console.log("Role from API:", data?.role);
+      console.log("Description field:", data?.description);
+      console.log("All keys:", Object.keys(data || {}));
+
+      // Debug: Check if description exists in different field names
+      const possibleDescFields = [
+        "description",
+        "desc",
+        "teamDescription",
+        "about",
+      ];
+      possibleDescFields.forEach((field) => {
+        if ((data as any)?.[field]) {
+          console.log(
+            `Found description in field '${field}':`,
+            (data as any)[field]
+          );
+        }
+      });
+
       setTeam(data);
     } catch (err: any) {
       console.error("Failed to fetch team info:", err);
-      setError("Failed to load team information. Please try again later.");
+
+      // Xử lý lỗi 401 - Token hết hạn
+      if (err?.response?.status === 401) {
+        setError("Your session has expired. Please login again.");
+        // Có thể redirect về login page
+        // router.replace("/(auth)/login");
+      } else {
+        setError("Failed to load team information. Please try again later.");
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
   // first load
   useEffect(() => {
     fetchTeamInfo();
-  }, [id]);
-  // when come back to screen
+  }, [fetchTeamInfo]);
+
+  // when come back to screen (after editing description)
   useFocusEffect(
     useCallback(() => {
       fetchTeamInfo();
-    }, [id])
+    }, [fetchTeamInfo])
   );
 
   if (loading) {
@@ -89,6 +126,33 @@ export default function TeamInfoScreen({
       <View className="flex-1 items-center justify-center bg-[#F2EFF0]">
         <ActivityIndicator size="large" color="#90717E" />
         <Text className="mt-2 text-gray-600">Loading team information...</Text>
+      </View>
+    );
+  }
+
+  // Hiển thị error nếu không load được team
+  if (error || !team) {
+    return (
+      <View className="flex-1 items-center justify-center bg-[#F2EFF0] px-6">
+        <MaterialCommunityIcons
+          name="alert-circle-outline"
+          size={64}
+          color="#FF5F57"
+        />
+        <Text className="mt-4 text-lg font-semibold text-center">
+          {error || "Team not found"}
+        </Text>
+        <Text className="mt-2 text-sm text-gray-600 text-center">
+          {error?.includes("session")
+            ? "Please try logging in again."
+            : "This team may have been deleted or you don't have access."}
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="mt-6 bg-[#90717E] px-6 py-3 rounded-full"
+        >
+          <Text className="text-white font-medium">Go Back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -114,8 +178,16 @@ export default function TeamInfoScreen({
   };
 
   const handleInvite = () => {
-    router.push("/(team)/invite");
+    if (!id) return;
+
+    router.push({
+      pathname: "/(team)/invite",
+      params: {
+        teamId: id,
+      },
+    });
   };
+
   const handleShowMember = () => {
     router.push({
       pathname: "/(team)/member",
@@ -152,7 +224,11 @@ export default function TeamInfoScreen({
     setLoading(true);
     try {
       await teamApi.delete(id as string);
-      router.push("/(team)/search");
+      // Dùng replace + timestamp để force reload search page
+      router.replace({
+        pathname: "/(team)/search",
+        params: { refresh: Date.now().toString() },
+      });
     } catch (err: any) {
       setError("Failed to delete team. Please try again later.");
     } finally {
@@ -199,233 +275,426 @@ export default function TeamInfoScreen({
 
   const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.5);
   return (
-    <View className="flex-1 bg-[#F2EFF0]">
-      <View style={{ height: 140, backgroundColor: "#90717E" }}>
-        <IconButton
-          icon="arrow-left"
-          onPress={() => router.back()}
-          size={25}
-          iconColor="#fff"
-          mode="outlined"
-          style={{
-            position: "absolute",
-            top: 14,
-            outlineColor: "#fff",
-            borderWidth: 0,
-          }}
-        />
-      </View>
+    <>
+      <View className="flex-1 bg-[#F2EFF0]">
+        {/* FIXED HEADER SECTION */}
+        <View style={{ backgroundColor: "#F2EFF0" }}>
+          {/* Purple Header Background */}
+          <View style={{ height: 180, backgroundColor: "#90717E" }}>
+            <IconButton
+              icon="arrow-left"
+              onPress={() => router.back()}
+              size={25}
+              iconColor="#fff"
+              mode="outlined"
+              style={{
+                position: "absolute",
+                top: 14,
+                left: 0,
+                zIndex: 10,
+              }}
+            />
+          </View>
 
-      {/* CONTENT */}
-      <View className=" px-4 pb-6">
-        {/* Card 1: Avatar + team name */}
-        <Card
-          mode="contained"
-          style={{
-            overflow: "visible",
-            borderRadius: 0,
-            backgroundColor: "#fff",
-          }}
-        >
-          <Card.Content className="">
-            <View className="items-center">
-              {/* Avatar + camera overlay (owner only) */}
-              <View style={{ marginTop: -65 }}>
-                <View style={{ position: "relative" }}>
-                  <View
-                    style={{
-                      borderWidth: 6,
-                      borderColor: "#fff",
-                      borderRadius: 999,
+          {/* Avatar - Overlapping the header boundary */}
+          <View
+            style={{
+              position: "absolute",
+              top: 120,
+              left: 0,
+              right: 0,
+              alignItems: "center",
+              zIndex: 100,
+            }}
+          >
+            <View style={{ position: "relative" }}>
+              <View
+                style={{
+                  borderWidth: 8,
+                  borderColor: "#fff",
+                  borderRadius: 999,
+                  backgroundColor: "#fff",
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 8,
+                  elevation: 8,
+                }}
+              >
+                {team?.avatarUrl ? (
+                  <Avatar.Image size={120} source={{ uri: team.avatarUrl }} />
+                ) : (
+                  <Avatar.Text
+                    size={120}
+                    label={(team?.name ?? name).charAt(0)}
+                    labelStyle={{
+                      fontSize: 58,
+                      fontWeight: "800",
+                      letterSpacing: 1,
+                      color: "#fff",
                     }}
-                  >
-                    {team?.avatarUrl ? (
-                      <Avatar.Image
-                        size={120}
-                        source={{ uri: team.avatarUrl }}
-                      />
-                    ) : (
-                      <Avatar.Text
-                        size={120}
-                        label={name.charAt(0)}
-                        labelStyle={{
-                          fontSize: 58,
-                          fontWeight: "800",
-                          letterSpacing: 1,
-                          color: "#fff",
-                        }}
-                        style={{ backgroundColor: "#90717E" }}
-                      />
-                    )}
-                  </View>
-
-                  {isOwner && (
-                    <IconButton
-                      icon="camera-outline"
-                      size={30}
-                      iconColor="#90717E"
-                      mode="contained-tonal"
-                      style={{
-                        position: "absolute",
-                        right: 0,
-                        bottom: -10,
-                        borderBlockColor: "#ccc",
-                        backgroundColor: "#fff",
-                      }}
-                      onPress={() => router.push("/")}
-                      accessibilityLabel="Change team avatar"
-                    />
-                  )}
-                </View>
-              </View>
-
-              {/* Team name */}
-              <View className="mt-3 flex-row items-center">
-                <Text
-                  style={{
-                    fontWeight: "800",
-                    letterSpacing: 0.5,
-                    fontSize: 20,
-                  }}
-                >
-                  {team?.name ?? "Loading..."}
-                </Text>
-                {isOwner && (
-                  <IconButton
-                    icon="pencil-outline"
-                    size={24}
-                    iconColor="#90717E"
-                    onPress={() => setTeamNameModalVisible(true)}
-                    accessibilityLabel="Edit team name"
-                    style={{ marginLeft: -6 }}
+                    style={{ backgroundColor: "#90717E" }}
                   />
                 )}
               </View>
+
+              {isOwner && (
+                <View
+                  style={{
+                    position: "absolute",
+                    right: 0,
+                    bottom: 5,
+                    borderRadius: 999,
+                    backgroundColor: "#90717E",
+                    borderWidth: 3,
+                    borderColor: "#fff",
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 4,
+                    elevation: 5,
+                  }}
+                >
+                  <IconButton
+                    icon="camera"
+                    size={18}
+                    iconColor="#fff"
+                    onPress={() => console.log("Change avatar")}
+                    accessibilityLabel="Change team avatar"
+                    style={{ margin: 0 }}
+                  />
+                </View>
+              )}
             </View>
-          </Card.Content>
-        </Card>
+          </View>
 
-        {/* Card 2: description*/}
-        <Card
-          mode="contained"
-          style={{
-            marginTop: 10,
-            borderRadius: 0,
-            padding: 10,
-            backgroundColor: "#fff",
-          }}
-        >
-          <TouchableRipple
-            onPress={isOwner ? handleDescription : undefined}
-            disabled={!isOwner}
-            rippleColor="rgba(0,0,0,0.08)"
-            style={{ borderRadius: 0 }}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !isOwner }}
-            accessibilityHint="Open team description"
+          {/* Team Name & Description - Below avatar */}
+          <View
+            style={{
+              paddingTop: 70,
+              paddingHorizontal: 16,
+              alignItems: "center",
+              paddingBottom: 20,
+            }}
           >
-            <Card.Content>
-              <View className="flex-row items-center gap-2">
-                <IconButton icon="information-outline" size={24} disabled />
-                <Text className="flex-1 text-[15px] text-black/80">
-                  {team?.description ?? "No description provided."}
-                </Text>
-              </View>
-            </Card.Content>
-          </TouchableRipple>
-        </Card>
+            {/* Team name with edit button */}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginBottom: 10,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 24,
+                  fontWeight: "600",
+                  color: "#1C1B1F",
+                  marginRight: 8,
+                }}
+              >
+                {team?.name ?? "Loading..."}
+              </Text>
+              {isOwner && (
+                <TouchableOpacity onPress={() => setTeamNameModalVisible(true)}>
+                  <MaterialCommunityIcons
+                    name="pencil"
+                    size={20}
+                    color="#49454F"
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
 
-        {/* Card 3: Action lists */}
-        <Card
-          mode="contained"
-          style={{ marginTop: 10, borderRadius: 0, backgroundColor: "#fff" }}
+            {/* Description Card - Clickable */}
+            <TouchableOpacity
+              onPress={isOwner ? handleDescription : undefined}
+              disabled={!isOwner}
+              activeOpacity={0.7}
+              style={{ width: "100%" }}
+            >
+              <Card
+                mode="contained"
+                style={{
+                  borderRadius: 12,
+                  backgroundColor: "#F8F6F7",
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+              >
+                <Card.Content style={{ paddingVertical: 12 }}>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: "#49454F",
+                      textAlign: "center",
+                      lineHeight: 20,
+                    }}
+                  >
+                    {team?.description || "No description"}
+                  </Text>
+                </Card.Content>
+              </Card>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* SCROLLABLE MENU SECTION */}
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 20 }}
         >
-          <Card.Content>
-            {canManage && (
-              <>
+          <View className="px-4">
+            {/* Card 3: Section 1 - QR, Invite, Members */}
+            {(canManage || true) && (
+              <Card
+                mode="contained"
+                style={{
+                  marginTop: 10,
+                  borderRadius: 0,
+                  backgroundColor: "#F8F6F7",
+                }}
+              >
+                <Card.Content
+                  style={{ paddingHorizontal: 10, paddingVertical: 12 }}
+                >
+                  {canManage && (
+                    <>
+                      <List.Item
+                        title="QR code"
+                        titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
+                        left={(p) => (
+                          <Ionicons name="qr-code" size={24} color="#49454F" />
+                        )}
+                        right={(p) => (
+                          <Ionicons
+                            name="chevron-forward"
+                            size={24}
+                            color="#49454F"
+                          />
+                        )}
+                        onPress={handleOpenQR}
+                        style={{ paddingRight: 0, paddingLeft: 0 }}
+                      />
+
+                      <List.Item
+                        title="Invite user"
+                        titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
+                        left={(p) => (
+                          <Ionicons
+                            name="person-add"
+                            size={24}
+                            color="#49454F"
+                          />
+                        )}
+                        right={(p) => (
+                          <Ionicons
+                            name="chevron-forward"
+                            size={24}
+                            color="#49454F"
+                          />
+                        )}
+                        onPress={handleInvite}
+                        style={{ paddingRight: 0, paddingLeft: 0 }}
+                      />
+                    </>
+                  )}
+
+                  <List.Item
+                    title={`Show members (${team?.totalMembers ?? 0})`}
+                    titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
+                    left={(p) => (
+                      <Ionicons name="people" size={24} color="#49454F" />
+                    )}
+                    right={(p) => (
+                      <Ionicons
+                        name="chevron-forward"
+                        size={24}
+                        color="#49454F"
+                      />
+                    )}
+                    onPress={handleShowMember}
+                    style={{ paddingRight: 0, paddingLeft: 0 }}
+                  />
+                </Card.Content>
+              </Card>
+            )}
+
+            {/* Card 4: Section 2 - Plans, Documents, Statistic, Recover */}
+            <Card
+              mode="contained"
+              style={{
+                marginTop: 10,
+                borderRadius: 0,
+                backgroundColor: "#F8F6F7",
+              }}
+            >
+              <Card.Content
+                style={{ paddingHorizontal: 10, paddingVertical: 12 }}
+              >
                 <List.Item
-                  title="QR code"
+                  title="Plans"
+                  titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
                   left={(p) => (
-                    <FontAwesome name="qrcode" size={24} color="black" />
+                    <MaterialIcons
+                      name="track-changes"
+                      size={24}
+                      color="#49454F"
+                    />
                   )}
                   right={(p) => (
-                    <FontAwesome name="caret-right" size={20} color="#49454F" />
+                    <Ionicons
+                      name="chevron-forward"
+                      size={24}
+                      color="#49454F"
+                    />
                   )}
-                  onPress={handleOpenQR}
-                  style={{ paddingRight: 0 }}
+                  onPress={() => {
+                    router.push({
+                      pathname: "/(team)/plan",
+                      params: {
+                        teamId: id,
+                        role: team?.role || "MEMBER",
+                        teamName: team?.name || "",
+                      },
+                    });
+                  }}
+                  style={{ paddingRight: 0, paddingLeft: 0 }}
                 />
-              </>
-            )}
 
-            <List.Item
-              title="Notification settings"
-              left={(props) => (
-                <FontAwesome name="gear" size={24} color="black" />
-              )}
-              right={(p) => (
-                <FontAwesome name="caret-right" size={20} color="#49454F" />
-              )}
-              onPress={handleNotiSettings}
-              style={{ paddingRight: 0 }}
-            />
-
-            {canManage && (
-              <>
                 <List.Item
-                  title="Invite user"
+                  title="Documents"
+                  titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
                   left={(p) => (
-                    <FontAwesome name="user-plus" size={24} color="black" />
+                    <Ionicons name="folder-open" size={24} color="#49454F" />
                   )}
                   right={(p) => (
-                    <FontAwesome name="caret-right" size={20} color="#49454F" />
+                    <Ionicons
+                      name="chevron-forward"
+                      size={24}
+                      color="#49454F"
+                    />
                   )}
-                  onPress={handleInvite}
-                  style={{ paddingRight: 0 }}
+                  onPress={() => console.log("Documents clicked")}
+                  style={{ paddingRight: 0, paddingLeft: 0 }}
                 />
-              </>
-            )}
 
-            <List.Item
-              title={`Show members (${team?.totalMembers})`}
-              left={(p) => <FontAwesome name="users" size={24} color="black" />}
-              right={(p) => (
-                <FontAwesome name="caret-right" size={20} color="#49454F" />
-              )}
-              onPress={handleShowMember}
-              style={{ paddingRight: 0 }}
-            />
+                <List.Item
+                  title="Statistic"
+                  titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
+                  left={(p) => (
+                    <Ionicons name="stats-chart" size={24} color="#49454F" />
+                  )}
+                  right={(p) => (
+                    <Ionicons
+                      name="chevron-forward"
+                      size={24}
+                      color="#49454F"
+                    />
+                  )}
+                  onPress={() => {
+                    router.push({
+                      pathname: "/(team)/statistic",
+                      params: { teamId: id },
+                    });
+                  }}
+                  style={{ paddingRight: 0, paddingLeft: 0 }}
+                />
 
-            {/* All role) */}
-            <List.Item
-              title="Leave team"
-              titleStyle={{ color: "#DF3B27", fontWeight: "600" }}
-              left={(p) => (
-                <FontAwesome name="sign-out" size={24} color="#DF3B27" />
-              )}
-              right={(p) => (
-                <FontAwesome name="caret-right" size={20} color="#DF3B27" />
-              )}
-              style={{ paddingRight: 0 }}
-              onPress={handleLeave}
-            />
-
-            {/* Delete team (owner-only) */}
-            {isOwner && (
-              <List.Item
-                title="Delete team"
-                titleStyle={{ color: "#DF3B27", fontWeight: "600" }}
-                left={(p) => (
-                  <FontAwesome name="trash" size={24} color="#DF3B27" />
+                {canManage && (
+                  <List.Item
+                    title="Recover"
+                    titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
+                    left={(p) => (
+                      <Ionicons name="reload" size={24} color="#49454F" />
+                    )}
+                    right={(p) => (
+                      <Ionicons
+                        name="chevron-forward"
+                        size={24}
+                        color="#49454F"
+                      />
+                    )}
+                    onPress={() => console.log("Recover clicked")}
+                    style={{ paddingRight: 0, paddingLeft: 0 }}
+                  />
                 )}
-                right={(p) => (
-                  <FontAwesome name="caret-right" size={20} color="#DF3B27" />
+              </Card.Content>
+            </Card>
+
+            {/* Card 5: Section 3 - Notification, Leave, Delete */}
+            <Card
+              mode="contained"
+              style={{
+                marginTop: 10,
+                borderRadius: 0,
+                backgroundColor: "#F8F6F7",
+              }}
+            >
+              <Card.Content
+                style={{ paddingHorizontal: 10, paddingVertical: 12 }}
+              >
+                <List.Item
+                  title="Notification settings"
+                  titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
+                  left={(props) => (
+                    <Ionicons name="notifications" size={24} color="#49454F" />
+                  )}
+                  right={(p) => (
+                    <Ionicons
+                      name="chevron-forward"
+                      size={24}
+                      color="#49454F"
+                    />
+                  )}
+                  onPress={handleNotiSettings}
+                  style={{ paddingRight: 0, paddingLeft: 0 }}
+                />
+
+                {/* All role) */}
+                <List.Item
+                  title="Leave team"
+                  titleStyle={{ color: "#FF5F57", fontWeight: "600" }}
+                  left={(p) => (
+                    <Ionicons name="exit" size={24} color="#FF5F57" />
+                  )}
+                  right={(p) => (
+                    <Ionicons
+                      name="chevron-forward"
+                      size={24}
+                      color="#FF5F57"
+                    />
+                  )}
+                  style={{ paddingRight: 0, paddingLeft: 0 }}
+                  onPress={handleLeave}
+                />
+
+                {/* Delete team (owner-only) */}
+                {isOwner && (
+                  <List.Item
+                    title="Delete team"
+                    titleStyle={{ color: "#FF5F57", fontWeight: "600" }}
+                    left={(p) => (
+                      <Ionicons name="trash" size={24} color="#FF5F57" />
+                    )}
+                    right={(p) => (
+                      <Ionicons
+                        name="chevron-forward"
+                        size={24}
+                        color="#FF5F57"
+                      />
+                    )}
+                    style={{ paddingRight: 0, paddingLeft: 0 }}
+                    onPress={handleDelete}
+                  />
                 )}
-                style={{ paddingRight: 0 }}
-                onPress={handleDelete}
-              />
-            )}
-          </Card.Content>
-        </Card>
+              </Card.Content>
+            </Card>
+          </View>
+        </ScrollView>
       </View>
 
       {/* QR bottom sheet */}
@@ -478,6 +747,6 @@ export default function TeamInfoScreen({
           }
         }}
       />
-    </View>
+    </>
   );
 }

@@ -1,5 +1,5 @@
 import { useNavigation } from "@react-navigation/native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 import React, { useEffect, useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
@@ -17,11 +17,14 @@ import Header from "@/components/ui/header";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CreateModal from "./components/createTeam";
+import EmptyState from "./components/EmtyState";
 import JoinTeamModal from "./components/joinTeam";
+import SearchEmptyState from "./components/SearchEmtyState";
 
 /* ======================================================= */
 export default function Search() {
   const router = useRouter();
+  const params = useLocalSearchParams();
 
   //CONST
   const insets = useSafeAreaInsets();
@@ -66,7 +69,7 @@ export default function Search() {
       }
     };
     fetchTeams();
-  }, [tab]);
+  }, [tab, params.refresh]); // Thêm params.refresh để reload khi có thay đổi
 
   //Handlers
   const handleSave = async (name: string, description: string) => {
@@ -159,9 +162,9 @@ export default function Search() {
       />
       <View className="flex-1 bg-white mx-3 my-3 mb-60">
         {/* Content */}
-        <View className="flex-1 px-4 my-2">
+        <View className="flex-1 my-2">
           {/* Search */}
-          <View className="pt-3">
+          <View className="pt-3 px-4">
             <Searchbar
               placeholder="Search by team name"
               value={query}
@@ -171,7 +174,7 @@ export default function Search() {
           </View>
 
           {/* Toggle + Actions  */}
-          <View className="pt-3">
+          <View className="pt-3 px-4">
             <View className="flex-row items-center">
               {/* Toggle (left) */}
               <View style={{ maxWidth: "70%", flexShrink: 1 }}>
@@ -248,41 +251,63 @@ export default function Search() {
             Team List ({teams.length})
           </Text>
 
-          {/* List */}
-          <FlatList
-            data={teams}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={{ marginBottom: 24 }}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() =>
-                  router.push({
-                    pathname: "/(team)/teamInfo",
-                    params: { id: item.id },
-                  })
-                }
-                className="flex-row items-center justify-between px-4 py-3"
-              >
-                {/* Avatar + Name */}
-                <View className="flex-row items-center">
-                  {item.avatarUrl ? (
-                    <Avatar.Image size={40} source={{ uri: item.avatarUrl }} />
-                  ) : (
-                    <Avatar.Text size={40} label={item.name.charAt(0)} />
-                  )}
+          {/* Empty State, Search Empty, hoặc List */}
+          {teams.length === 0 && !loading ? (
+            // Nếu đang search mà không có kết quả → SearchEmptyState
+            query.trim().length > 0 ? (
+              <SearchEmptyState searchQuery={query.trim()} />
+            ) : (
+              // Nếu không search và không có team → EmptyState với buttons
+              <EmptyState
+                title="You haven't joined any team yet!"
+                primaryButtonText="Create new team"
+                secondaryButtonText="Scan to join team"
+                onPrimaryPress={() => setCreateModalVisible(true)}
+                onSecondaryPress={() => router.push("/")}
+              />
+            )
+          ) : (
+            // Có team → hiển thị list
+            <View className="flex-1 px-4">
+              <FlatList
+                data={teams}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={{ paddingBottom: 24 }}
+                renderItem={({ item }) => (
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(team)/teamInfo",
+                        params: { id: item.id },
+                      })
+                    }
+                    className="flex-row items-center justify-between py-3"
+                  >
+                    {/* Avatar + Name */}
+                    <View className="flex-row items-center">
+                      {item.avatarUrl ? (
+                        <Avatar.Image
+                          size={40}
+                          source={{ uri: item.avatarUrl }}
+                        />
+                      ) : (
+                        <Avatar.Text size={40} label={item.name.charAt(0)} />
+                      )}
 
-                  <Text className="ml-3 text-xl font-semibold text-black ">
-                    {item.name}
-                  </Text>
-                </View>
+                      <Text className="ml-3 text-xl font-semibold text-black ">
+                        {item.name}
+                      </Text>
+                    </View>
 
-                {/* Icon owner */}
-                {item.owner && (
-                  <FontAwesome5 name="key" size={20} color="#90717E" />
+                    {/* Icon owner */}
+                    {item.owner && (
+                      <FontAwesome5 name="key" size={20} color="#90717E" />
+                    )}
+                  </Pressable>
                 )}
-              </Pressable>
-            )}
-          />
+              />
+            </View>
+          )}
         </View>
       </View>
 
