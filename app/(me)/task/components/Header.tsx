@@ -1,38 +1,56 @@
+import dayjs from "dayjs";
 import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Calendar } from "react-native-calendario";
 
-export default function HeaderSection() {
-  const name = "Nguyetlun115";
-  const taskCount = 3;
+interface HeaderProps {
+  userName: string;
+  taskCount: number;
+  markedDates: string[];
+  selectedDate: Date | null;
+  onDateSelect: (date: Date) => void;
+  onMonthChange: (date: Date) => void;
+}
 
-  const taskDates = ["2025-12-16", "2025-12-18", "2025-12-07"];
-  const taskSet = new Set(taskDates);
+export default function HeaderSection({
+  userName,
+  taskCount,
+  markedDates,
+  selectedDate,
+  onDateSelect,
+  onMonthChange,
+}: HeaderProps) {
+  // Normalize dates to YYYY-MM-DD to match local date strings
+  const taskSet = new Set(
+    markedDates.map((date) => dayjs(date).format("YYYY-MM-DD"))
+  );
 
-  const [selected, setSelected] = useState<Date | null>(null);
-
-  const formatMonth = (d: Date) => d.toISOString().slice(0, 7) + "-01";
+  const formatMonth = (d: Date) => dayjs(d).format("YYYY-MM-01");
   const [currentMonth, setCurrentMonth] = useState(formatMonth(new Date()));
 
-  const today = new Date().toISOString().split("T")[0];
-  const getDateStr = (d: Date) => d.toISOString().split("T")[0];
+  const today = dayjs().format("YYYY-MM-DD");
+  const getDateStr = (d: Date) => dayjs(d).format("YYYY-MM-DD");
 
   const goPrev = () => {
     const d = new Date(currentMonth);
     d.setMonth(d.getMonth() - 1);
-    setCurrentMonth(formatMonth(d));
+    const newMonth = formatMonth(d);
+    setCurrentMonth(newMonth);
+    onMonthChange(new Date(newMonth));
   };
 
   const goNext = () => {
     const d = new Date(currentMonth);
     d.setMonth(d.getMonth() + 1);
-    setCurrentMonth(formatMonth(d));
+    const newMonth = formatMonth(d);
+    setCurrentMonth(newMonth);
+    onMonthChange(new Date(newMonth));
   };
 
   return (
     <View style={styles.container}>
       <Text className="text-center text-[16px] mb-2">
-        Hi {name}, you have{" "}
+        Hi {userName}, you have{" "}
         <Text className="text-[#90717E] font-bold">{taskCount}</Text>{" "}
         {taskCount > 1 ? "tasks" : "task"} today.
       </Text>
@@ -58,11 +76,11 @@ export default function HeaderSection() {
 
         {/* ==== CALENDAR ==== */}
         <Calendar
-          key={currentMonth}
+          key={`${currentMonth}-${markedDates.length}`}
           numberOfMonths={1}
           startingMonth={currentMonth}
-          startDate={selected ?? undefined}
-          onPress={(date: Date) => setSelected(date)}
+          startDate={selectedDate ?? undefined}
+          onPress={(date: Date) => onDateSelect(date)}
           theme={{
             monthTitleTextStyle: { display: "none" },
 
@@ -105,24 +123,26 @@ export default function HeaderSection() {
 
             const isToday = dateStr === today;
             const isTaskDay = taskSet.has(dateStr);
-            const isSelected = selected && dateStr === getDateStr(selected);
+            const isSelected =
+              selectedDate && dateStr === getDateStr(selectedDate);
 
+            // Using similar colors as in Plan
             let bg = "transparent";
             let color = "#000";
             let radius = 10;
 
+            if (isToday) {
+              bg = "#B8C6B6"; // Green
+              color = "white";
+            }
+
             if (isTaskDay) {
-              bg = "#FF6B6B";
+              bg = "#FF6B6B"; // Red
               color = "white";
             }
 
             if (isSelected) {
-              bg = "#90717E";
-              color = "white";
-            }
-
-            if (isToday && !isTaskDay && !isSelected) {
-              bg = "#B8C6B6";
+              bg = "#90717E"; // Brown
               color = "white";
             }
 

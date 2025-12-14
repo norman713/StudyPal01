@@ -2,8 +2,8 @@ import planApi, { Plan } from "@/api/planApi";
 import BottomBar from "@/components/ui/buttom";
 import Header from "@/components/ui/header";
 import dayjs from "dayjs";
-import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useState } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import ChatBotSection from "./components/PlanScreen/Chatbot";
 import PlanHeader from "./components/PlanScreen/Header";
@@ -98,26 +98,35 @@ export default function PlanScreen() {
   };
 
   // Initial Load
-  useEffect(() => {
-    if (!teamId) return;
+  useFocusEffect(
+    useCallback(() => {
+      if (!teamId) return;
 
-    // 1. Get User Info
-    import("@/api/userApi").then(({ default: userApi }) => {
-      userApi
-        .getSummary()
-        .then((user) => {
+      const initData = async () => {
+        try {
+          // 1. Get User Info first (Verify Auth)
+          const { default: userApi } = await import("@/api/userApi");
+          const user = await userApi.getSummary();
           setUserSummary(user);
-          // 2. Get Stats using user ID
-          loadStats(user.id);
-        })
-        .catch((err) => console.error("User fetch error", err));
-    });
 
-    // 3. Initial Calendar Data (Current Month & Today)
-    const now = new Date();
-    loadPlanDates(now.getMonth() + 1, now.getFullYear());
-    loadPlansForDate(now);
-  }, [teamId]);
+          // Add delay
+          await new Promise((resolve) => setTimeout(resolve, 500));
+
+          // 2. Get Stats & Plans
+          const now = new Date();
+          await Promise.all([
+            loadStats(user.id),
+            loadPlanDates(now.getMonth() + 1, now.getFullYear()),
+            loadPlansForDate(now),
+          ]);
+        } catch (error) {
+          console.error("Failed to initialize plan screen", error);
+        }
+      };
+
+      initData();
+    }, [teamId])
+  );
 
   // Handlers
   const handleDateSelect = (date: Date) => {

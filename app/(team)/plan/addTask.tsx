@@ -1,34 +1,24 @@
-import memberApi from "@/api/memberApi";
-import planApi from "@/api/planApi";
-import { FontAwesome, Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import dayjs from "dayjs";
+import planApi, { TaskPriority } from "@/api/planApi";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
+  Alert,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
-import { Appbar, Button, TextInput } from "react-native-paper";
+import { Appbar, TextInput } from "react-native-paper";
+import AssigneeSelector from "./components/AssigneeSelector";
+import DateTimeInput from "./components/DateTimeInput";
+import PrioritySelector from "./components/PrioritySelector";
 
-const ACCENT = "#90717E";
-
-interface Member {
-  id: string;
-  name: string;
-  avatarUrl?: string;
-}
-type Priority = "HIGH" | "MEDIUM" | "LOW";
+type Role = "OWNER" | "ADMIN" | "MEMBER";
 
 /**
- * Add New Task Screen - giống design
+ * Add New Task Screen - giống design taskDetail
  */
 export default function AddTaskScreen() {
   const {
@@ -48,118 +38,18 @@ export default function AddTaskScreen() {
   const [fromDate, setFromDate] = useState("12-12-1212");
   const [toTime, setToTime] = useState("12:00");
   const [toDate, setToDate] = useState("12-12-1212");
-  const [priority, setPriority] = useState<Priority>("MEDIUM");
-
-  // Date/Time picker states
-  const [showFromTimePicker, setShowFromTimePicker] = useState(false);
-  const [showFromDatePicker, setShowFromDatePicker] = useState(false);
-  const [showToTimePicker, setShowToTimePicker] = useState(false);
-  const [showToDatePicker, setShowToDatePicker] = useState(false);
-
-  // Assignee states
-  const [members, setMembers] = useState<Member[]>([]);
-  const [selectedAssignee, setSelectedAssignee] = useState<Member | null>(null);
-  const [showAssigneePicker, setShowAssigneePicker] = useState(false);
-  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
+  const [assigneeId, setAssigneeId] = useState<string>("");
 
   // Submit state
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string }>({});
-
-  // Fetch team members for assignee
-  const fetchMembers = useCallback(async () => {
-    if (!teamId) return;
-    setLoadingMembers(true);
-    try {
-      const res = await memberApi.getAll(teamId);
-      // Map member data to match our interface
-      const mappedMembers = (res.members || []).map((m) => ({
-        id: m.userId,
-        name: m.name,
-        avatarUrl: m.avatarUrl,
-      }));
-      setMembers(mappedMembers);
-      // Set default assignee to first member
-      if (mappedMembers.length > 0) {
-        setSelectedAssignee(mappedMembers[0]);
-      }
-    } catch (err) {
-      // API chưa có - dùng mock data
-      console.warn("Member API not available, using mock data");
-      // Mock data
-      const mockMembers = [
-        {
-          id: "1",
-          name: "Nguyetlun115",
-          avatarUrl: "https://i.pravatar.cc/40?img=1",
-        },
-        {
-          id: "2",
-          name: "Minh Huy",
-          avatarUrl: "https://i.pravatar.cc/40?img=2",
-        },
-        {
-          id: "3",
-          name: "Minh Hoàng",
-          avatarUrl: "https://i.pravatar.cc/40?img=3",
-        },
-      ];
-      setMembers(mockMembers);
-      setSelectedAssignee(mockMembers[0]);
-    } finally {
-      setLoadingMembers(false);
-    }
-  }, [teamId]);
-
-  useEffect(() => {
-    fetchMembers();
-  }, [fetchMembers]);
-
-  // Format helpers
-  const formatTime = (date: Date) => {
-    return dayjs(date).format("HH:mm");
-  };
-
-  const formatDate = (date: Date) => {
-    return dayjs(date).format("DD-MM-YYYY");
-  };
-
-  // Handlers
-  const handleFromTimeChange = (event: any, selectedDate?: Date) => {
-    setShowFromTimePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setFromTime(formatTime(selectedDate));
-    }
-  };
-
-  const handleFromDateChange = (event: any, selectedDate?: Date) => {
-    setShowFromDatePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setFromDate(formatDate(selectedDate));
-    }
-  };
-
-  const handleToTimeChange = (event: any, selectedDate?: Date) => {
-    setShowToTimePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setToTime(formatTime(selectedDate));
-    }
-  };
-
-  const handleToDateChange = (event: any, selectedDate?: Date) => {
-    setShowToDatePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setToDate(formatDate(selectedDate));
-    }
-  };
 
   const validate = () => {
-    const newErrors: typeof errors = {};
     if (!taskName.trim()) {
-      newErrors.name = "Task name is required";
+      Alert.alert("Error", "Task name is required");
+      return false;
     }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return true;
   };
 
   const handleCreate = async () => {
@@ -188,306 +78,134 @@ export default function AddTaskScreen() {
         description: taskNote.trim(),
         startDate: startDate.toISOString(),
         dueDate: dueDate.toISOString(),
-        assigneeId: selectedAssignee?.id,
+        assigneeId: assigneeId || undefined,
       });
 
       router.back();
     } catch (err) {
-      // API chưa có - quay lại trang trước
-      console.warn("Create Task API not available");
-      router.back();
+      console.warn("Failed to create task", err);
+      Alert.alert("Error", "Failed to create task");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View className="flex-1 bg-[#F8F6F7]">
+    <View style={styles.container}>
       {/* Header */}
-      <Appbar.Header mode="small" style={{ backgroundColor: ACCENT }}>
+      <Appbar.Header mode="small" style={styles.header}>
         <Appbar.BackAction color="#fff" onPress={() => router.back()} />
-        <Appbar.Content
-          title="Add new task"
-          titleStyle={{ color: "#fff", fontSize: 18, fontWeight: "600" }}
-        />
+        <Appbar.Content title="Add new task" titleStyle={styles.headerTitle} />
+        <View style={styles.placeholderButton} />
       </Appbar.Header>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-        <ScrollView className="flex-1 p-4">
-          {/* Detail Section */}
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Detail</Text>
+      <ScrollView style={styles.content}>
+        {/* Main Form Section */}
+        <View style={styles.mainFormSection}>
+          {/* Section Title */}
+          <Text style={styles.sectionTitle}>Detail</Text>
 
-            {/* Task Name */}
+          {/* Task Name */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Task name</Text>
             <TextInput
               mode="outlined"
-              label="Task name"
+              label=""
               value={taskName}
               onChangeText={setTaskName}
               style={styles.input}
-              outlineStyle={{ borderRadius: 12 }}
-              error={!!errors.name}
+              outlineStyle={styles.inputOutline}
+              contentStyle={styles.inputContent}
+              theme={{
+                roundness: 30,
+                colors: {
+                  background: "#F8F6F7",
+                  outline: "#79747E",
+                },
+              }}
             />
-            {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+          </View>
 
-            {/* Task Note */}
+          {/* Task Note */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Task note (optional)</Text>
             <TextInput
               mode="outlined"
-              label="Task note"
+              label=""
               value={taskNote}
               onChangeText={setTaskNote}
-              style={styles.inputMultiline}
-              outlineStyle={{ borderRadius: 12 }}
               multiline
               numberOfLines={4}
+              style={styles.input}
+              outlineStyle={styles.inputOutline}
+              contentStyle={[styles.inputContent, styles.textAreaContent]}
+              theme={{
+                roundness: 30,
+                colors: {
+                  background: "#F8F6F7",
+                  outline: "#79747E",
+                },
+              }}
             />
-
-            {/* Time/Date Row - From */}
-            <View style={styles.dateTimeRow}>
-              {/* From Time */}
-              <View style={styles.dateTimeField}>
-                <TextInput
-                  mode="outlined"
-                  label="From time"
-                  value={fromTime}
-                  editable={false}
-                  outlineStyle={{ borderRadius: 12 }}
-                  right={
-                    <TextInput.Icon
-                      icon={() => (
-                        <Ionicons name="time-outline" size={20} color="#555" />
-                      )}
-                      onPress={() => setShowFromTimePicker(true)}
-                    />
-                  }
-                />
-                {showFromTimePicker && (
-                  <DateTimePicker
-                    value={new Date()}
-                    mode="time"
-                    display="default"
-                    onChange={handleFromTimeChange}
-                  />
-                )}
-              </View>
-
-              {/* From Date */}
-              <View style={styles.dateTimeField}>
-                <TextInput
-                  mode="outlined"
-                  label="From date"
-                  value={fromDate}
-                  editable={false}
-                  outlineStyle={{ borderRadius: 12 }}
-                  right={
-                    <TextInput.Icon
-                      icon={() => (
-                        <FontAwesome name="calendar" size={20} color="#555" />
-                      )}
-                      onPress={() => setShowFromDatePicker(true)}
-                    />
-                  }
-                />
-                {showFromDatePicker && (
-                  <DateTimePicker
-                    value={new Date()}
-                    mode="date"
-                    display="calendar"
-                    onChange={handleFromDateChange}
-                  />
-                )}
-              </View>
-            </View>
-
-            {/* Time/Date Row - To */}
-            <View style={styles.dateTimeRow}>
-              {/* To Time */}
-              <View style={styles.dateTimeField}>
-                <TextInput
-                  mode="outlined"
-                  label="To time"
-                  value={toTime}
-                  editable={false}
-                  outlineStyle={{ borderRadius: 12 }}
-                  right={
-                    <TextInput.Icon
-                      icon={() => (
-                        <Ionicons name="time-outline" size={20} color="#555" />
-                      )}
-                      onPress={() => setShowToTimePicker(true)}
-                    />
-                  }
-                />
-                {showToTimePicker && (
-                  <DateTimePicker
-                    value={new Date()}
-                    mode="time"
-                    display="default"
-                    onChange={handleToTimeChange}
-                  />
-                )}
-              </View>
-
-              {/* To Date */}
-              <View style={styles.dateTimeField}>
-                <TextInput
-                  mode="outlined"
-                  label="To date"
-                  value={toDate}
-                  editable={false}
-                  outlineStyle={{ borderRadius: 12 }}
-                  right={
-                    <TextInput.Icon
-                      icon={() => (
-                        <FontAwesome name="calendar" size={20} color="#555" />
-                      )}
-                      onPress={() => setShowToDatePicker(true)}
-                    />
-                  }
-                />
-                {showToDatePicker && (
-                  <DateTimePicker
-                    value={new Date()}
-                    mode="date"
-                    display="calendar"
-                    onChange={handleToDateChange}
-                  />
-                )}
-              </View>
-            </View>
           </View>
 
-          {/* Assignee Section */}
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Assignee</Text>
-
-            <TouchableOpacity
-              style={styles.assigneeSelector}
-              onPress={() => setShowAssigneePicker(!showAssigneePicker)}
-            >
-              {loadingMembers ? (
-                <ActivityIndicator size="small" color={ACCENT} />
-              ) : selectedAssignee ? (
-                <>
-                  {selectedAssignee.avatarUrl ? (
-                    <Image
-                      source={{ uri: selectedAssignee.avatarUrl }}
-                      style={styles.assigneeAvatar}
-                    />
-                  ) : (
-                    <View style={styles.assigneeAvatarPlaceholder}>
-                      <Text style={styles.assigneeAvatarText}>
-                        {selectedAssignee.name.charAt(0)}
-                      </Text>
-                    </View>
-                  )}
-                  <Text style={styles.assigneeName}>
-                    {selectedAssignee.name}
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.assigneePlaceholder}>Select assignee</Text>
-              )}
-              <Ionicons
-                name={showAssigneePicker ? "chevron-up" : "chevron-down"}
-                size={24}
-                color={ACCENT}
-              />
-            </TouchableOpacity>
-            {/* Priority Section */}
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Priority</Text>
-
-              <View style={styles.priorityRow}>
-                {[
-                  { label: "High", value: "HIGH", color: "#FF5F57" },
-                  { label: "Medium", value: "MEDIUM", color: "#F5A623" },
-                  { label: "Low", value: "LOW", color: "#2ECC71" },
-                ].map((item) => {
-                  const selected = priority === item.value;
-
-                  return (
-                    <TouchableOpacity
-                      key={item.value}
-                      style={styles.priorityItem}
-                      onPress={() => setPriority(item.value as Priority)}
-                      activeOpacity={0.8}
-                    >
-                      <View
-                        style={[
-                          styles.priorityCircle,
-                          {
-                            borderColor: item.color,
-                            backgroundColor: selected
-                              ? item.color
-                              : "transparent",
-                          },
-                        ]}
-                      />
-                      <Text style={styles.priorityLabel}>{item.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* Assignee Dropdown */}
-            {showAssigneePicker && (
-              <View style={styles.assigneeDropdown}>
-                {members.map((member) => (
-                  <TouchableOpacity
-                    key={member.id}
-                    style={[
-                      styles.assigneeOption,
-                      selectedAssignee?.id === member.id &&
-                        styles.assigneeOptionSelected,
-                    ]}
-                    onPress={() => {
-                      setSelectedAssignee(member);
-                      setShowAssigneePicker(false);
-                    }}
-                  >
-                    {member.avatarUrl ? (
-                      <Image
-                        source={{ uri: member.avatarUrl }}
-                        style={styles.optionAvatar}
-                      />
-                    ) : (
-                      <View style={styles.optionAvatarPlaceholder}>
-                        <Text style={styles.optionAvatarText}>
-                          {member.name.charAt(0)}
-                        </Text>
-                      </View>
-                    )}
-                    <Text style={styles.optionName}>{member.name}</Text>
-                    {selectedAssignee?.id === member.id && (
-                      <Ionicons name="checkmark" size={20} color={ACCENT} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+          {/* From Time and Date */}
+          <View style={styles.row}>
+            <DateTimeInput
+              label="From time"
+              value={fromTime}
+              onChangeText={setFromTime}
+              icon="time-outline"
+            />
+            <DateTimeInput
+              label="From date"
+              value={fromDate}
+              onChangeText={setFromDate}
+              icon="calendar-outline"
+            />
           </View>
-        </ScrollView>
 
-        {/* Create Button */}
-        <View style={styles.footer}>
-          <Button
-            mode="contained"
-            onPress={handleCreate}
-            loading={loading}
-            disabled={loading}
-            style={styles.createButton}
-            buttonColor={ACCENT}
-            labelStyle={{ fontSize: 16 }}
-          >
-            Create
-          </Button>
+          {/* To Time and Date */}
+          <View style={styles.row}>
+            <DateTimeInput
+              label="To time"
+              value={toTime}
+              onChangeText={setToTime}
+              icon="time-outline"
+            />
+            <DateTimeInput
+              label="To date"
+              value={toDate}
+              onChangeText={setToDate}
+              icon="calendar-outline"
+            />
+          </View>
         </View>
-      </KeyboardAvoidingView>
+
+        {/* Priority */}
+        <PrioritySelector priority={priority} onPriorityChange={setPriority} />
+
+        {/* Assignee */}
+        {teamId && (
+          <AssigneeSelector
+            teamId={teamId}
+            selectedAssigneeId={assigneeId}
+            onAssigneeChange={setAssigneeId}
+          />
+        )}
+      </ScrollView>
+      {/* Create Button */}
+      <Pressable
+        style={[styles.createButton, loading && styles.createButtonDisabled]}
+        onPress={handleCreate}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
+          <Text style={styles.createButtonText}>Create</Text>
+        )}
+      </Pressable>
     </View>
   );
 }
@@ -495,163 +213,89 @@ export default function AddTaskScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F6F7",
+    backgroundColor: "#F2EFF0",
   },
-  scrollView: {
+  header: {
+    backgroundColor: "#90717E",
+  },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  placeholderButton: {
+    width: 48,
+  },
+  content: {
     flex: 1,
-    padding: 16,
+    padding: 10,
   },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+  mainFormSection: {
+    backgroundColor: "#F8F6F7",
+    padding: 10,
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: 20,
+    marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    fontFamily: "PoppinsSemiBold",
     color: "#0F0C0D",
-    marginBottom: 16,
+    paddingHorizontal: 9,
+    marginBottom: 0,
+  },
+  inputContainer: {
+    marginBottom: 0,
+  },
+  inputLabel: {
+    position: "absolute",
+    top: -10,
+    left: 12,
+    backgroundColor: "#F8F6F7",
+    paddingHorizontal: 4,
+    fontSize: 12,
+    color: "#49454F",
+    fontFamily: "PoppinsBold",
+    zIndex: 1,
   },
   input: {
-    backgroundColor: "#fff",
-    marginBottom: 12,
-  },
-  inputMultiline: {
-    backgroundColor: "#fff",
-    marginBottom: 12,
-    minHeight: 100,
-  },
-  errorText: {
-    fontSize: 12,
-    color: "#FF5F57",
-    marginTop: -8,
-    marginBottom: 12,
-  },
-  dateTimeRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 12,
-  },
-  dateTimeField: {
-    flex: 1,
-  },
-  // Assignee
-  assigneeSelector: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8F6F7",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#E3DBDF",
-  },
-  assigneeAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  assigneeAvatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: ACCENT,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  assigneeAvatarText: {
-    fontSize: 16,
-    color: "#fff",
-    fontWeight: "600",
-  },
-  assigneeName: {
-    flex: 1,
-    fontSize: 16,
-    color: "#0F0C0D",
-  },
-  assigneePlaceholder: {
-    flex: 1,
-    fontSize: 16,
-    color: "#79747E",
-  },
-  assigneeDropdown: {
-    marginTop: 8,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E3DBDF",
-    overflow: "hidden",
-  },
-  assigneeOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F2EFF0",
-  },
-  assigneeOptionSelected: {
     backgroundColor: "#F8F6F7",
   },
-  optionAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 12,
+  inputOutline: {
+    borderRadius: 30,
+    borderWidth: 1,
   },
-  optionAvatarPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: ACCENT,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  optionAvatarText: {
-    fontSize: 14,
-    color: "#fff",
-    fontWeight: "600",
-  },
-  optionName: {
-    flex: 1,
-    fontSize: 14,
+  inputContent: {
+    fontSize: 16,
+    fontFamily: "PoppinsRegular",
     color: "#0F0C0D",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
-  // Footer
-  footer: {
-    padding: 16,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#E3DBDF",
+  textAreaContent: {
+    minHeight: 110,
+    paddingTop: 12,
+    textAlignVertical: "top",
+  },
+  row: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 0,
   },
   createButton: {
+    backgroundColor: "#90717E",
     borderRadius: 100,
-  },
-  priorityRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 4,
-  },
-
-  priorityItem: {
-    flexDirection: "row",
+    paddingVertical: 10,
     alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 6,
+    margin: 20,
   },
-
-  priorityCircle: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1,
-    marginRight: 8,
+  createButtonDisabled: {
+    opacity: 0.6,
   },
-
-  priorityLabel: {
-    fontSize: 15,
-    color: "#0F0C0D",
+  createButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontFamily: "PoppinsBold",
   },
 });

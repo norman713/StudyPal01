@@ -1,542 +1,422 @@
-import memberApi from "@/api/memberApi";
-import planApi from "@/api/planApi";
-import { FontAwesome, Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import dayjs from "dayjs";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
-import { Appbar, Button, TextInput } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-const ACCENT = "#90717E";
+type TPriority = "high" | "medium" | "low";
 
-interface Member {
-  id: string;
-  name: string;
-  avatarUrl?: string;
-}
-type Priority = "HIGH" | "MEDIUM" | "LOW";
+export default function TaskDetail() {
+  const params = useLocalSearchParams();
+  const taskId = params.taskId as string;
 
-/**
- * Add New Task Screen - giống design
- */
-export default function AddTaskScreen() {
-  const {
-    teamId,
-    planId,
-    role: roleParam,
-  } = useLocalSearchParams<{
-    teamId: string;
-    planId: string;
-    role: string;
-  }>();
-
-  // Form states
-  const [taskName, setTaskName] = useState("");
-  const [taskNote, setTaskNote] = useState("");
+  // Mock data - replace with actual API call
+  const [taskName, setTaskName] = useState("Task A");
+  const [taskNote, setTaskNote] = useState("This is task A note");
   const [fromTime, setFromTime] = useState("12:00");
   const [fromDate, setFromDate] = useState("12-12-1212");
   const [toTime, setToTime] = useState("12:00");
   const [toDate, setToDate] = useState("12-12-1212");
-  const [priority, setPriority] = useState<Priority>("MEDIUM");
+  const [priority, setPriority] = useState<TPriority>("high");
 
-  // Date/Time picker states
-  const [showFromTimePicker, setShowFromTimePicker] = useState(false);
-  const [showFromDatePicker, setShowFromDatePicker] = useState(false);
-  const [showToTimePicker, setShowToTimePicker] = useState(false);
-  const [showToDatePicker, setShowToDatePicker] = useState(false);
-
-  // Assignee states
-  const [members, setMembers] = useState<Member[]>([]);
-  const [selectedAssignee, setSelectedAssignee] = useState<Member | null>(null);
-  const [showAssigneePicker, setShowAssigneePicker] = useState(false);
-  const [loadingMembers, setLoadingMembers] = useState(false);
-
-  // Submit state
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string }>({});
-
-  // Fetch team members for assignee
-  const fetchMembers = useCallback(async () => {
-    if (!teamId) return;
-    setLoadingMembers(true);
-    try {
-      const res = await memberApi.getAll(teamId);
-      // Map member data to match our interface
-      const mappedMembers = (res.members || []).map((m) => ({
-        id: m.userId,
-        name: m.name,
-        avatarUrl: m.avatarUrl,
-      }));
-      setMembers(mappedMembers);
-      // Set default assignee to first member
-      if (mappedMembers.length > 0) {
-        setSelectedAssignee(mappedMembers[0]);
-      }
-    } catch (err) {
-      // API chưa có - dùng mock data
-      console.warn("Member API not available, using mock data");
-      // Mock data
-      const mockMembers = [
-        {
-          id: "1",
-          name: "Nguyetlun115",
-          avatarUrl: "https://i.pravatar.cc/40?img=1",
-        },
-        {
-          id: "2",
-          name: "Minh Huy",
-          avatarUrl: "https://i.pravatar.cc/40?img=2",
-        },
-        {
-          id: "3",
-          name: "Minh Hoàng",
-          avatarUrl: "https://i.pravatar.cc/40?img=3",
-        },
-      ];
-      setMembers(mockMembers);
-      setSelectedAssignee(mockMembers[0]);
-    } finally {
-      setLoadingMembers(false);
-    }
-  }, [teamId]);
-
-  useEffect(() => {
-    fetchMembers();
-  }, [fetchMembers]);
-
-  // Format helpers
-  const formatTime = (date: Date) => {
-    return dayjs(date).format("HH:mm");
-  };
-
-  const formatDate = (date: Date) => {
-    return dayjs(date).format("DD-MM-YYYY");
-  };
-
-  // Handlers
-  const handleFromTimeChange = (event: any, selectedDate?: Date) => {
-    setShowFromTimePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setFromTime(formatTime(selectedDate));
-    }
-  };
-
-  const handleFromDateChange = (event: any, selectedDate?: Date) => {
-    setShowFromDatePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setFromDate(formatDate(selectedDate));
-    }
-  };
-
-  const handleToTimeChange = (event: any, selectedDate?: Date) => {
-    setShowToTimePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setToTime(formatTime(selectedDate));
-    }
-  };
-
-  const handleToDateChange = (event: any, selectedDate?: Date) => {
-    setShowToDatePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setToDate(formatDate(selectedDate));
-    }
-  };
-
-  const validate = () => {
-    const newErrors: typeof errors = {};
-    if (!taskName.trim()) {
-      newErrors.name = "Task name is required";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleCreate = async () => {
-    if (!validate()) return;
-    if (!teamId || !planId) return;
-
-    setLoading(true);
-    try {
-      // Parse dates
-      const [fromDay, fromMonth, fromYear] = fromDate.split("-").map(Number);
-      const [fromHour, fromMin] = fromTime.split(":").map(Number);
-      const startDate = new Date(
-        fromYear,
-        fromMonth - 1,
-        fromDay,
-        fromHour,
-        fromMin
-      );
-
-      const [toDay, toMonth, toYear] = toDate.split("-").map(Number);
-      const [toHour, toMin] = toTime.split(":").map(Number);
-      const dueDate = new Date(toYear, toMonth - 1, toDay, toHour, toMin);
-
-      await planApi.createTask(teamId, planId, {
-        name: taskName.trim(),
-        description: taskNote.trim(),
-        startDate: startDate.toISOString(),
-        dueDate: dueDate.toISOString(),
-        assigneeId: selectedAssignee?.id,
-      });
-
-      router.back();
-    } catch (err) {
-      // API chưa có - quay lại trang trước
-      console.warn("Create Task API not available");
-      router.back();
-    } finally {
-      setLoading(false);
+  const getPriorityColor = (p: TPriority) => {
+    switch (p) {
+      case "high":
+        return "#FF5F57";
+      case "medium":
+        return "#FEBC2F";
+      case "low":
+        return "#27C840";
     }
   };
 
   return (
-    <View className="flex-1 bg-[#F8F6F7]">
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
-      <Appbar.Header mode="small" style={{ backgroundColor: ACCENT }}>
-        <Appbar.BackAction color="#fff" onPress={() => router.back()} />
-        <Appbar.Content
-          title="Add new task"
-          titleStyle={{ color: "#fff", fontSize: 18, fontWeight: "600" }}
-        />
-      </Appbar.Header>
+      <View className="flex-row items-center px-4 h-14 bg-[#90717E]">
+        {/* Left group: Back + Title */}
+        <View className="flex-row items-center gap-2.5">
+          <Pressable onPress={() => router.back()} className="p-1">
+            <Ionicons name="arrow-back" size={24} color="#F8F6F7" />
+          </Pressable>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-        <ScrollView className="flex-1 p-4">
-          {/* Detail Section */}
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Detail</Text>
+          <Text
+            numberOfLines={1}
+            className="text-lg font-semibold text-[#F8F6F7]"
+          >
+            Add new task
+          </Text>
+        </View>
 
-            {/* Task Name */}
+        {/* Delete button */}
+        <Pressable className="ml-auto p-1">
+          <MaterialIcons name="delete" size={24} color="#F8F6F7" />
+        </Pressable>
+      </View>
+
+      <ScrollView style={styles.content}>
+        {/* Task ID and Check */}
+        <View className="bg-white p-4 gap-2">
+          <View style={styles.taskHeader}>
+            <Text style={styles.taskId}>TSK-{taskId || "1"}</Text>
+            <View style={styles.checkButton}>
+              <Ionicons name="checkmark" size={18} color="#F8F6F7" />
+            </View>
+          </View>
+
+          {/* Task Name */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Task name</Text>
             <TextInput
-              mode="outlined"
-              label="Task name"
+              style={styles.input}
               value={taskName}
               onChangeText={setTaskName}
-              style={styles.input}
-              outlineStyle={{ borderRadius: 12 }}
-              error={!!errors.name}
             />
-            {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+          </View>
 
-            {/* Task Note */}
+          {/* Task Note */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Task note (optional)</Text>
             <TextInput
-              mode="outlined"
-              label="Task note (optional)"
+              style={[styles.input, styles.textArea]}
               value={taskNote}
               onChangeText={setTaskNote}
-              style={styles.inputMultiline}
-              outlineStyle={{ borderRadius: 12 }}
               multiline
               numberOfLines={4}
+              textAlignVertical="top"
             />
+          </View>
 
-            {/* Time/Date Row - From */}
-            <View style={styles.dateTimeRow}>
-              {/* From Time */}
-              <View style={styles.dateTimeField}>
+          {/* From Time and Date */}
+          <View style={styles.row}>
+            <View style={[styles.inputContainer, styles.halfWidth]}>
+              <Text style={styles.inputLabel}>From time</Text>
+              <View style={styles.inputWithIcon}>
                 <TextInput
-                  mode="outlined"
-                  label="From time"
+                  style={styles.input}
                   value={fromTime}
-                  editable={false}
-                  outlineStyle={{ borderRadius: 12 }}
-                  right={
-                    <TextInput.Icon
-                      icon={() => (
-                        <Ionicons name="time-outline" size={20} color="#555" />
-                      )}
-                      onPress={() => setShowFromTimePicker(true)}
-                    />
-                  }
+                  onChangeText={setFromTime}
                 />
-                {showFromTimePicker && (
-                  <DateTimePicker
-                    value={new Date()}
-                    mode="time"
-                    display="default"
-                    onChange={handleFromTimeChange}
-                  />
-                )}
-              </View>
-
-              {/* From Date */}
-              <View style={styles.dateTimeField}>
-                <TextInput
-                  mode="outlined"
-                  label="From date"
-                  value={fromDate}
-                  editable={false}
-                  outlineStyle={{ borderRadius: 12 }}
-                  right={
-                    <TextInput.Icon
-                      icon={() => (
-                        <FontAwesome name="calendar" size={20} color="#555" />
-                      )}
-                      onPress={() => setShowFromDatePicker(true)}
-                    />
-                  }
+                <Ionicons
+                  name="time-outline"
+                  size={24}
+                  color="#49454F"
+                  style={styles.icon}
                 />
-                {showFromDatePicker && (
-                  <DateTimePicker
-                    value={new Date()}
-                    mode="date"
-                    display="calendar"
-                    onChange={handleFromDateChange}
-                  />
-                )}
               </View>
             </View>
 
-            {/* Time/Date Row - To */}
-            <View style={styles.dateTimeRow}>
-              {/* To Time */}
-              <View style={styles.dateTimeField}>
+            <View style={[styles.inputContainer, styles.halfWidth]}>
+              <Text style={styles.inputLabel}>From date</Text>
+              <View style={styles.inputWithIcon}>
                 <TextInput
-                  mode="outlined"
-                  label="To time"
-                  value={toTime}
-                  editable={false}
-                  outlineStyle={{ borderRadius: 12 }}
-                  right={
-                    <TextInput.Icon
-                      icon={() => (
-                        <Ionicons name="time-outline" size={20} color="#555" />
-                      )}
-                      onPress={() => setShowToTimePicker(true)}
-                    />
-                  }
+                  style={styles.input}
+                  value={fromDate}
+                  onChangeText={setFromDate}
                 />
-                {showToTimePicker && (
-                  <DateTimePicker
-                    value={new Date()}
-                    mode="time"
-                    display="default"
-                    onChange={handleToTimeChange}
-                  />
-                )}
-              </View>
-
-              {/* To Date */}
-              <View style={styles.dateTimeField}>
-                <TextInput
-                  mode="outlined"
-                  label="To date"
-                  value={toDate}
-                  editable={false}
-                  outlineStyle={{ borderRadius: 12 }}
-                  right={
-                    <TextInput.Icon
-                      icon={() => (
-                        <FontAwesome name="calendar" size={20} color="#555" />
-                      )}
-                      onPress={() => setShowToDatePicker(true)}
-                    />
-                  }
+                <Ionicons
+                  name="calendar-outline"
+                  size={24}
+                  color="#49454F"
+                  style={styles.icon}
                 />
-                {showToDatePicker && (
-                  <DateTimePicker
-                    value={new Date()}
-                    mode="date"
-                    display="calendar"
-                    onChange={handleToDateChange}
-                  />
-                )}
               </View>
             </View>
           </View>
-        </ScrollView>
 
-        {/* Create Button */}
-        <View style={styles.footer}>
-          <Button
-            mode="contained"
-            onPress={handleCreate}
-            loading={loading}
-            disabled={loading}
-            style={styles.createButton}
-            buttonColor={ACCENT}
-            labelStyle={{ fontSize: 16 }}
-          >
-            Create
-          </Button>
+          {/* To Time and Date */}
+          <View style={styles.row}>
+            <View style={[styles.inputContainer, styles.halfWidth]}>
+              <Text style={styles.inputLabel}>To time</Text>
+              <View style={styles.inputWithIcon}>
+                <TextInput
+                  style={styles.input}
+                  value={toTime}
+                  onChangeText={setToTime}
+                />
+                <Ionicons
+                  name="time-outline"
+                  size={24}
+                  color="#49454F"
+                  style={styles.icon}
+                />
+              </View>
+            </View>
+
+            <View style={[styles.inputContainer, styles.halfWidth]}>
+              <Text style={styles.inputLabel}>To date</Text>
+              <View style={styles.inputWithIcon}>
+                <TextInput
+                  style={styles.input}
+                  value={toDate}
+                  onChangeText={setToDate}
+                />
+                <Ionicons
+                  name="calendar-outline"
+                  size={24}
+                  color="#49454F"
+                  style={styles.icon}
+                />
+              </View>
+            </View>
+          </View>
         </View>
-      </KeyboardAvoidingView>
-    </View>
+
+        {/* Priority */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Priority</Text>
+          <View style={styles.priorityContainer}>
+            <Pressable
+              style={styles.priorityOption}
+              onPress={() => setPriority("high")}
+            >
+              <View
+                style={[
+                  styles.radio,
+                  priority === "high" && styles.radioSelected,
+                  { borderColor: getPriorityColor("high") },
+                ]}
+              >
+                {priority === "high" && (
+                  <View
+                    style={[
+                      styles.radioInner,
+                      { backgroundColor: getPriorityColor("high") },
+                    ]}
+                  />
+                )}
+              </View>
+              <Text style={styles.priorityText}>High</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.priorityOption}
+              onPress={() => setPriority("medium")}
+            >
+              <View
+                style={[
+                  styles.radio,
+                  priority === "medium" && styles.radioSelected,
+                  { borderColor: getPriorityColor("medium") },
+                ]}
+              >
+                {priority === "medium" && (
+                  <View
+                    style={[
+                      styles.radioInner,
+                      { backgroundColor: getPriorityColor("medium") },
+                    ]}
+                  />
+                )}
+              </View>
+              <Text style={styles.priorityText}>Medium</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.priorityOption}
+              onPress={() => setPriority("low")}
+            >
+              <View
+                style={[
+                  styles.radio,
+                  priority === "low" && styles.radioSelected,
+                  { borderColor: getPriorityColor("low") },
+                ]}
+              >
+                {priority === "low" && (
+                  <View
+                    style={[
+                      styles.radioInner,
+                      { backgroundColor: getPriorityColor("low") },
+                    ]}
+                  />
+                )}
+              </View>
+              <Text style={styles.priorityText}>Low</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Save Button */}
+        <Pressable style={styles.saveButton}>
+          <Text style={styles.saveButtonText}>Save</Text>
+        </Pressable>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F6F7",
+    backgroundColor: "#F2EFF0",
   },
-  scrollView: {
+  header: {
+    backgroundColor: "#90717E",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    color: "#F8F6F7",
+    fontSize: 16,
+    fontFamily: "Poppins_400Regular",
+  },
+  deleteButton: {
+    padding: 8,
+  },
+  content: {
     flex: 1,
-    padding: 16,
+    padding: 10,
   },
-  card: {
-    backgroundColor: "#fff",
+  taskHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 9,
+    paddingVertical: 10,
+    backgroundColor: "#F8F6F7",
+    marginBottom: 10,
+  },
+  taskId: {
+    fontSize: 16,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#0F0C0D",
+  },
+  checkButton: {
+    width: 24,
+    height: 24,
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: "#92AAA5",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    position: "absolute",
+    top: -10,
+    left: 12,
+    backgroundColor: "#FEF7FF",
+    paddingHorizontal: 4,
+    fontSize: 12,
+    color: "#49454F",
+    zIndex: 1,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#79747E",
+    borderRadius: 30,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    fontSize: 16,
+    fontFamily: "Poppins_400Regular",
+    color: "#0F0C0D",
+    backgroundColor: "#FEF7FF",
+  },
+  textArea: {
+    minHeight: 110,
+    paddingTop: 12,
+    textAlignVertical: "top",
+  },
+  row: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 20,
+  },
+  halfWidth: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  inputWithIcon: {
+    position: "relative",
+  },
+  icon: {
+    position: "absolute",
+    right: 16,
+    top: 8,
+  },
+  section: {
+    backgroundColor: "#fff",
+    padding: 10,
+    marginBottom: 10,
+    marginTop: 10,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
     color: "#0F0C0D",
-    marginBottom: 16,
+    paddingHorizontal: 9,
+    marginBottom: 10,
   },
-  input: {
-    backgroundColor: "#fff",
-    marginBottom: 12,
-  },
-  inputMultiline: {
-    backgroundColor: "#fff",
-    marginBottom: 12,
-    minHeight: 100,
-  },
-  errorText: {
-    fontSize: 12,
-    color: "#FF5F57",
-    marginTop: -8,
-    marginBottom: 12,
-  },
-  dateTimeRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 12,
-  },
-  dateTimeField: {
-    flex: 1,
-  },
-  // Assignee
-  assigneeSelector: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8F6F7",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#E3DBDF",
-  },
-  assigneeAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  assigneeAvatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: ACCENT,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  assigneeAvatarText: {
-    fontSize: 16,
-    color: "#fff",
-    fontWeight: "600",
-  },
-  assigneeName: {
-    flex: 1,
-    fontSize: 16,
-    color: "#0F0C0D",
-  },
-  assigneePlaceholder: {
-    flex: 1,
-    fontSize: 16,
-    color: "#79747E",
-  },
-  assigneeDropdown: {
-    marginTop: 8,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E3DBDF",
-    overflow: "hidden",
-  },
-  assigneeOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F2EFF0",
-  },
-  assigneeOptionSelected: {
-    backgroundColor: "#F8F6F7",
-  },
-  optionAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 12,
-  },
-  optionAvatarPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: ACCENT,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  optionAvatarText: {
-    fontSize: 14,
-    color: "#fff",
-    fontWeight: "600",
-  },
-  optionName: {
-    flex: 1,
-    fontSize: 14,
-    color: "#0F0C0D",
-  },
-  // Footer
-  footer: {
-    padding: 16,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#E3DBDF",
-  },
-  createButton: {
-    borderRadius: 100,
-  },
-  priorityRow: {
+  priorityContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 4,
+    paddingHorizontal: 20,
   },
-
-  priorityItem: {
+  priorityOption: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 6,
+    gap: 12,
   },
-
-  priorityCircle: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1,
-    marginRight: 8,
+  radio: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    justifyContent: "center",
+    alignItems: "center",
   },
-
-  priorityLabel: {
-    fontSize: 15,
+  radioSelected: {
+    backgroundColor: "#E6E6E6",
+  },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  priorityText: {
+    fontSize: 16,
+    fontFamily: "Poppins_400Regular",
+    color: "#1E1E1E",
+  },
+  menuItem: {
+    backgroundColor: "#F8F6F7",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 9,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  menuText: {
+    fontSize: 16,
+    fontFamily: "Poppins_600SemiBold",
     color: "#0F0C0D",
+  },
+  saveButton: {
+    backgroundColor: "#90717E",
+    borderRadius: 100,
+    paddingVertical: 10,
+    alignItems: "center",
+    marginVertical: 10,
+  },
+  saveButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontFamily: "Poppins_400Regular",
   },
 });

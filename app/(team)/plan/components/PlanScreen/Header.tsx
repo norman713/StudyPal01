@@ -23,12 +23,16 @@ export default function HeaderSection({
   onDateSelect,
   onMonthChange,
 }: HeaderApiProps) {
-  const taskSet = new Set(markedDates);
+  // Normalize dates to YYYY-MM-DD
+  const taskSet = new Set(
+    markedDates.map((date) => dayjs(date).format("YYYY-MM-DD"))
+  );
 
+  /* FIX: Use dayjs for LOCAL time dates to avoid UTC offset issues */
   const formatMonth = (d: Date) => dayjs(d).format("YYYY-MM-01");
   const [currentMonth, setCurrentMonth] = useState(formatMonth(new Date()));
 
-  // ✅ LOCAL timezone
+  // Local date strings
   const today = dayjs().format("YYYY-MM-DD");
   const getDateStr = (d: Date) => dayjs(d).format("YYYY-MM-DD");
 
@@ -51,7 +55,7 @@ export default function HeaderSection({
       <Text className="text-center text-[16px] mb-2">
         Hi {userName}, you have{" "}
         <Text className="text-[#90717E] font-bold">{taskCount}</Text>{" "}
-        {taskCount > 1 ? "plans" : "plan"} today.
+        {taskCount > 1 ? "tasks" : "task"} today.
       </Text>
 
       <View style={styles.calendarWrapper}>
@@ -72,7 +76,7 @@ export default function HeaderSection({
 
         {/* ==== CALENDAR ==== */}
         <Calendar
-          key={currentMonth}
+          key={`${currentMonth}-${markedDates.length}`}
           numberOfMonths={1}
           startingMonth={currentMonth}
           startDate={selectedDate ?? undefined}

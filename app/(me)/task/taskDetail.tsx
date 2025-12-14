@@ -40,12 +40,20 @@ export default function TaskDetail() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#F8F6F7" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Task detail</Text>
-        <Pressable style={styles.deleteButton}>
+      <View className="flex-row items-center px-4 h-14 bg-[#90717E]">
+        {/* Left group: Back + Title */}
+        <View className="flex-row items-center gap-2.5">
+          <Pressable onPress={() => router.back()} className="p-1">
+            <Ionicons name="arrow-back" size={24} color="#F8F6F7" />
+          </Pressable>
+
+          <Text className="text-lg font-semibold text-[#F8F6F7]">
+            Task detail
+          </Text>
+        </View>
+
+        {/* Delete button */}
+        <Pressable className="ml-auto p-1">
           <MaterialIcons name="delete" size={24} color="#F8F6F7" />
         </Pressable>
       </View>
@@ -233,6 +241,16 @@ export default function TaskDetail() {
           </View>
         </View>
 
+        {/* Recurrence */}
+        <Pressable
+          style={styles.menuItem}
+          onPress={() =>
+            router.push({ pathname: "/(me)/reminders", params: { taskId } })
+          }
+        >
+          <Text style={styles.menuText}>Recurrence</Text>
+          <Ionicons name="chevron-forward" size={18} color="#79747E" />
+        </Pressable>
         {/* Reminders */}
         <Pressable
           style={styles.menuItem}
@@ -350,9 +368,10 @@ const styles = StyleSheet.create({
     top: 8,
   },
   section: {
-    backgroundColor: "#F8F6F7",
+    backgroundColor: "#fff",
     padding: 10,
     marginBottom: 10,
+    marginTop: 10,
   },
   sectionTitle: {
     fontSize: 16,
@@ -405,6 +424,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Poppins_600SemiBold",
     color: "#0F0C0D",
+    fontWeight: 700,
   },
   saveButton: {
     backgroundColor: "#90717E",

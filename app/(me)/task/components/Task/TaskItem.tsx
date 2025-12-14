@@ -1,37 +1,31 @@
+import { PersonalTask, TaskPriority } from "@/api/taskApi";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import dayjs from "dayjs";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-type TPriority = "high" | "medium" | "low";
-
-export type TTask = {
-  id: number;
-  name: string;
-  start: string;
-  end: string;
-  priority: TPriority;
-  completed: boolean;
-  repeat?: boolean;
-};
-
-type TaskItemProps = {
-  task: TTask;
+interface TaskItemProps {
+  task: PersonalTask;
   onPress: () => void;
   onToggle: () => void;
-};
+}
 
 export default function TaskItem({ task, onPress, onToggle }: TaskItemProps) {
-  const getPriorityColor = (priority: TPriority) => {
+  const getPriorityColor = (priority: TaskPriority) => {
     switch (priority) {
-      case "high":
+      case "HIGH":
         return "#FF5F57";
-      case "medium":
+      case "MEDIUM":
         return "#FEBC2F";
-      case "low":
+      case "LOW":
         return "#27C840";
       default:
         return "#ccc";
     }
+  };
+
+  const formatTime = (dateStr: string) => {
+    return dayjs(dateStr).format("HH:mm DD MMM, YYYY");
   };
 
   return (
@@ -47,19 +41,19 @@ export default function TaskItem({ task, onPress, onToggle }: TaskItemProps) {
       {/* Task info */}
       <View style={styles.info}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
-          {task.repeat && (
+          {task.taskType === "CLONED" && (
             <FontAwesome
               name="refresh"
-              size={20}
+              size={16}
               color="#7D8B91"
-              style={{ marginRight: 10 }}
+              style={{ marginRight: 6 }}
             />
           )}
-          <Text style={styles.name}>{task.name}</Text>
+          <Text style={styles.name}>{task.content}</Text>
         </View>
 
         <Text style={styles.time}>
-          {task.start} — {task.end}
+          {formatTime(task.startDate)} — {formatTime(task.dueDate)}
         </Text>
       </View>
 
@@ -71,13 +65,13 @@ export default function TaskItem({ task, onPress, onToggle }: TaskItemProps) {
         }}
         style={[
           styles.checkButton,
-          task.completed ? styles.checkButtonDone : styles.checkButtonIdle,
+          task.completedAt ? styles.checkButtonDone : styles.checkButtonIdle,
         ]}
       >
         <Ionicons
           name="checkmark"
           size={18}
-          color={task.completed ? "#fff" : "#7D8B91"}
+          color={task.completedAt ? "#fff" : "#7D8B91"}
         />
       </Pressable>
     </Pressable>
