@@ -2,16 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
-import {
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Appbar } from "react-native-paper";
 
 type Reminder = {
   id: string;
@@ -112,45 +104,59 @@ export default function Reminders() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <View className="flex-1 bg-[#F2EFF0]">
       {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#F8F6F7" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Reminders</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <Appbar.Header style={{ backgroundColor: "#90717E" }}>
+        <Appbar.BackAction
+          color="#fff"
+          onPress={() => router.back()}
+          style={{ marginLeft: 10 }}
+        />
+        <Appbar.Content
+          title="Reminder"
+          titleStyle={{
+            color: "#fff",
+            fontWeight: "600",
+            fontSize: 16,
+          }}
+        />
+      </Appbar.Header>
 
-      <ScrollView style={styles.content}>
-        <View style={styles.section}>
+      <ScrollView className="flex-1 p-4">
+        <View className="bg-[#F8F6F7] p-4">
           {/* Section Header */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Reminders</Text>
-            <Pressable onPress={handleAddReminder} style={styles.addButton}>
+          <View className="flex-row justify-between items-center mb-5 px-2">
+            <Text className="text-[16px] font-semibold">Reminders</Text>
+            <Pressable
+              onPress={handleAddReminder}
+              className="w-5 h-5 justify-center items-center"
+            >
               <Ionicons name="add" size={18} color="#90717E" />
             </Pressable>
           </View>
 
           {/* Reminders List */}
           {reminders.length > 0 && (
-            <View style={styles.remindersList}>
+            <View className="space-y-2">
               {reminders.map((reminder) => (
-                <View key={reminder.id} style={styles.reminderItem}>
-                  <View style={styles.reminderInfo}>
+                <View
+                  key={reminder.id}
+                  className="bg-[#F2EFF0] flex-row justify-between items-center px-2 py-1 mb-3 rounded-lg"
+                >
+                  <View className="flex-row items-center space-x-2">
                     <Ionicons
                       name="time-outline"
                       size={18}
                       color="#92AAA5"
-                      style={styles.clockIcon}
+                      className="mr-2"
                     />
-                    <Text style={styles.reminderText}>
+                    <Text className="text-[16px] font-normal text-[#0F0C0D]">
                       {reminder.time} {reminder.date}
                     </Text>
                   </View>
                   <Pressable
                     onPress={() => handleDeleteReminder(reminder.id)}
-                    style={styles.deleteButton}
+                    className="p-2"
                   >
                     <Ionicons name="close" size={18} color="#90717E" />
                   </Pressable>
@@ -161,34 +167,7 @@ export default function Reminders() {
         </View>
       </ScrollView>
 
-      {/* Date Picker Modal */}
-      {Platform.OS === "ios" && showDatePicker && (
-        <Modal transparent animationType="fade" visible={showDatePicker}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select date</Text>
-              <DateTimePicker
-                value={selectedDate}
-                mode="date"
-                display="inline"
-                onChange={handleDateChange}
-              />
-              <View style={styles.modalButtons}>
-                <Pressable onPress={handleCancel} style={styles.modalButton}>
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                  onPress={handleDateConfirm}
-                  style={[styles.modalButton, styles.okButton]}
-                >
-                  <Text style={styles.okButtonText}>OK</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
-
+      {/* Date Picker Modal for Android */}
       {Platform.OS === "android" && showDatePicker && (
         <DateTimePicker
           value={selectedDate}
@@ -198,34 +177,7 @@ export default function Reminders() {
         />
       )}
 
-      {/* Time Picker Modal */}
-      {Platform.OS === "ios" && showTimePicker && (
-        <Modal transparent animationType="fade" visible={showTimePicker}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select time</Text>
-              <DateTimePicker
-                value={selectedTime}
-                mode="time"
-                display="spinner"
-                onChange={handleTimeChange}
-              />
-              <View style={styles.modalButtons}>
-                <Pressable onPress={handleCancel} style={styles.modalButton}>
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                  onPress={handleTimeConfirm}
-                  style={[styles.modalButton, styles.okButton]}
-                >
-                  <Text style={styles.okButtonText}>OK</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
-
+      {/* Time Picker Modal for Android */}
       {Platform.OS === "android" && showTimePicker && (
         <DateTimePicker
           value={selectedTime}
@@ -234,126 +186,6 @@ export default function Reminders() {
           onChange={handleTimeChange}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F2EFF0",
-  },
-  header: {
-    backgroundColor: "#90717E",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    color: "#F8F6F7",
-    fontSize: 16,
-    fontFamily: "Poppins_400Regular",
-  },
-  content: {
-    flex: 1,
-    padding: 10,
-  },
-  section: {
-    backgroundColor: "#F8F6F7",
-    padding: 10,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 9,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontFamily: "Poppins_600SemiBold",
-    color: "#0F0C0D",
-  },
-  addButton: {
-    width: 18,
-    height: 18,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  remindersList: {
-    gap: 5,
-  },
-  reminderItem: {
-    backgroundColor: "#F2EFF0",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 5,
-  },
-  reminderInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  clockIcon: {
-    marginRight: 5,
-  },
-  reminderText: {
-    fontSize: 16,
-    fontFamily: "Poppins_400Regular",
-    color: "#0F0C0D",
-  },
-  deleteButton: {
-    padding: 5,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    width: "90%",
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontFamily: "Poppins_600SemiBold",
-    color: "#0F0C0D",
-    marginBottom: 16,
-  },
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 16,
-    marginTop: 16,
-  },
-  modalButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  okButton: {
-    backgroundColor: "#E8DEF8",
-    borderRadius: 8,
-  },
-  cancelButtonText: {
-    fontSize: 14,
-    fontFamily: "Poppins_600SemiBold",
-    color: "#6750A4",
-  },
-  okButtonText: {
-    fontSize: 14,
-    fontFamily: "Poppins_600SemiBold",
-    color: "#6750A4",
-  },
-});

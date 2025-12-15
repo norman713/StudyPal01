@@ -106,15 +106,18 @@ export default function TaskDetail() {
       {/* Header */}
       <Appbar.Header mode="small" style={styles.header}>
         <Appbar.BackAction color="#F8F6F7" onPress={() => router.back()} />
-
         <Appbar.Content title="Task detail" titleStyle={styles.headerTitle} />
 
-        <Appbar.Action
-          icon={() => <MaterialIcons name="delete" size={24} color="#F8F6F7" />}
-          onPress={() => {
-            // TODO: handle delete
-          }}
-        />
+        {/* icon */}
+        <View>
+          <Pressable
+            onPress={() => {
+              /* TODO: handle delete */
+            }}
+          >
+            <MaterialIcons name="delete" size={24} color="#F8F6F7" />
+          </Pressable>
+        </View>
       </Appbar.Header>
 
       <ScrollView style={styles.content}>
@@ -247,7 +250,7 @@ export default function TaskDetail() {
 
         {/* Priority */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Priority</Text>
+          <Text className="text-[16px] font-bold">Priority</Text>
           <View style={styles.priorityContainer}>
             <Pressable
               style={styles.priorityOption}
@@ -384,7 +387,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 9,
     paddingVertical: 10,
-    backgroundColor: "#F8F6F7",
     marginBottom: 10,
   },
   taskId: {
@@ -428,7 +430,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Poppins_400Regular",
     color: "#0F0C0D",
-    backgroundColor: "#FEF7FF",
+    backgroundColor: "#fff",
   },
   textArea: {
     minHeight: 110,
@@ -497,7 +499,7 @@ const styles = StyleSheet.create({
     color: "#1E1E1E",
   },
   menuItem: {
-    backgroundColor: "#F8F6F7",
+    backgroundColor: "#fff",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",

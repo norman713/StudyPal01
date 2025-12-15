@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Appbar } from "react-native-paper";
 
 type RecurrenceType = "NONE" | "DAILY" | "WEEKLY";
 
@@ -22,86 +22,101 @@ export default function RecurrenceScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+    <View className="flex-1 bg-[#F2EFF0]">
       {/* Header */}
-      <View className="flex-row items-center bg-[#90717E] px-3 py-4">
-        <Pressable onPress={() => router.back()} className="p-1">
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </Pressable>
-
-        <Text className="flex-1 text-center text-white text-base font-semibold">
-          Recurrence
-        </Text>
-
-        <View className="w-10" />
-      </View>
+      <Appbar.Header style={{ backgroundColor: "#90717E" }}>
+        <Appbar.BackAction
+          color="#fff"
+          onPress={() => router.back()}
+          style={{ marginLeft: 10 }}
+        />
+        <Appbar.Content
+          title="Recurrence"
+          titleStyle={{
+            color: "#fff",
+            fontWeight: "600",
+            fontSize: 16,
+          }}
+        />
+      </Appbar.Header>
 
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         {/* TYPE */}
-        <Text className="text-xl font-semibold text-[#0F0C0D] mb-3">Type</Text>
-
-        <View className="flex-row gap-6 mb-4">
-          {[
-            { key: "NONE", label: "None" },
-            { key: "DAILY", label: "Daily" },
-            { key: "WEEKLY", label: "Weekly" },
-          ].map((item) => {
-            const active = type === item.key;
-            return (
-              <Pressable
-                key={item.key}
-                onPress={() => setType(item.key as RecurrenceType)}
-                className="flex-row items-center gap-2"
-              >
-                <View className="w-[18px] h-[18px] rounded-full border-2 border-[#90717E] items-center justify-center">
-                  {active && (
-                    <View className="w-2 h-2 rounded-full bg-[#90717E]" />
-                  )}
-                </View>
-                <Text className="text-[15px] text-[#0F0C0D]">{item.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* WEEKLY DAYS */}
-        {type === "WEEKLY" && (
-          <View className="flex-row justify-between mb-6">
-            {WEEK_DAYS.map((day) => {
-              const active = selectedDays.includes(day);
+        <View className="bg-white p-4 mb-4">
+          <Text className="text-xl font-semibold text-[#0F0C0D] mb-3">
+            Type
+          </Text>
+          <View className="flex-row justify-between px-6 py-4">
+            {[
+              { key: "NONE", label: "None" },
+              { key: "DAILY", label: "Daily" },
+              { key: "WEEKLY", label: "Weekly" },
+            ].map((item) => {
+              const active = type === item.key;
               return (
                 <Pressable
-                  key={day}
-                  onPress={() => toggleDay(day)}
-                  className={`px-3 py-1.5 rounded-lg ${
-                    active ? "bg-[#90717E]" : "bg-transparent"
-                  }`}
+                  key={item.key}
+                  onPress={() => setType(item.key as RecurrenceType)}
+                  className="flex-row items-center gap-2"
                 >
-                  <Text
-                    className={`text-[15px] ${
-                      active ? "text-white font-semibold" : "text-[#0F0C0D]"
-                    }`}
-                  >
-                    {day}
+                  <View className="w-[18px] h-[18px] rounded-full border-2 border-[#90717E] items-center justify-center">
+                    {active && (
+                      <View className="w-2 h-2 rounded-full bg-[#90717E]" />
+                    )}
+                  </View>
+                  <Text className="text-[16px] text-[#0F0C0D]">
+                    {item.label}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
-        )}
+
+          {/* WEEKLY DAYS */}
+          {type === "WEEKLY" && (
+            <View className="flex-row justify-between mb-6">
+              {WEEK_DAYS.map((day) => {
+                const active = selectedDays.includes(day);
+                return (
+                  <Pressable
+                    key={day}
+                    onPress={() => toggleDay(day)}
+                    className={`px-3 py-1.5 rounded-lg ${
+                      active ? "bg-[#90717E]" : "bg-transparent"
+                    }`}
+                  >
+                    <Text
+                      className={`text-[16px] ${
+                        active ? "text-white font-semibold" : "text-[#0F0C0D]"
+                      }`}
+                    >
+                      {day}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        </View>
 
         {/* DURATION */}
-        <Text className="text-xl font-semibold text-[#0F0C0D] mb-3">
-          Duration
-        </Text>
+        <View className="bg-white p-4">
+          <Text className="text-xl font-semibold text-[#0F0C0D] mb-3">
+            Duration
+          </Text>
 
-        <View className="flex-row gap-3">
-          <DateInput
-            label="From date"
-            value={fromDate}
-            onChangeText={setFromDate}
-          />
-          <DateInput label="To date" value={toDate} onChangeText={setToDate} />
+          <View className="flex-row gap-3">
+            <DateInput
+              label="From date"
+              value={fromDate}
+              onChangeText={setFromDate}
+            />
+            <DateInput
+              label="To date"
+              value={toDate}
+              onChangeText={setToDate}
+            />
+          </View>
         </View>
 
         {/* SAVE */}
@@ -109,7 +124,7 @@ export default function RecurrenceScreen() {
           <Text className="text-white text-base font-semibold">Save</Text>
         </Pressable>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -169,7 +184,7 @@ function DateInput({
       </Text>
 
       <View
-        className="flex-row items-center justify-between px-4 py-3 border rounded-full"
+        className="flex-row items-center justify-between px-4 border rounded-full"
         style={{
           borderColor: "#79747E",
           backgroundColor: "#FEF7FF",
