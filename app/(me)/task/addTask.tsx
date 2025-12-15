@@ -1,4 +1,4 @@
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Appbar } from "react-native-paper";
 
 type TPriority = "high" | "medium" | "low";
 
@@ -38,39 +38,16 @@ export default function TaskDetail() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <View style={styles.container}>
       {/* Header */}
-      <View className="flex-row items-center px-4 h-14 bg-[#90717E]">
-        {/* Left group: Back + Title */}
-        <View className="flex-row items-center gap-2.5">
-          <Pressable onPress={() => router.back()} className="p-1">
-            <Ionicons name="arrow-back" size={24} color="#F8F6F7" />
-          </Pressable>
-
-          <Text
-            numberOfLines={1}
-            className="text-lg font-semibold text-[#F8F6F7]"
-          >
-            Add new task
-          </Text>
-        </View>
-
-        {/* Delete button */}
-        <Pressable className="ml-auto p-1">
-          <MaterialIcons name="delete" size={24} color="#F8F6F7" />
-        </Pressable>
-      </View>
+      <Appbar.Header mode="small" style={styles.header}>
+        <Appbar.BackAction color="#F8F6F7" onPress={() => router.back()} />
+        <Appbar.Content title="Add task" titleStyle={styles.headerTitle} />
+      </Appbar.Header>
 
       <ScrollView style={styles.content}>
         {/* Task ID and Check */}
         <View className="bg-white p-4 gap-2">
-          <View style={styles.taskHeader}>
-            <Text style={styles.taskId}>TSK-{taskId || "1"}</Text>
-            <View style={styles.checkButton}>
-              <Ionicons name="checkmark" size={18} color="#F8F6F7" />
-            </View>
-          </View>
-
           {/* Task Name */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Task name</Text>
@@ -249,7 +226,7 @@ export default function TaskDetail() {
           <Text style={styles.saveButtonText}>Save</Text>
         </Pressable>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -310,7 +287,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -10,
     left: 12,
-    backgroundColor: "#FEF7FF",
+    backgroundColor: "#fff",
     paddingHorizontal: 4,
     fontSize: 12,
     color: "#49454F",
@@ -325,7 +302,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Poppins_400Regular",
     color: "#0F0C0D",
-    backgroundColor: "#FEF7FF",
+    backgroundColor: "#fff",
   },
   textArea: {
     minHeight: 110,
