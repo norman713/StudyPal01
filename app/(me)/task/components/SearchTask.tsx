@@ -31,6 +31,17 @@ export default function SearchTasksScreen() {
 
   const handleSearch = async () => {
     try {
+      if (!taskName.trim()) {
+        // If no keyword, clear list and return or alert?
+        // User asked why it calls API. So we should stop it.
+        // Let's clear the list to be distinct.
+        setTasks([]);
+        return;
+      }
+      if (dayjs(toDate).isBefore(dayjs(fromDate))) {
+        alert("To date must be after From date");
+        return;
+      }
       setLoading(true);
 
       const request: SearchTaskRequest = {
@@ -170,7 +181,19 @@ export default function SearchTasksScreen() {
             <TaskItem
               key={t.id}
               task={t}
-              onPress={() => console.log("Pressed task", t.id)}
+              onPress={() => {
+                if (t.taskType === "PERSONAL" || t.taskType === "CLONED") {
+                  router.push({
+                    pathname: "/(me)/task/taskDetail",
+                    params: { taskId: t.id },
+                  });
+                } else if (t.taskType === "TEAM") {
+                  router.push({
+                    pathname: "/(team)/plan/taskDetail",
+                    params: { taskId: t.id },
+                  });
+                }
+              }}
               onToggle={() => console.log("Toggle task", t.id)}
             />
           ))}

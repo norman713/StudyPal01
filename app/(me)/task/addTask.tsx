@@ -1,7 +1,10 @@
+import SuccessModal from "@/components/modal/success";
 import { Ionicons } from "@expo/vector-icons";
+import dayjs from "dayjs"; // NEW
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
+  Alert, // NEW
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { Appbar } from "react-native-paper";
+import taskApi, { TaskPriority } from "../../../api/taskApi";
 
 type TPriority = "high" | "medium" | "low";
 
@@ -17,14 +21,22 @@ export default function TaskDetail() {
   const params = useLocalSearchParams();
   const taskId = params.taskId as string;
 
-  // Mock data - replace with actual API call
-  const [taskName, setTaskName] = useState("Task A");
-  const [taskNote, setTaskNote] = useState("This is task A note");
-  const [fromTime, setFromTime] = useState("12:00");
-  const [fromDate, setFromDate] = useState("12-12-1212");
-  const [toTime, setToTime] = useState("12:00");
-  const [toDate, setToDate] = useState("12-12-1212");
-  const [priority, setPriority] = useState<TPriority>("high");
+  // Default values: Current date and time
+  const [taskName, setTaskName] = useState(""); // Empty initially
+  const [taskNote, setTaskNote] = useState("");
+
+  // states
+  const now = dayjs();
+  const [fromTime, setFromTime] = useState(now.format("HH:mm"));
+  const [fromDate, setFromDate] = useState(now.format("DD-MM-YYYY"));
+
+  const nextHour = now.add(1, "hour");
+  const [toTime, setToTime] = useState(nextHour.format("HH:mm"));
+  const [toDate, setToDate] = useState(nextHour.format("DD-MM-YYYY"));
+
+  const [priority, setPriority] = useState<TPriority>("medium"); // Default medium
+  const [isLoading, setIsLoading] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   const getPriorityColor = (p: TPriority) => {
     switch (p) {
@@ -37,16 +49,71 @@ export default function TaskDetail() {
     }
   };
 
+  const parseDateTime = (dateStr: string, timeStr: string) => {
+    // dateStr: DD-MM-YYYY, timeStr: HH:mm
+    return dayjs(`${dateStr} ${timeStr}`, "DD-MM-YYYY HH:mm");
+  };
+
+  const handleSave = async () => {
+    // 1. Validate required fields
+    if (!taskName.trim()) {
+      Alert.alert("Validation Error", "Please enter a task name.");
+      return;
+    }
+
+    // 2. Validate Date/Time format (Simple regex or dayjs isValid)
+    const startDateTime = parseDateTime(fromDate, fromTime);
+    const endDateTime = parseDateTime(toDate, toTime);
+
+    if (!startDateTime.isValid()) {
+      Alert.alert("Validation Error", "Invalid Start Date or Time.");
+      return;
+    }
+    if (!endDateTime.isValid()) {
+      Alert.alert("Validation Error", "Invalid End Date or Time.");
+      return;
+    }
+
+    // 3. Validate Logic: End > Start
+    if (endDateTime.isBefore(startDateTime)) {
+      Alert.alert("Validation Error", "End time must be after start time.");
+      return;
+    }
+
+    // 4. API Call
+    try {
+      setIsLoading(true);
+      const payload = {
+        content: taskName,
+        startDate: startDateTime.format("YYYY-MM-DD HH:mm:ss"),
+        dueDate: endDateTime.format("YYYY-MM-DD HH:mm:ss"),
+        priority: priority.toUpperCase() as TaskPriority, // "high" -> "HIGH"
+        note: taskNote,
+      };
+
+      console.log("Saving task payload:", payload);
+      await taskApi.createTask(payload);
+
+      setIsModalVisible(true); // Show modal on success
+    } catch (error) {
+      console.error("Failed to create task:", error);
+      setIsModalVisible(false); // Close any previous modal if error occurs
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-[#F2EFF0]">
       {/* Header */}
       <Appbar.Header mode="small" style={styles.header}>
         <Appbar.BackAction color="#F8F6F7" onPress={() => router.back()} />
-        <Appbar.Content title="Add task" titleStyle={styles.headerTitle} />
+
+        <Appbar.Content title="Add new task" titleStyle={styles.headerTitle} />
       </Appbar.Header>
 
       <ScrollView style={styles.content}>
-        {/* Task ID and Check */}
+        {/* Add task detail  */}
         <View className="bg-white p-4 gap-2">
           {/* Task Name */}
           <View style={styles.inputContainer}>
@@ -55,6 +122,7 @@ export default function TaskDetail() {
               style={styles.input}
               value={taskName}
               onChangeText={setTaskName}
+              placeholder="Enter task name"
             />
           </View>
 
@@ -147,9 +215,9 @@ export default function TaskDetail() {
         </View>
 
         {/* Priority */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Priority</Text>
-          <View style={styles.priorityContainer}>
+        <View className="bg-white p-4 mb-4 mt-4">
+          <Text className="text-[16px] font-PoppinsSemiBold">Priority</Text>
+          <View className="flex-row justify-between mt-4">
             <Pressable
               style={styles.priorityOption}
               onPress={() => setPriority("high")}
@@ -222,19 +290,23 @@ export default function TaskDetail() {
         </View>
 
         {/* Save Button */}
-        <Pressable style={styles.saveButton}>
-          <Text style={styles.saveButtonText}>Save</Text>
+        <Pressable style={styles.saveButton} onPress={handleSave}>
+          <Text className="text-white text-lg font-PoppinsRegular">Save</Text>
         </Pressable>
       </ScrollView>
+      {/* Success Modal */}
+      <SuccessModal
+        visible={isModalVisible}
+        title="Success"
+        message="Task created successfully!"
+        confirmText="OK"
+        onConfirm={() => router.back()}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F2EFF0",
-  },
   header: {
     backgroundColor: "#90717E",
     flexDirection: "row",
@@ -243,16 +315,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  backButton: {
-    padding: 8,
-  },
   headerTitle: {
     color: "#F8F6F7",
     fontSize: 16,
     fontFamily: "Poppins_400Regular",
-  },
-  deleteButton: {
-    padding: 8,
   },
   content: {
     flex: 1,
@@ -326,24 +392,7 @@ const styles = StyleSheet.create({
     right: 16,
     top: 8,
   },
-  section: {
-    backgroundColor: "#fff",
-    padding: 10,
-    marginBottom: 10,
-    marginTop: 10,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontFamily: "Poppins_600SemiBold",
-    color: "#0F0C0D",
-    paddingHorizontal: 9,
-    marginBottom: 10,
-  },
-  priorityContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-  },
+
   priorityOption: {
     flexDirection: "row",
     alignItems: "center",
@@ -378,11 +427,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 10,
     marginBottom: 10,
-  },
-  menuText: {
-    fontSize: 16,
-    fontFamily: "Poppins_600SemiBold",
-    color: "#0F0C0D",
   },
   saveButton: {
     backgroundColor: "#90717E",

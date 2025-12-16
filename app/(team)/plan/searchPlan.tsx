@@ -63,6 +63,11 @@ export default function PlanScreen() {
       return;
     }
 
+    if (dayjs(toDate).isBefore(dayjs(fromDate))) {
+      alert("To date must be after From date");
+      return;
+    }
+
     try {
       setLoading(true);
 

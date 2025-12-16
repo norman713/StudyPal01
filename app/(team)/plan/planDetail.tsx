@@ -1,10 +1,11 @@
 import planApi, { Plan, Task } from "@/api/planApi";
-import { Ionicons } from "@expo/vector-icons";
+import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -12,6 +13,7 @@ import {
 } from "react-native";
 import { Appbar, Text } from "react-native-paper";
 
+import EditPlanCard from "@/components/modal/editPlanCard";
 import ProgressCircle from "./components/ProgressCircle";
 import TaskItem from "./components/TaskItem";
 
@@ -121,11 +123,12 @@ export default function PlanDetailScreen() {
 
   const role: Role = (roleParam as Role) || "MEMBER";
   const canManage = role === "OWNER" || role === "ADMIN";
-
+  // States
   const [plan, setPlan] = useState<Plan | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>("ALL");
+  const [isEditModalVisible, setEditModalVisible] = useState(false);
 
   // Fetch data
   const fetchPlanDetail = useCallback(async () => {
@@ -201,6 +204,7 @@ export default function PlanDetailScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
+
       <Appbar.Header mode="small" style={styles.header}>
         {/* Back */}
         <Appbar.BackAction color="#fff" onPress={() => router.back()} />
@@ -208,42 +212,44 @@ export default function PlanDetailScreen() {
         {/* Title */}
         <Appbar.Content title="Plan detail" titleStyle={styles.headerTitle} />
 
-        {/* Recover / History – luôn hiển thị */}
-        <Appbar.Action
-          icon="history"
-          color="#fff"
+        {/* Recover / History – always visible */}
+        <Pressable
           onPress={() => {
-            // TODO: handle recover / history
+            // Navigate to planHistory page
+            router.push({
+              pathname: "/(team)/plan/planHistory", // Add the correct path for the history page
+              params: { teamId, planId }, // Pass relevant parameters if needed
+            });
           }}
-        />
+          style={{ marginRight: 16 }}
+        >
+          <FontAwesome5 name="history" size={24} color="#fff" />
+        </Pressable>
 
-        {/* Nếu có quyền quản lý */}
+        {/* If user has manage rights */}
         {canManage && (
           <>
             {/* Edit */}
-            <Appbar.Action
-              icon="pencil"
-              color="#fff"
-              onPress={() =>
-                router.push({
-                  pathname: "/(team)/plan/planCreate",
-                  params: { teamId, planId, role, mode: "edit" },
-                })
-              }
-            />
+            {/* Edit */}
+            <Pressable
+              onPress={() => setEditModalVisible(true)} // Open modal instead of navigating
+              style={{ marginRight: 16 }}
+            >
+              <FontAwesome5 name="pen" size={24} color="#fff" />
+            </Pressable>
 
             {/* Delete */}
-            <Appbar.Action
-              icon="trash-can-outline"
-              color="#fff"
+            <Pressable
               onPress={() => {
                 // TODO: confirm delete
               }}
-            />
+              style={{ marginRight: 16 }}
+            >
+              <FontAwesome5 name="trash" size={24} color="#fff" />
+            </Pressable>
           </>
         )}
       </Appbar.Header>
-
       <ScrollView style={styles.scrollView}>
         {/* Plan Info Card */}
         <View style={styles.card}>
@@ -310,6 +316,15 @@ export default function PlanDetailScreen() {
           </View>
         </View>
       </ScrollView>
+      {/* Edit Plan Modal */}
+      <EditPlanCard
+        visible={isEditModalVisible}
+        onDismiss={() => setEditModalVisible(false)} // Close modal
+        onSave={(data) => {
+          console.log("Saved Plan Data:", data);
+          setEditModalVisible(false); // Close modal after saving
+        }}
+      />
     </View>
   );
 }

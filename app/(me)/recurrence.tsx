@@ -1,52 +1,154 @@
+import taskApi, { RecurrenceRule } from "@/api/taskApi";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, { useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { Appbar } from "react-native-paper";
+
+dayjs.extend(customParseFormat);
 
 type RecurrenceType = "NONE" | "DAILY" | "WEEKLY";
 
-const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// Frontend display
+const WEEK_DAYS_DISPLAY = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// Backend values
+const WEEK_DAYS_BACKEND = [
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+  "SATURDAY",
+  "SUNDAY",
+];
 
 export default function RecurrenceScreen() {
-  const [type, setType] = useState<RecurrenceType>("WEEKLY");
-  const [selectedDays, setSelectedDays] = useState<string[]>(["Wed"]);
+  const { taskId } = useLocalSearchParams<{ taskId: string }>();
 
-  const [fromDate, setFromDate] = useState("12-12-2025");
-  const [toDate, setToDate] = useState("12-12-2025");
+  const [loading, setLoading] = useState(false);
+  const [type, setType] = useState<RecurrenceType>("NONE");
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  // Store full backend day strings in selectedDays? Or map?
+  // Let's store Backend strings to make it easier for submitting, map for display.
 
-  const toggleDay = (day: string) => {
+  const [fromDate, setFromDate] = useState(dayjs().format("DD-MM-YYYY"));
+  const [toDate, setToDate] = useState(
+    dayjs().add(1, "week").format("DD-MM-YYYY")
+  );
+
+  useEffect(() => {
+    console.log("RecurrenceScreen mounted, taskId:", taskId);
+    if (taskId) {
+      fetchRecurrence();
+    }
+  }, [taskId]);
+
+  const fetchRecurrence = async () => {
+    try {
+      setLoading(true);
+      console.log("Fetching recurrence for:", taskId);
+      const data = await taskApi.getRecurrenceRules(taskId);
+      console.log("Fetched recurrence data:", data);
+      if (data) {
+        setType(data.recurrenceType as RecurrenceType);
+        if (data.weekDays) {
+          setSelectedDays(data.weekDays);
+        }
+        if (data.recurrenceStartDate) {
+          setFromDate(dayjs(data.recurrenceStartDate).format("DD-MM-YYYY"));
+        }
+        if (data.recurrenceEndDate) {
+          setToDate(dayjs(data.recurrenceEndDate).format("DD-MM-YYYY"));
+        }
+      }
+    } catch (error: any) {
+      console.log("Error fetching recurrence", error?.response?.data || error);
+      // If error (e.g. 404 or no rules), just keep defaults
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleDay = (backendDay: string) => {
     setSelectedDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+      prev.includes(backendDay)
+        ? prev.filter((d) => d !== backendDay)
+        : [...prev, backendDay]
     );
+  };
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      // Validation?
+      // Format dates to YYYY-MM-DD for backend
+      const start = dayjs(fromDate, "DD-MM-YYYY").format("YYYY-MM-DD");
+      const end = dayjs(toDate, "DD-MM-YYYY").format("YYYY-MM-DD");
+
+      const payload: RecurrenceRule = {
+        // recurrenceType: type, // Keep this for TS satisfaction or use as any
+        type: type, // Add this for backend
+        weekDays: type === "WEEKLY" ? selectedDays : null,
+        recurrenceStartDate: start,
+        recurrenceEndDate: end,
+      };
+
+      console.log("Saving payload:", JSON.stringify(payload, null, 2));
+
+      await taskApi.updateRecurrenceRules(taskId, payload);
+      Alert.alert("Success", "Recurrence updated", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    } catch (error: any) {
+      console.log("Error saving recurrence", error?.response?.data || error);
+      Alert.alert("Error", "Failed to update recurrence");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <View className="flex-1 bg-[#F2EFF0]">
       {/* Header */}
-      <Appbar.Header style={{ backgroundColor: "#90717E" }}>
-        <Appbar.BackAction
-          color="#fff"
-          onPress={() => router.back()}
-          style={{ marginLeft: 10 }}
-        />
+      <Appbar.Header mode="small" style={{ backgroundColor: "#90717E" }}>
+        <Appbar.BackAction color="#F8F6F7" onPress={() => router.back()} />
+
         <Appbar.Content
           title="Recurrence"
           titleStyle={{
-            color: "#fff",
-            fontWeight: "600",
             fontSize: 16,
+            color: "#FFFFFF",
+            fontFamily: "Poppins_400Regular",
           }}
         />
       </Appbar.Header>
 
       <ScrollView contentContainerStyle={{ padding: 16 }}>
+        {loading && (
+          <ActivityIndicator
+            size="small"
+            color="#90717E"
+            style={{ marginBottom: 10 }}
+          />
+        )}
+
         {/* TYPE */}
-        <View className="bg-white p-4 mb-4">
+        <View className="bg-white p-4">
           <Text className="text-xl font-semibold text-[#0F0C0D] mb-3">
             Type
           </Text>
-          <View className="flex-row justify-between px-6 py-4">
+
+          <View className="flex-row gap-6 mb-4">
             {[
               { key: "NONE", label: "None" },
               { key: "DAILY", label: "Daily" },
@@ -64,33 +166,33 @@ export default function RecurrenceScreen() {
                       <View className="w-2 h-2 rounded-full bg-[#90717E]" />
                     )}
                   </View>
-                  <Text className="text-[16px] text-[#0F0C0D]">
+                  <Text className="text-[15px] text-[#0F0C0D]">
                     {item.label}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
-
           {/* WEEKLY DAYS */}
           {type === "WEEKLY" && (
-            <View className="flex-row justify-between mb-6">
-              {WEEK_DAYS.map((day) => {
+            <View className="flex-row justify-between mb-6 flex-wrap">
+              {WEEK_DAYS_BACKEND.map((day, index) => {
                 const active = selectedDays.includes(day);
+                const displayLabel = WEEK_DAYS_DISPLAY[index];
                 return (
                   <Pressable
                     key={day}
                     onPress={() => toggleDay(day)}
-                    className={`px-3 py-1.5 rounded-lg ${
+                    className={`px-3 py-1.5 rounded-lg mb-2 ${
                       active ? "bg-[#90717E]" : "bg-transparent"
                     }`}
                   >
                     <Text
-                      className={`text-[16px] ${
+                      className={`text-[15px] ${
                         active ? "text-white font-semibold" : "text-[#0F0C0D]"
                       }`}
                     >
-                      {day}
+                      {displayLabel}
                     </Text>
                   </Pressable>
                 );
@@ -100,7 +202,7 @@ export default function RecurrenceScreen() {
         </View>
 
         {/* DURATION */}
-        <View className="bg-white p-4">
+        <View className="bg-white p-4 mt-4">
           <Text className="text-xl font-semibold text-[#0F0C0D] mb-3">
             Duration
           </Text>
@@ -120,8 +222,16 @@ export default function RecurrenceScreen() {
         </View>
 
         {/* SAVE */}
-        <Pressable className="mt-8 bg-[#90717E] rounded-full py-3 items-center">
-          <Text className="text-white text-base font-semibold">Save</Text>
+        <Pressable
+          onPress={handleSave}
+          className="mt-8 bg-[#90717E] rounded-full py-3 items-center"
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-white text-base font-semibold">Save</Text>
+          )}
         </Pressable>
       </ScrollView>
     </View>
@@ -184,7 +294,7 @@ function DateInput({
       </Text>
 
       <View
-        className="flex-row items-center justify-between px-4 border rounded-full"
+        className="flex-row items-center justify-between px-4 py-3 border rounded-full"
         style={{
           borderColor: "#79747E",
           backgroundColor: "#FEF7FF",

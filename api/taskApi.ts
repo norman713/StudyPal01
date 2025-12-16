@@ -46,6 +46,17 @@ const taskApi = {
         const data: SearchTaskResponse = await axiosInstance.post(url, request);
         return data;
     },
+
+    /**
+     * Create new task
+     * POST /api/tasks
+     */
+    async createTask(payload: CreateTaskRequest): Promise<PersonalTask> {
+        const url = `/tasks`;
+        const data: PersonalTask = await axiosInstance.post(url, payload);
+        return data;
+    },
+
     /**
      * Get task detail generic
      * GET /api/tasks/{id}
@@ -65,7 +76,82 @@ const taskApi = {
         const data: { success: boolean; message: string } = await axiosInstance.patch(url);
         return data;
     },
+
+    /**
+     * Update task generic
+     * PATCH /api/tasks/{id}?applyScope=CURRENT_ONLY
+     */
+    async updateTask(id: string, payload: UpdateTaskRequest): Promise<PersonalTask> {
+        const url = `/tasks/${id}`;
+        // User requested applyScope=CURRENT_ONLY by default or as example.
+        // I will add it as query param.
+        const params = { applyScope: "CURRENT_ONLY" };
+        const data: PersonalTask = await axiosInstance.patch(url, payload, { params });
+        return data;
+    },
+
+    /**
+     * Delete task generic
+     * DELETE /api/tasks/{id}?applyScope=CURRENT_ONLY
+     */
+    async deleteTask(id: string, applyScope: "CURRENT_ONLY" | "ALL_ITEMS" = "CURRENT_ONLY"): Promise<{ success: boolean; message?: string }> {
+        const url = `/tasks/${id}`;
+        const params = { applyScope };
+        const data: any = await axiosInstance.delete(url, { params });
+        return data;
+    },
+
+    // --- RECURRENCE ---
+    async getRecurrenceRules(taskId: string): Promise<RecurrenceRule | null> {
+        const url = `/tasks/${taskId}/recurrence-rules`;
+        // API might return 204 or empty if no rules? Assuming it returns object or null.
+        // User said it returns the object.
+        const data: RecurrenceRule = await axiosInstance.get(url);
+        return data;
+    },
+
+    async updateRecurrenceRules(taskId: string, rules: Partial<RecurrenceRule> & { type?: string }): Promise<void> {
+        const url = `/tasks/${taskId}/recurrence-rules`;
+        await axiosInstance.post(url, rules);
+    },
+
+    // --- REMINDERS ---
+    async getReminders(taskId: string): Promise<Reminder[]> {
+        const url = `/tasks/${taskId}/reminders`;
+        const data: Reminder[] = await axiosInstance.get(url);
+        return data;
+    },
+
+    async createReminder(taskId: string, remindAt: string): Promise<{ success: boolean, message: string }> {
+        const url = `/tasks/${taskId}/reminders`;
+        const data: any = await axiosInstance.post(url, { remindAt });
+        return data; // Assuming interceptor returns data directly
+    },
+
+    async updateReminder(reminderId: string, remindAt: string): Promise<void> {
+        const url = `/tasks/reminders/${reminderId}`;
+        await axiosInstance.put(url, { remindAt });
+    },
+
+    async deleteReminder(reminderId: string): Promise<{ success: boolean, message: string }> {
+        const url = `/tasks/reminders/${reminderId}`;
+        const data: any = await axiosInstance.delete(url);
+        return data;
+    },
 };
+
+export interface RecurrenceRule {
+    // recurrenceType: "NONE" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"; // Adjust based on backend options. User showed NONE/DAILY.
+    type?: "NONE" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"; // For update payload
+    weekDays: string[] | null; // e.g. ["MONDAY"]
+    recurrenceStartDate: string; // YYYY-MM-DD
+    recurrenceEndDate: string;   // YYYY-MM-DD
+}
+
+export interface Reminder {
+    id: string;
+    remindAt: string; // YYYY-MM-DD HH:mm:ss
+}
 
 export interface SearchTaskRequest {
     keyword?: string;
@@ -78,6 +164,22 @@ export interface SearchTaskResponse {
     tasks: PersonalTask[];
     total: number;
     nextCursor: string | null;
+}
+
+export interface UpdateTaskRequest {
+    content?: string;
+    startDate?: string;
+    dueDate?: string;
+    priority?: TaskPriority;
+    note?: string;
+}
+
+export interface CreateTaskRequest {
+    content: string;
+    startDate: string;
+    dueDate: string;
+    priority: TaskPriority;
+    note?: string;
 }
 
 export default taskApi;

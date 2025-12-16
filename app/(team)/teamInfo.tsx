@@ -536,6 +536,22 @@ export default function TeamInfoScreen({
                 style={{ paddingHorizontal: 10, paddingVertical: 12 }}
               >
                 <List.Item
+                  title="Chat"
+                  titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
+                  left={(p) => (
+                    <Ionicons name="folder-open" size={24} color="#49454F" />
+                  )}
+                  right={(p) => (
+                    <Ionicons
+                      name="chevron-forward"
+                      size={24}
+                      color="#49454F"
+                    />
+                  )}
+                  onPress={() => console.log("Documents clicked")}
+                  style={{ paddingRight: 0, paddingLeft: 0 }}
+                />
+                <List.Item
                   title="Plans"
                   titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
                   left={(p) => (

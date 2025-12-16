@@ -1,146 +1,137 @@
-import planApi, { TaskPriority } from "@/api/planApi";
-import { planCreationStore } from "@/utils/planCreationStore";
-import dayjs from "dayjs";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import dayjs from "dayjs"; // NEW
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
+  Alert, // NEW
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
-import { Appbar, TextInput } from "react-native-paper";
-import AssigneeSelector from "./components/AssigneeSelector";
-import DateTimeInput from "./components/DateTimeInput";
-import PrioritySelector from "./components/PrioritySelector";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-type Role = "OWNER" | "ADMIN" | "MEMBER";
+type TPriority = "high" | "medium" | "low";
 
-/**
- * Add New Task Screen - giống design taskDetail
- */
-export default function AddTaskScreen() {
-  const {
-    teamId,
-    planId,
-    role: roleParam,
-  } = useLocalSearchParams<{
-    teamId: string;
-    planId: string;
-    role: string;
-  }>();
+export default function TaskDetail() {
+  const params = useLocalSearchParams();
+  const taskId = params.taskId as string;
 
-  // Form states
-  const [taskName, setTaskName] = useState("");
+  // Default values: Current date and time
+  const [taskName, setTaskName] = useState(""); // Empty initially
   const [taskNote, setTaskNote] = useState("");
-  const [fromTime, setFromTime] = useState("12:00");
-  const [fromDate, setFromDate] = useState("12-12-1212");
-  const [toTime, setToTime] = useState("12:00");
-  const [toDate, setToDate] = useState("12-12-1212");
-  const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
-  const [assigneeId, setAssigneeId] = useState<string>("");
 
-  // Submit state
-  const [loading, setLoading] = useState(false);
+  // Current time rounded to nearest minute or just current
+  const now = dayjs();
+  const [fromTime, setFromTime] = useState(now.format("HH:mm"));
+  const [fromDate, setFromDate] = useState(now.format("DD-MM-YYYY"));
 
-  const validate = () => {
-    if (!taskName.trim()) {
-      Alert.alert("Error", "Task name is required");
-      return false;
+  const nextHour = now.add(1, "hour");
+  const [toTime, setToTime] = useState(nextHour.format("HH:mm"));
+  const [toDate, setToDate] = useState(nextHour.format("DD-MM-YYYY"));
+
+  const [priority, setPriority] = useState<TPriority>("medium"); // Default medium
+
+  const getPriorityColor = (p: TPriority) => {
+    switch (p) {
+      case "high":
+        return "#FF5F57";
+      case "medium":
+        return "#FEBC2F";
+      case "low":
+        return "#27C840";
     }
-    return true;
   };
 
-  const handleCreate = async () => {
-    if (!validate()) return;
-    if (!teamId) return;
+  const parseDateTime = (dateStr: string, timeStr: string) => {
+    // dateStr: DD-MM-YYYY, timeStr: HH:mm
+    return dayjs(`${dateStr} ${timeStr}`, "DD-MM-YYYY HH:mm");
+  };
 
-    setLoading(true);
-    try {
-      // Parse dates
-      const [fromDay, fromMonth, fromYear] = fromDate.split("-").map(Number);
-      const [fromHour, fromMin] = fromTime.split(":").map(Number);
-      const startDate = new Date(
-        fromYear,
-        fromMonth - 1,
-        fromDay,
-        fromHour,
-        fromMin
-      );
-
-      const [toDay, toMonth, toYear] = toDate.split("-").map(Number);
-      const [toHour, toMin] = toTime.split(":").map(Number);
-      const dueDate = new Date(toYear, toMonth - 1, toDay, toHour, toMin);
-
-      // Check if we are creating a new plan (planId is "new" or missing)
-      const isNewPlan = !planId || planId === "new";
-
-      if (isNewPlan) {
-        // Save to local store
-        planCreationStore.addTask({
-          content: taskName.trim(),
-          note: taskNote.trim(),
-          startDate: dayjs(startDate).format("YYYY-MM-DD HH:mm:ss"),
-          dueDate: dayjs(dueDate).format("YYYY-MM-DD HH:mm:ss"),
-          assigneeId: assigneeId || undefined,
-          priority,
-        });
-        router.back();
-      } else {
-        // Direct API call for existing plan
-        await planApi.createTask(teamId, planId, {
-          name: taskName.trim(),
-          description: taskNote.trim(),
-          startDate: dayjs(startDate).format("YYYY-MM-DD HH:mm:ss"),
-          dueDate: dayjs(dueDate).format("YYYY-MM-DD HH:mm:ss"),
-          assigneeId: assigneeId || undefined,
-        });
-        router.back();
-      }
-    } catch (err) {
-      console.warn("Failed to create task", err);
-      Alert.alert("Error", "Failed to create task");
-    } finally {
-      setLoading(false);
+  const handleSave = () => {
+    // 1. Validate required fields
+    if (!taskName.trim()) {
+      Alert.alert("Validation Error", "Please enter a task name.");
+      return;
     }
+
+    // 2. Validate Date/Time format (Simple regex or dayjs isValid)
+    const startDateTime = parseDateTime(fromDate, fromTime);
+    const endDateTime = parseDateTime(toDate, toTime);
+
+    if (!startDateTime.isValid()) {
+      Alert.alert("Validation Error", "Invalid Start Date or Time.");
+      return;
+    }
+    if (!endDateTime.isValid()) {
+      Alert.alert("Validation Error", "Invalid End Date or Time.");
+      return;
+    }
+
+    // 3. Validate Logic: End > Start
+    if (endDateTime.isBefore(startDateTime)) {
+      Alert.alert("Validation Error", "End time must be after start time.");
+      return;
+    }
+
+    // All good - Proceed to save (Mock)
+    console.log("Saving task:", {
+      taskName,
+      taskNote,
+      start: startDateTime.format(),
+      end: endDateTime.format(),
+      priority,
+    });
+
+    // In real app: call API then navigate back
+    // router.back();
+    Alert.alert("Success", "Task validated successfully (Mock Save)");
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
-      <Appbar.Header mode="small" style={styles.header}>
-        <Appbar.BackAction color="#fff" onPress={() => router.back()} />
-        <Appbar.Content title="Add new task" titleStyle={styles.headerTitle} />
-        <View style={styles.placeholderButton} />
-      </Appbar.Header>
+      <View className="flex-row items-center px-4 h-14 bg-[#90717E]">
+        {/* Left group: Back + Title */}
+        <View className="flex-row items-center gap-2.5">
+          <Pressable onPress={() => router.back()} className="p-1">
+            <Ionicons name="arrow-back" size={24} color="#F8F6F7" />
+          </Pressable>
+
+          <Text
+            numberOfLines={1}
+            className="text-lg font-semibold text-[#F8F6F7]"
+          >
+            Add new task
+          </Text>
+        </View>
+
+        {/* Delete button */}
+        <Pressable className="ml-auto p-1">
+          <MaterialIcons name="delete" size={24} color="#F8F6F7" />
+        </Pressable>
+      </View>
 
       <ScrollView style={styles.content}>
-        {/* Main Form Section */}
-        <View style={styles.mainFormSection}>
-          {/* Section Title */}
-          <Text style={styles.sectionTitle}>Detail</Text>
+        {/* Task ID and Check */}
+        <View className="bg-white p-4 gap-2">
+          <View style={styles.taskHeader}>
+            <Text style={styles.taskId}>TSK-{taskId || "NEW"}</Text>
+            <View style={styles.checkButton}>
+              <Ionicons name="checkmark" size={18} color="#F8F6F7" />
+            </View>
+          </View>
 
           {/* Task Name */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Task name</Text>
             <TextInput
-              mode="outlined"
-              label=""
+              style={styles.input}
               value={taskName}
               onChangeText={setTaskName}
-              style={styles.input}
-              outlineStyle={styles.inputOutline}
-              contentStyle={styles.inputContent}
-              theme={{
-                roundness: 30,
-                colors: {
-                  background: "#F8F6F7",
-                  outline: "#79747E",
-                },
-              }}
+              placeholder="Enter task name"
             />
           </View>
 
@@ -148,83 +139,171 @@ export default function AddTaskScreen() {
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Task note (optional)</Text>
             <TextInput
-              mode="outlined"
-              label=""
+              style={[styles.input, styles.textArea]}
               value={taskNote}
               onChangeText={setTaskNote}
               multiline
               numberOfLines={4}
-              style={styles.input}
-              outlineStyle={styles.inputOutline}
-              contentStyle={[styles.inputContent, styles.textAreaContent]}
-              theme={{
-                roundness: 30,
-                colors: {
-                  background: "#F8F6F7",
-                  outline: "#79747E",
-                },
-              }}
+              textAlignVertical="top"
             />
           </View>
 
           {/* From Time and Date */}
           <View style={styles.row}>
-            <DateTimeInput
-              label="From time"
-              value={fromTime}
-              onChangeText={setFromTime}
-              icon="time-outline"
-            />
-            <DateTimeInput
-              label="From date"
-              value={fromDate}
-              onChangeText={setFromDate}
-              icon="calendar-outline"
-            />
+            <View style={[styles.inputContainer, styles.halfWidth]}>
+              <Text style={styles.inputLabel}>From time</Text>
+              <View style={styles.inputWithIcon}>
+                <TextInput
+                  style={styles.input}
+                  value={fromTime}
+                  onChangeText={setFromTime}
+                />
+                <Ionicons
+                  name="time-outline"
+                  size={24}
+                  color="#49454F"
+                  style={styles.icon}
+                />
+              </View>
+            </View>
+
+            <View style={[styles.inputContainer, styles.halfWidth]}>
+              <Text style={styles.inputLabel}>From date</Text>
+              <View style={styles.inputWithIcon}>
+                <TextInput
+                  style={styles.input}
+                  value={fromDate}
+                  onChangeText={setFromDate}
+                />
+                <Ionicons
+                  name="calendar-outline"
+                  size={24}
+                  color="#49454F"
+                  style={styles.icon}
+                />
+              </View>
+            </View>
           </View>
 
           {/* To Time and Date */}
           <View style={styles.row}>
-            <DateTimeInput
-              label="To time"
-              value={toTime}
-              onChangeText={setToTime}
-              icon="time-outline"
-            />
-            <DateTimeInput
-              label="To date"
-              value={toDate}
-              onChangeText={setToDate}
-              icon="calendar-outline"
-            />
+            <View style={[styles.inputContainer, styles.halfWidth]}>
+              <Text style={styles.inputLabel}>To time</Text>
+              <View style={styles.inputWithIcon}>
+                <TextInput
+                  style={styles.input}
+                  value={toTime}
+                  onChangeText={setToTime}
+                />
+                <Ionicons
+                  name="time-outline"
+                  size={24}
+                  color="#49454F"
+                  style={styles.icon}
+                />
+              </View>
+            </View>
+
+            <View style={[styles.inputContainer, styles.halfWidth]}>
+              <Text style={styles.inputLabel}>To date</Text>
+              <View style={styles.inputWithIcon}>
+                <TextInput
+                  style={styles.input}
+                  value={toDate}
+                  onChangeText={setToDate}
+                />
+                <Ionicons
+                  name="calendar-outline"
+                  size={24}
+                  color="#49454F"
+                  style={styles.icon}
+                />
+              </View>
+            </View>
           </View>
         </View>
 
         {/* Priority */}
-        <PrioritySelector priority={priority} onPriorityChange={setPriority} />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Priority</Text>
+          <View style={styles.priorityContainer}>
+            <Pressable
+              style={styles.priorityOption}
+              onPress={() => setPriority("high")}
+            >
+              <View
+                style={[
+                  styles.radio,
+                  priority === "high" && styles.radioSelected,
+                  { borderColor: getPriorityColor("high") },
+                ]}
+              >
+                {priority === "high" && (
+                  <View
+                    style={[
+                      styles.radioInner,
+                      { backgroundColor: getPriorityColor("high") },
+                    ]}
+                  />
+                )}
+              </View>
+              <Text style={styles.priorityText}>High</Text>
+            </Pressable>
 
-        {/* Assignee */}
-        {teamId && (
-          <AssigneeSelector
-            teamId={teamId}
-            selectedAssigneeId={assigneeId}
-            onAssigneeChange={setAssigneeId}
-          />
-        )}
+            <Pressable
+              style={styles.priorityOption}
+              onPress={() => setPriority("medium")}
+            >
+              <View
+                style={[
+                  styles.radio,
+                  priority === "medium" && styles.radioSelected,
+                  { borderColor: getPriorityColor("medium") },
+                ]}
+              >
+                {priority === "medium" && (
+                  <View
+                    style={[
+                      styles.radioInner,
+                      { backgroundColor: getPriorityColor("medium") },
+                    ]}
+                  />
+                )}
+              </View>
+              <Text style={styles.priorityText}>Medium</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.priorityOption}
+              onPress={() => setPriority("low")}
+            >
+              <View
+                style={[
+                  styles.radio,
+                  priority === "low" && styles.radioSelected,
+                  { borderColor: getPriorityColor("low") },
+                ]}
+              >
+                {priority === "low" && (
+                  <View
+                    style={[
+                      styles.radioInner,
+                      { backgroundColor: getPriorityColor("low") },
+                    ]}
+                  />
+                )}
+              </View>
+              <Text style={styles.priorityText}>Low</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Save Button */}
+        <Pressable style={styles.saveButton} onPress={handleSave}>
+          <Text style={styles.saveButtonText}>Save</Text>
+        </Pressable>
       </ScrollView>
-      {/* Create Button */}
-      <Pressable
-        style={[styles.createButton, loading && styles.createButtonDisabled]}
-        onPress={handleCreate}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
-        ) : (
-          <Text style={styles.createButtonText}>Create</Text>
-        )}
-      </Pressable>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -235,62 +314,74 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#90717E",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  backButton: {
+    padding: 8,
   },
   headerTitle: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
+    color: "#F8F6F7",
+    fontSize: 16,
+    fontFamily: "Poppins_400Regular",
   },
-  placeholderButton: {
-    width: 48,
+  deleteButton: {
+    padding: 8,
   },
   content: {
     flex: 1,
     padding: 10,
   },
-  mainFormSection: {
+  taskHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 9,
+    paddingVertical: 10,
     backgroundColor: "#F8F6F7",
-    padding: 10,
-    flexDirection: "column",
-    alignItems: "stretch",
-    gap: 20,
     marginBottom: 10,
   },
-  sectionTitle: {
+  taskId: {
     fontSize: 16,
-    fontFamily: "PoppinsSemiBold",
+    fontFamily: "Poppins_600SemiBold",
     color: "#0F0C0D",
-    paddingHorizontal: 9,
-    marginBottom: 0,
+  },
+  checkButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#92AAA5",
+    justifyContent: "center",
+    alignItems: "center",
   },
   inputContainer: {
-    marginBottom: 0,
+    marginBottom: 20,
   },
   inputLabel: {
     position: "absolute",
     top: -10,
     left: 12,
-    backgroundColor: "#F8F6F7",
+    backgroundColor: "#FEF7FF",
     paddingHorizontal: 4,
     fontSize: 12,
     color: "#49454F",
-    fontFamily: "PoppinsBold",
     zIndex: 1,
   },
   input: {
-    backgroundColor: "#F8F6F7",
-  },
-  inputOutline: {
-    borderRadius: 30,
     borderWidth: 1,
-  },
-  inputContent: {
-    fontSize: 16,
-    fontFamily: "PoppinsRegular",
-    color: "#0F0C0D",
+    borderColor: "#79747E",
+    borderRadius: 30,
     paddingHorizontal: 16,
+    paddingVertical: 8,
+    fontSize: 16,
+    fontFamily: "Poppins_400Regular",
+    color: "#0F0C0D",
+    backgroundColor: "#FEF7FF",
   },
-  textAreaContent: {
+  textArea: {
     minHeight: 110,
     paddingTop: 12,
     textAlignVertical: "top",
@@ -298,20 +389,88 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     gap: 10,
+    marginBottom: 20,
   },
-  createButton: {
+  halfWidth: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  inputWithIcon: {
+    position: "relative",
+  },
+  icon: {
+    position: "absolute",
+    right: 16,
+    top: 8,
+  },
+  section: {
+    backgroundColor: "#fff",
+    padding: 10,
+    marginBottom: 10,
+    marginTop: 10,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#0F0C0D",
+    paddingHorizontal: 9,
+    marginBottom: 10,
+  },
+  priorityContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+  },
+  priorityOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  radio: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  radioSelected: {
+    backgroundColor: "#E6E6E6",
+  },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  priorityText: {
+    fontSize: 16,
+    fontFamily: "Poppins_400Regular",
+    color: "#1E1E1E",
+  },
+  menuItem: {
+    backgroundColor: "#F8F6F7",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 9,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  menuText: {
+    fontSize: 16,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#0F0C0D",
+  },
+  saveButton: {
     backgroundColor: "#90717E",
     borderRadius: 100,
     paddingVertical: 10,
     alignItems: "center",
-    margin: 20,
+    marginVertical: 10,
   },
-  createButtonDisabled: {
-    opacity: 0.6,
-  },
-  createButtonText: {
+  saveButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontFamily: "PoppinsBold",
+    fontFamily: "Poppins_400Regular",
   },
 });

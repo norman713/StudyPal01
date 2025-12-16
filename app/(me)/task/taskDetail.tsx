@@ -1,6 +1,7 @@
 import taskApi, { PersonalTask, TaskPriority } from "@/api/taskApi";
 import QuestionModal from "@/components/modal/question";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import SuccessModal from "@/components/modal/success";
+import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -16,6 +17,7 @@ import {
 } from "react-native";
 import { Appbar } from "react-native-paper";
 
+type SuccessType = "UPDATE" | "DELETE" | null;
 export default function TaskDetail() {
   const params = useLocalSearchParams();
   const taskId = params.taskId as string;
@@ -23,6 +25,8 @@ export default function TaskDetail() {
   const [loading, setLoading] = useState(true);
   const [task, setTask] = useState<PersonalTask | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showScopeModal, setShowScopeModal] = useState(false);
 
   const [taskName, setTaskName] = useState("");
   const [taskNote, setTaskNote] = useState("");
@@ -31,6 +35,8 @@ export default function TaskDetail() {
   const [toTime, setToTime] = useState(dayjs().add(1, "hour").format("HH:mm"));
   const [toDate, setToDate] = useState(dayjs().format("DD-MM-YYYY"));
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
+  const [successType, setSuccessType] = useState<SuccessType>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const getPriorityColor = (p: TaskPriority) => {
     switch (p) {
@@ -43,6 +49,77 @@ export default function TaskDetail() {
       default:
         return "#FEBC2F";
     }
+  };
+
+  // Format time input to HH:mm format
+  const formatTime = (text: string) => {
+    const raw = text.replace(/\D/g, "").slice(0, 4);
+
+    const hourRaw = raw.slice(0, 2);
+    const minuteRaw = raw.slice(2, 4);
+
+    // validate hour khi đủ 2 số
+    if (hourRaw.length === 2) {
+      const hour = Number(hourRaw);
+      if (hour < 0 || hour > 23) return "";
+    }
+
+    // validate minute khi đủ 2 số
+    if (minuteRaw.length === 2) {
+      const minute = Number(minuteRaw);
+      if (minute < 0 || minute > 59) return `${hourRaw}:`;
+    }
+
+    let result = hourRaw;
+
+    if (raw.length > 2) {
+      result += ":" + minuteRaw;
+    }
+
+    return result;
+  };
+
+  // Format date input to DD-MM-YYYY format
+  const formatDate = (text: string) => {
+    const raw = text.replace(/\D/g, "").slice(0, 8);
+
+    const dayRaw = raw.slice(0, 2);
+    const monthRaw = raw.slice(2, 4);
+    const yearRaw = raw.slice(4, 8);
+
+    // validate day khi đủ 2 số
+    if (dayRaw.length === 2) {
+      const day = Number(dayRaw);
+      if (day < 1 || day > 31) return "";
+    }
+
+    // validate month khi đủ 2 số
+    if (monthRaw.length === 2) {
+      const month = Number(monthRaw);
+      if (month < 1 || month > 12) return `${dayRaw}-`;
+    }
+
+    let result = dayRaw;
+
+    if (raw.length > 2) {
+      result += "-" + monthRaw;
+    }
+
+    if (raw.length > 4) {
+      result += "-" + yearRaw;
+    }
+
+    // validate full date khi đủ 8 số
+    if (raw.length === 8) {
+      const day = Number(dayRaw);
+      const month = Number(monthRaw);
+      const year = Number(yearRaw);
+
+      const maxDay = dayjs(`${year}-${month}-01`).daysInMonth();
+      if (day > maxDay) return "";
+    }
+
+    return result;
   };
 
   const fetchTaskDetail = useCallback(async () => {
@@ -93,6 +170,85 @@ export default function TaskDetail() {
     }
   };
 
+  const handleDeletePress = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!taskId) return;
+
+    // First, close the confirm modal
+    setShowDeleteModal(false);
+
+    // Check if task is CLONED
+    if (task?.taskType === "CLONED") {
+      // Ask for scope
+      setTimeout(() => {
+        setShowScopeModal(true);
+      }, 300); // Small delay for modal transition
+      return;
+    }
+
+    // Default delete
+    await performDelete("CURRENT_ONLY");
+  };
+
+  const handleScopeDelete = async (scope: "CURRENT_ONLY" | "ALL_ITEMS") => {
+    setShowScopeModal(false);
+    await performDelete(scope);
+  };
+
+  const performDelete = async (scope: "CURRENT_ONLY" | "ALL_ITEMS") => {
+    try {
+      setLoading(true);
+      await taskApi.deleteTask(taskId, scope);
+      setSuccessType("DELETE");
+      setShowSuccessModal(true);
+    } catch (err) {
+      console.warn("Failed to delete task", err);
+      Alert.alert("Error", "Failed to delete task");
+      setLoading(false);
+    }
+  };
+
+  //handle save
+
+  const handleSave = async () => {
+    if (!taskId) return;
+    try {
+      setLoading(true);
+      const start = dayjs(`${fromDate} ${fromTime}`, "DD-MM-YYYY HH:mm").format(
+        "YYYY-MM-DD HH:mm:ss"
+      );
+      const due = dayjs(`${toDate} ${toTime}`, "DD-MM-YYYY HH:mm").format(
+        "YYYY-MM-DD HH:mm:ss"
+      );
+
+      const payload = {
+        content: taskName,
+        note: taskNote,
+        priority: priority,
+        startDate: start,
+        dueDate: due,
+      };
+
+      console.log("Update Task Payload:", JSON.stringify(payload, null, 2));
+
+      await taskApi.updateTask(taskId, payload);
+      setSuccessType("UPDATE");
+      setShowSuccessModal(true);
+    } catch (err: any) {
+      console.warn("Failed to update task", err);
+      console.log(
+        "Update Task Error Details:",
+        err?.response?.data || err?.message
+      );
+      Alert.alert("Error", "Failed to update task");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.container} className="justify-center items-center">
@@ -106,18 +262,15 @@ export default function TaskDetail() {
       {/* Header */}
       <Appbar.Header mode="small" style={styles.header}>
         <Appbar.BackAction color="#F8F6F7" onPress={() => router.back()} />
+
         <Appbar.Content title="Task detail" titleStyle={styles.headerTitle} />
 
-        {/* icon */}
-        <View>
-          <Pressable
-            onPress={() => {
-              /* TODO: handle delete */
-            }}
-          >
-            <MaterialIcons name="delete" size={24} color="#F8F6F7" />
-          </Pressable>
-        </View>
+        <FontAwesome5
+          name="trash"
+          size={24}
+          color="white"
+          onPress={handleDeletePress}
+        />
       </Appbar.Header>
 
       <ScrollView style={styles.content}>
@@ -150,6 +303,26 @@ export default function TaskDetail() {
             onCancel={() => setShowConfirmModal(false)}
           />
 
+          <QuestionModal
+            visible={showDeleteModal}
+            title="Confirm Delete"
+            message="Are you sure you want to delete this task?"
+            confirmText="Delete"
+            cancelText="Cancel"
+            onConfirm={handleConfirmDelete}
+            onCancel={() => setShowDeleteModal(false)}
+          />
+
+          <QuestionModal
+            visible={showScopeModal}
+            title="Recurring Task"
+            message="Do you want to delete all recurring tasks?"
+            confirmText="Yes, all"
+            cancelText="No, only this"
+            onConfirm={() => handleScopeDelete("ALL_ITEMS")}
+            onCancel={() => handleScopeDelete("CURRENT_ONLY")}
+          />
+
           {/* Task Name */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Task name</Text>
@@ -175,13 +348,16 @@ export default function TaskDetail() {
 
           {/* From Time and Date */}
           <View style={styles.row}>
+            {/* From Time */}
             <View style={[styles.inputContainer, styles.halfWidth]}>
               <Text style={styles.inputLabel}>From time</Text>
               <View style={styles.inputWithIcon}>
                 <TextInput
                   style={styles.input}
                   value={fromTime}
-                  onChangeText={setFromTime}
+                  onChangeText={(text) => setFromTime(formatTime(text))} // Format time as HH:mm
+                  placeholder="HH:mm"
+                  keyboardType="numeric"
                 />
                 <Ionicons
                   name="time-outline"
@@ -192,13 +368,16 @@ export default function TaskDetail() {
               </View>
             </View>
 
+            {/* From Date */}
             <View style={[styles.inputContainer, styles.halfWidth]}>
               <Text style={styles.inputLabel}>From date</Text>
               <View style={styles.inputWithIcon}>
                 <TextInput
                   style={styles.input}
                   value={fromDate}
-                  onChangeText={setFromDate}
+                  onChangeText={(text) => setFromDate(formatDate(text))} // Format date as DD-MM-YYYY
+                  placeholder="DD-MM-YYYY"
+                  keyboardType="numeric"
                 />
                 <Ionicons
                   name="calendar-outline"
@@ -210,15 +389,17 @@ export default function TaskDetail() {
             </View>
           </View>
 
-          {/* To Time and Date */}
           <View style={styles.row}>
+            {/* To Time */}
             <View style={[styles.inputContainer, styles.halfWidth]}>
               <Text style={styles.inputLabel}>To time</Text>
               <View style={styles.inputWithIcon}>
                 <TextInput
                   style={styles.input}
                   value={toTime}
-                  onChangeText={setToTime}
+                  onChangeText={(text) => setToTime(formatTime(text))} // Format time as HH:mm
+                  placeholder="HH:mm"
+                  keyboardType="numeric"
                 />
                 <Ionicons
                   name="time-outline"
@@ -229,13 +410,16 @@ export default function TaskDetail() {
               </View>
             </View>
 
+            {/* To Date */}
             <View style={[styles.inputContainer, styles.halfWidth]}>
               <Text style={styles.inputLabel}>To date</Text>
               <View style={styles.inputWithIcon}>
                 <TextInput
                   style={styles.input}
                   value={toDate}
-                  onChangeText={setToDate}
+                  onChangeText={(text) => setToDate(formatDate(text))} // Format date as DD-MM-YYYY
+                  placeholder="DD-MM-YYYY"
+                  keyboardType="numeric"
                 />
                 <Ionicons
                   name="calendar-outline"
@@ -250,7 +434,7 @@ export default function TaskDetail() {
 
         {/* Priority */}
         <View style={styles.section}>
-          <Text className="text-[16px] font-bold">Priority</Text>
+          <Text style={styles.sectionTitle}>Priority</Text>
           <View style={styles.priorityContainer}>
             <Pressable
               style={styles.priorityOption}
@@ -345,10 +529,27 @@ export default function TaskDetail() {
         </Pressable>
 
         {/* Save Button */}
-        <Pressable style={styles.saveButton}>
+        <Pressable style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save</Text>
         </Pressable>
       </ScrollView>
+      <SuccessModal
+        visible={showSuccessModal}
+        title="Success"
+        message={
+          successType === "DELETE"
+            ? "Task deleted successfully!"
+            : "Task updated successfully!"
+        }
+        confirmText="OK"
+        onConfirm={() => {
+          setShowSuccessModal(false);
+
+          if (successType === "DELETE") {
+            router.back();
+          }
+        }}
+      />
     </View>
   );
 }
@@ -387,6 +588,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 9,
     paddingVertical: 10,
+    backgroundColor: "#F8F6F7",
     marginBottom: 10,
   },
   taskId: {
@@ -430,7 +632,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Poppins_400Regular",
     color: "#0F0C0D",
-    backgroundColor: "#fff",
+    backgroundColor: "#FEF7FF",
   },
   textArea: {
     minHeight: 110,
@@ -499,7 +701,7 @@ const styles = StyleSheet.create({
     color: "#1E1E1E",
   },
   menuItem: {
-    backgroundColor: "#fff",
+    backgroundColor: "#F8F6F7",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
