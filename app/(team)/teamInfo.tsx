@@ -548,7 +548,7 @@ export default function TeamInfoScreen({
                       color="#49454F"
                     />
                   )}
-                  onPress={() => console.log("Documents clicked")}
+                  onPress={() => router.push("/(team)/chat")}
                   style={{ paddingRight: 0, paddingLeft: 0 }}
                 />
                 <List.Item
