@@ -141,11 +141,11 @@ const taskApi = {
 };
 
 export interface RecurrenceRule {
-    // recurrenceType: "NONE" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"; // Adjust based on backend options. User showed NONE/DAILY.
-    type?: "NONE" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"; // For update payload
+    recurrenceType?: "NONE" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"; // For GET response
+    type?: "NONE" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"; // For UPDATE payload
     weekDays: string[] | null; // e.g. ["MONDAY"]
-    recurrenceStartDate: string; // YYYY-MM-DD
-    recurrenceEndDate: string;   // YYYY-MM-DD
+  recurrenceStartDate: string | null;
+  recurrenceEndDate: string | null; 
 }
 
 export interface Reminder {

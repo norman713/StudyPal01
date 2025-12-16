@@ -1,10 +1,10 @@
+import ErrorModal from "@/components/modal/error";
 import SuccessModal from "@/components/modal/success";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs"; // NEW
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
-  Alert, // NEW
   Pressable,
   ScrollView,
   StyleSheet,
@@ -37,6 +37,79 @@ export default function TaskDetail() {
   const [priority, setPriority] = useState<TPriority>("medium"); // Default medium
   const [isLoading, setIsLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // Format time input to HH:mm format
+  const formatTime = (text: string) => {
+    const raw = text.replace(/\D/g, "").slice(0, 4);
+
+    const hourRaw = raw.slice(0, 2);
+    const minuteRaw = raw.slice(2, 4);
+
+    // validate hour khi đủ 2 số
+    if (hourRaw.length === 2) {
+      const hour = Number(hourRaw);
+      if (hour < 0 || hour > 23) return "";
+    }
+
+    // validate minute khi đủ 2 số
+    if (minuteRaw.length === 2) {
+      const minute = Number(minuteRaw);
+      if (minute < 0 || minute > 59) return `${hourRaw}:`;
+    }
+
+    let result = hourRaw;
+
+    if (raw.length > 2) {
+      result += ":" + minuteRaw;
+    }
+
+    return result;
+  };
+
+  // Format date input to DD-MM-YYYY format
+  const formatDate = (text: string) => {
+    const raw = text.replace(/\D/g, "").slice(0, 8);
+
+    const dayRaw = raw.slice(0, 2);
+    const monthRaw = raw.slice(2, 4);
+    const yearRaw = raw.slice(4, 8);
+
+    // validate day khi đủ 2 số
+    if (dayRaw.length === 2) {
+      const day = Number(dayRaw);
+      if (day < 1 || day > 31) return "";
+    }
+
+    // validate month khi đủ 2 số
+    if (monthRaw.length === 2) {
+      const month = Number(monthRaw);
+      if (month < 1 || month > 12) return `${dayRaw}-`;
+    }
+
+    let result = dayRaw;
+
+    if (raw.length > 2) {
+      result += "-" + monthRaw;
+    }
+
+    if (raw.length > 4) {
+      result += "-" + yearRaw;
+    }
+
+    // validate full date khi đủ 8 số
+    if (raw.length === 8) {
+      const day = Number(dayRaw);
+      const month = Number(monthRaw);
+      const year = Number(yearRaw);
+
+      const maxDay = dayjs(`${year}-${month}-01`).daysInMonth();
+      if (day > maxDay) return "";
+    }
+
+    return result;
+  };
 
   const getPriorityColor = (p: TPriority) => {
     switch (p) {
@@ -57,7 +130,8 @@ export default function TaskDetail() {
   const handleSave = async () => {
     // 1. Validate required fields
     if (!taskName.trim()) {
-      Alert.alert("Validation Error", "Please enter a task name.");
+      setErrorMessage("Please enter a task name.");
+      setShowErrorModal(true);
       return;
     }
 
@@ -66,17 +140,20 @@ export default function TaskDetail() {
     const endDateTime = parseDateTime(toDate, toTime);
 
     if (!startDateTime.isValid()) {
-      Alert.alert("Validation Error", "Invalid Start Date or Time.");
+      setErrorMessage("Invalid Start Date or Time.");
+      setShowErrorModal(true);
       return;
     }
     if (!endDateTime.isValid()) {
-      Alert.alert("Validation Error", "Invalid End Date or Time.");
+      setErrorMessage("Invalid End Date or Time.");
+      setShowErrorModal(true);
       return;
     }
 
     // 3. Validate Logic: End > Start
     if (endDateTime.isBefore(startDateTime)) {
-      Alert.alert("Validation Error", "End time must be after start time.");
+      setErrorMessage("End time must be after start time.");
+      setShowErrorModal(true);
       return;
     }
 
@@ -98,6 +175,8 @@ export default function TaskDetail() {
     } catch (error) {
       console.error("Failed to create task:", error);
       setIsModalVisible(false); // Close any previous modal if error occurs
+      setErrorMessage("Failed to create task. Please try again.");
+      setShowErrorModal(true);
     } finally {
       setIsLoading(false);
     }
@@ -141,13 +220,16 @@ export default function TaskDetail() {
 
           {/* From Time and Date */}
           <View style={styles.row}>
+            {/* From Time */}
             <View style={[styles.inputContainer, styles.halfWidth]}>
               <Text style={styles.inputLabel}>From time</Text>
               <View style={styles.inputWithIcon}>
                 <TextInput
                   style={styles.input}
                   value={fromTime}
-                  onChangeText={setFromTime}
+                  onChangeText={(text) => setFromTime(formatTime(text))} // Format time as HH:mm
+                  placeholder="HH:mm"
+                  keyboardType="numeric"
                 />
                 <Ionicons
                   name="time-outline"
@@ -158,13 +240,16 @@ export default function TaskDetail() {
               </View>
             </View>
 
+            {/* From Date */}
             <View style={[styles.inputContainer, styles.halfWidth]}>
               <Text style={styles.inputLabel}>From date</Text>
               <View style={styles.inputWithIcon}>
                 <TextInput
                   style={styles.input}
                   value={fromDate}
-                  onChangeText={setFromDate}
+                  onChangeText={(text) => setFromDate(formatDate(text))} // Format date as DD-MM-YYYY
+                  placeholder="DD-MM-YYYY"
+                  keyboardType="numeric"
                 />
                 <Ionicons
                   name="calendar-outline"
@@ -176,15 +261,17 @@ export default function TaskDetail() {
             </View>
           </View>
 
-          {/* To Time and Date */}
           <View style={styles.row}>
+            {/* To Time */}
             <View style={[styles.inputContainer, styles.halfWidth]}>
               <Text style={styles.inputLabel}>To time</Text>
               <View style={styles.inputWithIcon}>
                 <TextInput
                   style={styles.input}
                   value={toTime}
-                  onChangeText={setToTime}
+                  onChangeText={(text) => setToTime(formatTime(text))} // Format time as HH:mm
+                  placeholder="HH:mm"
+                  keyboardType="numeric"
                 />
                 <Ionicons
                   name="time-outline"
@@ -195,13 +282,16 @@ export default function TaskDetail() {
               </View>
             </View>
 
+            {/* To Date */}
             <View style={[styles.inputContainer, styles.halfWidth]}>
               <Text style={styles.inputLabel}>To date</Text>
               <View style={styles.inputWithIcon}>
                 <TextInput
                   style={styles.input}
                   value={toDate}
-                  onChangeText={setToDate}
+                  onChangeText={(text) => setToDate(formatDate(text))} // Format date as DD-MM-YYYY
+                  placeholder="DD-MM-YYYY"
+                  keyboardType="numeric"
                 />
                 <Ionicons
                   name="calendar-outline"
@@ -301,6 +391,12 @@ export default function TaskDetail() {
         message="Task created successfully!"
         confirmText="OK"
         onConfirm={() => router.back()}
+      />
+      {/* Error Modal */}
+      <ErrorModal
+        visible={showErrorModal}
+        message={errorMessage}
+        onConfirm={() => setShowErrorModal(false)}
       />
     </View>
   );

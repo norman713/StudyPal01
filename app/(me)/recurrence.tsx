@@ -1,4 +1,5 @@
 import taskApi, { RecurrenceRule } from "@/api/taskApi";
+import ErrorModal from "@/components/modal/error";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -6,7 +7,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   Text,
@@ -38,6 +38,8 @@ export default function RecurrenceScreen() {
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState<RecurrenceType>("NONE");
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   // Store full backend day strings in selectedDays? Or map?
   // Let's store Backend strings to make it easier for submitting, map for display.
 
@@ -60,7 +62,7 @@ export default function RecurrenceScreen() {
       const data = await taskApi.getRecurrenceRules(taskId);
       console.log("Fetched recurrence data:", data);
       if (data) {
-        setType(data.recurrenceType as RecurrenceType);
+        setType((data.recurrenceType || "NONE") as RecurrenceType);
         if (data.weekDays) {
           setSelectedDays(data.weekDays);
         }
@@ -90,14 +92,20 @@ export default function RecurrenceScreen() {
   const handleSave = async () => {
     try {
       setLoading(true);
-      // Validation?
-      // Format dates to YYYY-MM-DD for backend
-      const start = dayjs(fromDate, "DD-MM-YYYY").format("YYYY-MM-DD");
-      const end = dayjs(toDate, "DD-MM-YYYY").format("YYYY-MM-DD");
+
+      const isNone = type === "NONE";
+
+      // Only format dates if type !== NONE
+      const start = isNone
+        ? null
+        : dayjs(fromDate, "DD-MM-YYYY").format("YYYY-MM-DD");
+
+      const end = isNone
+        ? null
+        : dayjs(toDate, "DD-MM-YYYY").format("YYYY-MM-DD");
 
       const payload: RecurrenceRule = {
-        // recurrenceType: type, // Keep this for TS satisfaction or use as any
-        type: type, // Add this for backend
+        type: type,
         weekDays: type === "WEEKLY" ? selectedDays : null,
         recurrenceStartDate: start,
         recurrenceEndDate: end,
@@ -106,12 +114,15 @@ export default function RecurrenceScreen() {
       console.log("Saving payload:", JSON.stringify(payload, null, 2));
 
       await taskApi.updateRecurrenceRules(taskId, payload);
-      Alert.alert("Success", "Recurrence updated", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      router.back();
     } catch (error: any) {
-      console.log("Error saving recurrence", error?.response?.data || error);
-      Alert.alert("Error", "Failed to update recurrence");
+      console.log("Error saving recurrence", error);
+
+      const apiMessage =
+        error?.response?.data?.message || "Network error. Please try again.";
+
+      setErrorMessage(apiMessage);
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
@@ -202,24 +213,26 @@ export default function RecurrenceScreen() {
         </View>
 
         {/* DURATION */}
-        <View className="bg-white p-4 mt-4">
-          <Text className="text-xl font-semibold text-[#0F0C0D] mb-3">
-            Duration
-          </Text>
+        {type !== "NONE" && (
+          <View className="bg-white p-4 mt-4">
+            <Text className="text-xl font-semibold text-[#0F0C0D] mb-3">
+              Duration
+            </Text>
 
-          <View className="flex-row gap-3">
-            <DateInput
-              label="From date"
-              value={fromDate}
-              onChangeText={setFromDate}
-            />
-            <DateInput
-              label="To date"
-              value={toDate}
-              onChangeText={setToDate}
-            />
+            <View className="flex-row gap-3">
+              <DateInput
+                label="From date"
+                value={fromDate}
+                onChangeText={setFromDate}
+              />
+              <DateInput
+                label="To date"
+                value={toDate}
+                onChangeText={setToDate}
+              />
+            </View>
           </View>
-        </View>
+        )}
 
         {/* SAVE */}
         <Pressable
@@ -234,6 +247,12 @@ export default function RecurrenceScreen() {
           )}
         </Pressable>
       </ScrollView>
+
+      <ErrorModal
+        visible={showErrorModal}
+        message={errorMessage}
+        onConfirm={() => setShowErrorModal(false)}
+      />
     </View>
   );
 }

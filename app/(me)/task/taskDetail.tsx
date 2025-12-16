@@ -1,4 +1,5 @@
 import taskApi, { PersonalTask, TaskPriority } from "@/api/taskApi";
+import ErrorModal from "@/components/modal/error";
 import QuestionModal from "@/components/modal/question";
 import SuccessModal from "@/components/modal/success";
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
@@ -7,7 +8,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { Appbar } from "react-native-paper";
 
-type SuccessType = "UPDATE" | "DELETE" | null;
+type SuccessType = "UPDATE" | null;
 export default function TaskDetail() {
   const params = useLocalSearchParams();
   const taskId = params.taskId as string;
@@ -37,6 +37,8 @@ export default function TaskDetail() {
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   const [successType, setSuccessType] = useState<SuccessType>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const getPriorityColor = (p: TaskPriority) => {
     switch (p) {
@@ -141,7 +143,8 @@ export default function TaskDetail() {
       setPriority(data.priority);
     } catch (error) {
       console.warn("Failed to fetch task detail", error);
-      Alert.alert("Error", "Failed to load task details");
+      setErrorMessage("Failed to load task details");
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
@@ -165,8 +168,10 @@ export default function TaskDetail() {
       fetchTaskDetail();
     } catch (err) {
       console.warn("Failed to complete task", err);
-      Alert.alert("Error", "Failed to complete task");
+      console.warn("Failed to complete task", err);
       setShowConfirmModal(false);
+      setErrorMessage("Failed to complete task");
+      setShowErrorModal(true);
     }
   };
 
@@ -202,11 +207,12 @@ export default function TaskDetail() {
     try {
       setLoading(true);
       await taskApi.deleteTask(taskId, scope);
-      setSuccessType("DELETE");
-      setShowSuccessModal(true);
+      router.back();
     } catch (err) {
       console.warn("Failed to delete task", err);
-      Alert.alert("Error", "Failed to delete task");
+      console.warn("Failed to delete task", err);
+      setErrorMessage("Failed to delete task");
+      setShowErrorModal(true);
       setLoading(false);
     }
   };
@@ -243,7 +249,8 @@ export default function TaskDetail() {
         "Update Task Error Details:",
         err?.response?.data || err?.message
       );
-      Alert.alert("Error", "Failed to update task");
+      setErrorMessage("Failed to update task");
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
@@ -536,19 +543,17 @@ export default function TaskDetail() {
       <SuccessModal
         visible={showSuccessModal}
         title="Success"
-        message={
-          successType === "DELETE"
-            ? "Task deleted successfully!"
-            : "Task updated successfully!"
-        }
+        message={"Task updated successfully!"}
         confirmText="OK"
         onConfirm={() => {
           setShowSuccessModal(false);
-
-          if (successType === "DELETE") {
-            router.back();
-          }
         }}
+      />
+
+      <ErrorModal
+        visible={showErrorModal}
+        message={errorMessage}
+        onConfirm={() => setShowErrorModal(false)}
       />
     </View>
   );
