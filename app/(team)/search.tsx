@@ -179,7 +179,7 @@ export default function Search() {
           }
         }}
       />
-      <View className="flex-1 bg-white mx-3 my-3 mb-60">
+      <View className="flex-1 bg-white mx-3 my-3 mb-40">
         {/* Content */}
         <View className="flex-1 my-2">
           {/* Search */}
@@ -260,7 +260,7 @@ export default function Search() {
                 iconColor="#90717E"
                 size={25}
                 style={{ borderWidth: 0 }}
-                onPress={() => router.push("/")}
+                onPress={() => router.push("/QRScanner")}
               />
             </View>
           </View>
@@ -271,62 +271,64 @@ export default function Search() {
           </Text>
 
           {/* Empty State, Search Empty, hoặc List */}
-          {teams.length === 0 && !loading ? (
-            // Nếu đang search mà không có kết quả → SearchEmptyState
-            query.trim().length > 0 ? (
-              <SearchEmptyState searchQuery={query.trim()} />
+          <View className="flex-1">
+            {teams.length === 0 && !loading ? (
+              // Nếu đang search mà không có kết quả → SearchEmptyState
+              query.trim().length > 0 ? (
+                <SearchEmptyState searchQuery={query.trim()} />
+              ) : (
+                // Nếu không search và không có team → EmptyState với buttons
+                <EmptyState
+                  title="You haven't joined any team yet!"
+                  primaryButtonText="Create new team"
+                  secondaryButtonText="Scan to join team"
+                  onPrimaryPress={() => setCreateModalVisible(true)}
+                  onSecondaryPress={() => router.push("/")}
+                />
+              )
             ) : (
-              // Nếu không search và không có team → EmptyState với buttons
-              <EmptyState
-                title="You haven't joined any team yet!"
-                primaryButtonText="Create new team"
-                secondaryButtonText="Scan to join team"
-                onPrimaryPress={() => setCreateModalVisible(true)}
-                onSecondaryPress={() => router.push("/")}
-              />
-            )
-          ) : (
-            // Có team → hiển thị list
-            <View className="flex-1 px-4">
-              <FlatList
-                data={teams}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={{ paddingBottom: 24 }}
-                renderItem={({ item }) => (
-                  <Pressable
-                    onPress={() =>
-                      router.push({
-                        pathname: "/(team)/teamInfo",
-                        params: { id: item.id },
-                      })
-                    }
-                    className="flex-row items-center justify-between py-3"
-                  >
-                    {/* Avatar + Name */}
-                    <View className="flex-row items-center">
-                      {item.avatarUrl ? (
-                        <Avatar.Image
-                          size={40}
-                          source={{ uri: item.avatarUrl }}
-                        />
-                      ) : (
-                        <Avatar.Text size={40} label={item.name.charAt(0)} />
+              // Có team → hiển thị list
+              <View className="flex-1 px-4">
+                <FlatList
+                  data={teams}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={{ paddingBottom: 24 }}
+                  renderItem={({ item }) => (
+                    <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: "/(team)/teamInfo",
+                          params: { id: item.id },
+                        })
+                      }
+                      className="flex-row items-center justify-between py-3"
+                    >
+                      {/* Avatar + Name */}
+                      <View className="flex-row items-center">
+                        {item.avatarUrl ? (
+                          <Avatar.Image
+                            size={40}
+                            source={{ uri: item.avatarUrl }}
+                          />
+                        ) : (
+                          <Avatar.Text size={40} label={item.name.charAt(0)} />
+                        )}
+
+                        <Text className="ml-3 text-xl font-semibold text-black ">
+                          {item.name}
+                        </Text>
+                      </View>
+
+                      {/* Icon owner */}
+                      {item.owner && (
+                        <FontAwesome5 name="key" size={20} color="#90717E" />
                       )}
-
-                      <Text className="ml-3 text-xl font-semibold text-black ">
-                        {item.name}
-                      </Text>
-                    </View>
-
-                    {/* Icon owner */}
-                    {item.owner && (
-                      <FontAwesome5 name="key" size={20} color="#90717E" />
-                    )}
-                  </Pressable>
-                )}
-              />
-            </View>
-          )}
+                    </Pressable>
+                  )}
+                />
+              </View>
+            )}
+          </View>
         </View>
       </View>
 

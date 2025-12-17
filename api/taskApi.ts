@@ -76,8 +76,6 @@ async getDeletedTasks(params: {
   return data;
 },
 
-
-
     /**
      * Search tasks
      * POST /api/tasks/search

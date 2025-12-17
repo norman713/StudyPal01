@@ -138,8 +138,7 @@ export default function TaskScreen() {
               router.push("/");
               break;
             case "trash":
-              // Fix path to match validation
-              router.push("/(team)/trash/index" as any);
+              router.push("/(trash)");
               break;
           }
         }}

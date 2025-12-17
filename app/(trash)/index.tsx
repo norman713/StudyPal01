@@ -1,75 +1,14 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BackHandler, ScrollView, View } from "react-native";
 
 import BottomBar from "@/components/ui/buttom";
 import Header from "@/components/ui/header";
-import TrashTasks from "./task";
 import TabSelector from "./components/TabSelector";
 import TrashDocuments from "./document";
+import TrashTasks from "./task";
 
-/* =======================
-   TYPES & MOCK DATA
-======================= */
-
-// ---- TASKS ----
-type TaskPriority = "high" | "medium" | "low";
-
-export type TrashTask = {
-  id: string;
-  title: string;
-  dateRange: string;
-  deleteDate: string;
-  priority: TaskPriority;
-};
-
-const deletedTasks: TrashTask[] = [
-  {
-    id: "task-1",
-    title: "Task 1",
-    dateRange: "12:00 27 Oct, 2025 - 24:00 29 Oct, 2025",
-    deleteDate: "12:00 26 Oct, 2025",
-    priority: "high",
-  },
-  {
-    id: "task-2",
-    title: "Task 2",
-    dateRange: "08:00 20 Oct, 2025 - 18:00 22 Oct, 2025",
-    deleteDate: "09:30 21 Oct, 2025",
-    priority: "medium",
-  },
-  {
-    id: "task-3",
-    title: "Task 3",
-    dateRange: "09:00 15 Oct, 2025 - 17:00 18 Oct, 2025",
-    deleteDate: "10:00 16 Oct, 2025",
-    priority: "low",
-  },
-];
-
-// ---- FOLDERS ----
-type FolderItem = {
-  name: string;
-  itemCount: number;
-};
-
-const folders: FolderItem[] = [
-  { name: "General", itemCount: 12 },
-  { name: "Math", itemCount: 8 },
-  { name: "Science", itemCount: 15 },
-];
-
-// ---- FILES ----
-type FileItem = {
-  name: string;
-  type: "excel" | "pdf" | "doc";
-};
-
-const files: FileItem[] = [
-  { name: "DeCuong.xlsx", type: "excel" },
-  { name: "TaiLieu.xlsx", type: "excel" },
-  { name: "Report.pdf", type: "pdf" },
-];
+import taskApi, { DeletedTask } from "@/api/taskApi";
 
 /* =======================
    SCREEN
@@ -79,8 +18,10 @@ export default function TrashScreen() {
   const { teamId, planId, role } = useLocalSearchParams();
 
   const [currentTab, setCurrentTab] = useState<"tasks" | "documents">("tasks");
+  const [deletedTasks, setDeletedTasks] = useState<DeletedTask[]>([]);
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   /* =======================
      🔒 BLOCK ANDROID BACK
@@ -89,7 +30,7 @@ export default function TrashScreen() {
     useCallback(() => {
       const subscription = BackHandler.addEventListener(
         "hardwareBackPress",
-        () => true // chặn back
+        () => true
       );
 
       return () => {
@@ -97,6 +38,28 @@ export default function TrashScreen() {
       };
     }, [])
   );
+
+  /* =======================
+     FETCH DELETED TASKS
+  ======================= */
+  useEffect(() => {
+    const fetchDeletedTasks = async () => {
+      try {
+        setLoading(true);
+        const res = await taskApi.getDeletedTasks({
+          teamId: teamId as string | undefined,
+          size: 20,
+        });
+        setDeletedTasks(res.tasks);
+      } catch (error) {
+        console.log("Failed to fetch deleted tasks", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDeletedTasks();
+  }, [teamId]);
 
   /* =======================
      HANDLERS
@@ -118,6 +81,7 @@ export default function TrashScreen() {
 
   const handleRecover = () => {
     if (teamId && planId) {
+      // TODO: call recover API here
       router.replace({
         pathname: "/(team)/plan/planDetail",
         params: { teamId, planId, role },
@@ -161,7 +125,18 @@ export default function TrashScreen() {
             )}
 
             {currentTab === "documents" && (
-              <TrashDocuments folders={folders} files={files} />
+              <TrashDocuments
+                folders={[
+                  { name: "General", itemCount: 12 },
+                  { name: "Math", itemCount: 8 },
+                  { name: "Science", itemCount: 15 },
+                ]}
+                files={[
+                  { name: "DeCuong.xlsx", type: "excel" },
+                  { name: "TaiLieu.xlsx", type: "excel" },
+                  { name: "Report.pdf", type: "pdf" },
+                ]}
+              />
             )}
           </ScrollView>
         </View>

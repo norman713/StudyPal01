@@ -1,3 +1,4 @@
+import { DeletedTask } from "@/api/taskApi";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
@@ -14,7 +15,7 @@ export default function TrashTasks({
   onSelectAllToggle,
   onRecover,
 }: {
-  deletedTasks: any[];
+  deletedTasks: DeletedTask[];
   selectedTasks: Set<string>;
   selectAll: boolean;
   onTaskToggle: (id: string) => void;

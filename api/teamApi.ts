@@ -32,18 +32,23 @@ export interface CreateTeamResponse {
   name: string;
   description: string;
 }
+export interface TeamPreviewResponse {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  description?: string;
+  creatorName: string;
+  creatorAvatarUrl?: string;
+  totalMembers: number;
+}
+
 const teamApi = {
-  // async searchTeams(
-  //   filter: "JOINED" | "OWNED",
-  //   keyword?: string,
-  //   cursor?: string,
-  //   size: number = 10
-  // ): Promise<TeamListResponse> {
-  //   const url = "/teams/search";
-  //   const params = { filter, keyword, cursor, size };
-  //   const res = await axiosInstance.get<TeamListResponse>(url, { params });
-  //   return res.data;
-  // },
+async getPreviewByCode(teamCode: string): Promise<TeamPreviewResponse> {
+  const url = `/teams/${teamCode}/preview`;
+  const data: TeamPreviewResponse = await axiosInstance.get(url);
+  return data;
+},
+
 async searchTeams(
   filter: "JOINED" | "OWNED",
   keyword?: string,

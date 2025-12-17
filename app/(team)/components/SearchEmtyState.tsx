@@ -43,15 +43,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
-    paddingTop: 60,
-    backgroundColor: "transparent",
   },
   imageContainer: {
-    width: "100%",
+    width: "80%",
     maxWidth: 280,
     aspectRatio: 1,
-    marginBottom: 24,
-    opacity: 0.8,
   },
   image: {
     width: "100%",
