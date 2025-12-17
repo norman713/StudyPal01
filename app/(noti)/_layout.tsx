@@ -117,10 +117,10 @@ export default function NotificationLayout() {
               router.push("/(noti)");
               break;
             case "me":
-              router.push("/");
+              router.push("/(me)");
               break;
             case "trash":
-              router.push("/");
+              router.push("/(trash)");
               break;
           }
         }}

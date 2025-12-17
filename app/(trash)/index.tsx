@@ -1,24 +1,22 @@
-import { router, useLocalSearchParams } from "expo-router";
-import React, { useState } from "react";
-import { ScrollView, View } from "react-native";
-import { Appbar } from "react-native-paper";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useState } from "react";
+import { BackHandler, ScrollView, View } from "react-native";
 
+import BottomBar from "@/components/ui/buttom";
+import Header from "@/components/ui/header";
+import TrashTasks from "./task";
 import TabSelector from "./components/TabSelector";
 import TrashDocuments from "./document";
-import TrashTasks from "./task";
-
-const ACCENT = "#90717E";
 
 /* =======================
-   MOCK DATA
+   TYPES & MOCK DATA
 ======================= */
 
 // ---- TASKS ----
 type TaskPriority = "high" | "medium" | "low";
 
-type TrashTask = {
+export type TrashTask = {
   id: string;
-  code: string;
   title: string;
   dateRange: string;
   deleteDate: string;
@@ -28,7 +26,6 @@ type TrashTask = {
 const deletedTasks: TrashTask[] = [
   {
     id: "task-1",
-    code: "PLN-1",
     title: "Task 1",
     dateRange: "12:00 27 Oct, 2025 - 24:00 29 Oct, 2025",
     deleteDate: "12:00 26 Oct, 2025",
@@ -36,7 +33,6 @@ const deletedTasks: TrashTask[] = [
   },
   {
     id: "task-2",
-    code: "PLN-2",
     title: "Task 2",
     dateRange: "08:00 20 Oct, 2025 - 18:00 22 Oct, 2025",
     deleteDate: "09:30 21 Oct, 2025",
@@ -44,7 +40,6 @@ const deletedTasks: TrashTask[] = [
   },
   {
     id: "task-3",
-    code: "PLN-3",
     title: "Task 3",
     dateRange: "09:00 15 Oct, 2025 - 17:00 18 Oct, 2025",
     deleteDate: "10:00 16 Oct, 2025",
@@ -87,6 +82,25 @@ export default function TrashScreen() {
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
 
+  /* =======================
+     🔒 BLOCK ANDROID BACK
+  ======================= */
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        () => true // chặn back
+      );
+
+      return () => {
+        subscription.remove();
+      };
+    }, [])
+  );
+
+  /* =======================
+     HANDLERS
+  ======================= */
   const handleTaskToggle = (id: string) => {
     const next = new Set(selectedTasks);
     next.has(id) ? next.delete(id) : next.add(id);
@@ -104,38 +118,37 @@ export default function TrashScreen() {
 
   const handleRecover = () => {
     if (teamId && planId) {
-      router.push({
+      router.replace({
         pathname: "/(team)/plan/planDetail",
         params: { teamId, planId, role },
       });
-    } else {
-      router.back();
     }
   };
 
+  /* =======================
+     RENDER
+  ======================= */
   return (
     <View className="flex-1 bg-[#F2EFF0]">
-      <Appbar.Header style={{ backgroundColor: ACCENT }}>
-        <Appbar.BackAction color="#fff" onPress={() => router.back()} />
-        <Appbar.Content
-          title="Recover"
-          color="#fff"
-          titleStyle={{ fontSize: 18, fontWeight: "600" }}
-        />
-      </Appbar.Header>
+      {/* HEADER */}
+      <Header
+        avatarLabel="A"
+        items={[
+          { key: "inbox", label: "Inbox", icon: "inbox", badge: 24 },
+          { key: "outbox", label: "Outbox", icon: "send" },
+          { key: "favorites", label: "Favorites", icon: "heart-outline" },
+          { key: "trash", label: "Trash", icon: "trash-can-outline" },
+        ]}
+        activeKey="trash"
+        onSelect={() => {}}
+      />
 
-      <View style={{ padding: 10, flex: 1 }}>
-        <View
-          style={{
-            backgroundColor: "#F8F6F7",
-            borderRadius: 10,
-            padding: 10,
-            flex: 1,
-          }}
-        >
+      {/* CONTENT */}
+      <View className="flex-1 p-2">
+        <View className="flex-1 bg-[#F8F6F7] rounded-xl p-2">
           <TabSelector activeTab={currentTab} onTabChange={setCurrentTab} />
 
-          <ScrollView>
+          <ScrollView showsVerticalScrollIndicator={false}>
             {currentTab === "tasks" && (
               <TrashTasks
                 deletedTasks={deletedTasks}
@@ -153,6 +166,26 @@ export default function TrashScreen() {
           </ScrollView>
         </View>
       </View>
+
+      {/* BOTTOM BAR */}
+      <BottomBar
+        activeTab="trash"
+        onTabPress={(tab) => {
+          switch (tab) {
+            case "team":
+              router.replace("/(team)/search");
+              break;
+            case "notification":
+              router.replace("/(noti)");
+              break;
+            case "me":
+              router.replace("/(me)");
+              break;
+            case "trash":
+              break;
+          }
+        }}
+      />
     </View>
   );
 }

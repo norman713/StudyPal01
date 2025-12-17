@@ -75,27 +75,31 @@ export default function TaskItem({
 
       {/* Task Info */}
       <View style={styles.info}>
-        <Text style={styles.name}>{task.name}</Text>
+        <Text style={styles.name}>{task.content}</Text>
         <Text style={styles.date}>
           {formatDate(task.startDate)} - {formatDate(task.dueDate)}
         </Text>
 
         {/* Assignee */}
-        {task.assignee && (
+        {(task.assignee || task.assigneeName) && (
           <View style={styles.assigneeRow}>
-            {task.assignee.avatarUrl ? (
+            {task.assignee?.avatarUrl || task.assigneeAvatarUrl ? (
               <Image
-                source={{ uri: task.assignee.avatarUrl }}
+                source={{
+                  uri: task.assignee?.avatarUrl || task.assigneeAvatarUrl,
+                }}
                 style={styles.avatar}
               />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarText}>
-                  {task.assignee.name.charAt(0)}
+                  {(task.assignee?.name || task.assigneeName || "?").charAt(0)}
                 </Text>
               </View>
             )}
-            <Text style={styles.assigneeName}>{task.assignee.name}</Text>
+            <Text style={styles.assigneeName}>
+              {task.assignee?.name || task.assigneeName}
+            </Text>
           </View>
         )}
       </View>

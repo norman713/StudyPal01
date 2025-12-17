@@ -4,7 +4,7 @@ import Header from "@/components/ui/header";
 import dayjs from "dayjs";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { BackHandler, FlatList, StyleSheet, View } from "react-native";
 
 import ChatBotSection from "./task/components/Chatbot";
 import HeaderSection from "./task/components/Header";
@@ -35,6 +35,22 @@ export default function TaskScreen() {
       console.error("Failed to load tasks", error);
     }
   };
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress
+      );
+
+      return () => {
+        subscription.remove();
+      };
+    }, [])
+  );
 
   // Initial Load & Auth Check
   useFocusEffect(

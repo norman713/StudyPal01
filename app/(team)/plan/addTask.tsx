@@ -1,11 +1,11 @@
 import planApi, { TaskPriority } from "@/api/planApi";
+import ErrorModal from "@/components/modal/error";
 import { planCreationStore } from "@/utils/planCreationStore";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -36,19 +36,22 @@ export default function AddTaskScreen() {
   // Form states
   const [taskName, setTaskName] = useState("");
   const [taskNote, setTaskNote] = useState("");
-  const [fromTime, setFromTime] = useState("12:00");
-  const [fromDate, setFromDate] = useState("12-12-1212");
-  const [toTime, setToTime] = useState("12:00");
-  const [toDate, setToDate] = useState("12-12-1212");
+  const [fromTime, setFromTime] = useState("08:00");
+  const [fromDate, setFromDate] = useState(dayjs().format("DD-MM-YYYY"));
+  const [toTime, setToTime] = useState("09:00");
+  const [toDate, setToDate] = useState(dayjs().format("DD-MM-YYYY"));
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   const [assigneeId, setAssigneeId] = useState<string>("");
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Submit state
   const [loading, setLoading] = useState(false);
 
   const validate = () => {
     if (!taskName.trim()) {
-      Alert.alert("Error", "Task name is required");
+      setErrorMessage("Task name is required");
+      setShowErrorModal(true);
       return false;
     }
     return true;
@@ -92,17 +95,23 @@ export default function AddTaskScreen() {
       } else {
         // Direct API call for existing plan
         await planApi.createTask(teamId, planId, {
-          name: taskName.trim(),
-          description: taskNote.trim(),
+          content: taskName.trim(), // Changed from name
+          note: taskNote.trim(), // Changed from description
           startDate: dayjs(startDate).format("YYYY-MM-DD HH:mm:ss"),
           dueDate: dayjs(dueDate).format("YYYY-MM-DD HH:mm:ss"),
           assigneeId: assigneeId || undefined,
+          priority,
         });
         router.back();
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn("Failed to create task", err);
-      Alert.alert("Error", "Failed to create task");
+
+      const apiMessage =
+        err?.response?.data?.message || err?.message || "Failed to create task";
+
+      setErrorMessage(apiMessage);
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
@@ -224,6 +233,11 @@ export default function AddTaskScreen() {
           <Text style={styles.createButtonText}>Create</Text>
         )}
       </Pressable>
+      <ErrorModal
+        visible={showErrorModal}
+        message={errorMessage}
+        onConfirm={() => setShowErrorModal(false)}
+      />
     </View>
   );
 }
@@ -238,7 +252,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
   },
   placeholderButton: {

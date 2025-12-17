@@ -2,6 +2,21 @@ import axiosInstance from "./axiosConfig";
 
 export type TaskPriority = "HIGH" | "MEDIUM" | "LOW";
 
+export interface DeletedTask {
+  id: string;
+  planCode: string;
+  content: string;
+  startDate: string;   // ISO string
+  dueDate: string;     
+  deletedAt: string;   
+}
+export interface GetDeletedTasksResponse {
+  tasks: DeletedTask[];
+  total: number;
+  nextCursor: string | null;
+}
+
+
 export interface PersonalTask {
     id: string;
     content: string;
@@ -36,6 +51,32 @@ const taskApi = {
         const data: PersonalTask[] = await axiosInstance.get(url, { params });
         return data;
     },
+    /**
+ * Get deleted tasks
+ * GET /api/tasks/deleted
+ */
+/**
+ * Get deleted tasks
+ * GET /api/tasks/deleted
+ */
+async getDeletedTasks(params: {
+  teamId?: string;
+  cursor?: string;
+  size?: number;
+}): Promise<GetDeletedTasksResponse> {
+  const url = `/tasks/deleted`;
+
+  const data: GetDeletedTasksResponse = await axiosInstance.get(url, {
+    params: {
+      size: 10,
+      ...params,
+    },
+  });
+
+  return data;
+},
+
+
 
     /**
      * Search tasks
@@ -144,8 +185,8 @@ export interface RecurrenceRule {
     recurrenceType?: "NONE" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"; // For GET response
     type?: "NONE" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"; // For UPDATE payload
     weekDays: string[] | null; // e.g. ["MONDAY"]
-  recurrenceStartDate: string | null;
-  recurrenceEndDate: string | null; 
+    recurrenceStartDate: string; // YYYY-MM-DD
+    recurrenceEndDate: string;   // YYYY-MM-DD
 }
 
 export interface Reminder {

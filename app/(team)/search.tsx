@@ -1,8 +1,8 @@
 import { useNavigation } from "@react-navigation/native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 
-import React, { useEffect, useState } from "react";
-import { FlatList, Pressable, View } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { BackHandler, FlatList, Pressable, View } from "react-native";
 import {
   Avatar,
   IconButton,
@@ -71,6 +71,25 @@ export default function Search() {
     fetchTeams();
   }, [tab, params.refresh]); // Thêm params.refresh để reload khi có thay đổi
 
+  /* =======================
+       🔒 BLOCK BACK BUTTON
+    ======================= */
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress
+      );
+
+      return () => {
+        subscription.remove();
+      };
+    }, [])
+  );
   //Handlers
   const handleSave = async (name: string, description: string) => {
     try {
@@ -331,7 +350,7 @@ export default function Search() {
               break;
 
             case "trash":
-              router.push("/");
+              router.push("/(trash)");
               break;
 
             default:

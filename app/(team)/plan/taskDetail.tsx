@@ -1,11 +1,14 @@
 import planApi, { Task, TaskPriority } from "@/api/planApi";
+import taskApi from "@/api/taskApi";
+import ErrorModal from "@/components/modal/error";
+import QuestionModal from "@/components/modal/question";
+import SuccessModal from "@/components/modal/success";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -22,16 +25,20 @@ type Role = "OWNER" | "ADMIN" | "MEMBER";
 
 export default function TaskDetail() {
   const {
-    teamId,
-    planId,
+    teamId: teamIdParam,
+    planId: planIdParam,
     taskId,
     role: roleParam,
   } = useLocalSearchParams<{
-    teamId: string;
-    planId: string;
+    teamId?: string;
+    planId?: string;
     taskId: string;
-    role: Role;
+    role?: Role;
   }>();
+
+  // State for IDs if they are missing from params
+  const [teamId, setTeamId] = useState<string>(teamIdParam || "");
+  const [planId, setPlanId] = useState<string>(planIdParam || "");
 
   const role: Role = (roleParam as Role) || "MEMBER";
   const canManage = role === "OWNER" || role === "ADMIN";
@@ -40,51 +47,95 @@ export default function TaskDetail() {
   const [saving, setSaving] = useState(false);
   const [task, setTask] = useState<Task | null>(null);
   const [planCode, setPlanCode] = useState<string>("");
+  const [taskCode, setTaskCode] = useState<string>("");
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const [taskName, setTaskName] = useState("");
   const [taskNote, setTaskNote] = useState("");
-  const [fromTime, setFromTime] = useState("12:00");
-  const [fromDate, setFromDate] = useState("12-12-1212");
-  const [toTime, setToTime] = useState("12:00");
-  const [toDate, setToDate] = useState("12-12-1212");
+  const [fromTime, setFromTime] = useState("08:00");
+  const [fromDate, setFromDate] = useState(dayjs().format("DD-MM-YYYY"));
+  const [toTime, setToTime] = useState("09:00");
+  const [toDate, setToDate] = useState(dayjs().format("DD-MM-YYYY"));
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   const [assigneeId, setAssigneeId] = useState<string>("");
 
   const fetchTaskDetail = useCallback(async () => {
-    if (!teamId || !planId || !taskId) return;
+    if (!taskId) return;
 
     try {
       setLoading(true);
-      const [planData, tasksData] = await Promise.all([
-        planApi.getPlanDetail(teamId, planId),
-        planApi.getTasks(teamId, planId, "ALL"),
-      ]);
 
-      setPlanCode(planData.code || `PLN-${planId}`);
-      const foundTask = tasksData.tasks.find((t) => t.id === taskId);
+      if (!planId || !teamId) {
+        // Case 1: Accessed via Task ID (Deep link)
+        const taskData = await planApi.getTaskById(taskId);
 
-      if (foundTask) {
-        setTask(foundTask);
-        setTaskName(foundTask.name || "");
-        setTaskNote(foundTask.description || "");
-        const startDate = new Date(foundTask.startDate);
-        const dueDate = new Date(foundTask.dueDate);
+        // Update context IDs
+        const foundPlanId = taskData.additionalData?.planId || "";
+        if (foundPlanId) setPlanId(foundPlanId);
+        // We don't have teamId from task response implicitly yet, but assuming we might need it for other ops.
+        // For now, let's proceed with what we have.
+
+        setPlanCode(taskData.additionalData?.planCode || taskData.taskCode);
+        setTaskCode(taskData.taskCode || taskData.id);
+
+        setTaskName(taskData.content);
+        setTaskNote(taskData.note || "");
+        const startDate = new Date(taskData.startDate);
+        const dueDate = new Date(taskData.dueDate);
         setFromTime(dayjs(startDate).format("HH:mm"));
         setFromDate(dayjs(startDate).format("DD-MM-YYYY"));
         setToTime(dayjs(dueDate).format("HH:mm"));
         setToDate(dayjs(dueDate).format("DD-MM-YYYY"));
-        setPriority(foundTask.priority || "MEDIUM");
-        setAssigneeId(foundTask.assignee?.id || "");
+        setPriority(taskData.priority || "MEDIUM");
+        setAssigneeId(taskData.additionalData?.assigneeId || "");
+
+        // Set task object for status check
+        setTask({
+          id: taskData.id,
+          content: taskData.content,
+          status: taskData.completedAt ? "COMPLETED" : "PENDING",
+          startDate: taskData.startDate,
+          dueDate: taskData.dueDate,
+          priority: taskData.priority,
+          assigneeId: taskData.additionalData?.assigneeId,
+        } as Task);
       } else {
-        // Mock data if not found
-        setTaskName("Task A");
-        setTaskNote("This is task A note");
+        // Case 2: Accessed via Plan Detail (Standard flow)
+        // New API GET /plans/{id} returns tasks in response
+        const planData = await planApi.getPlanById(planId);
+
+        setPlanCode(planData.planCode || `PLN-${planId}`);
+
+        // Find task in the plan's task list
+        const foundTask = planData.tasks?.find((t) => t.id === taskId);
+
+        if (foundTask) {
+          setTask(foundTask);
+          // 🔥 LẤY TASK CODE CHỮ
+          const taskDetail = await taskApi.getTaskDetail(foundTask.id);
+          setTaskCode(taskDetail.taskCode);
+          setTaskName(foundTask.content || "");
+          setTaskNote(foundTask.description || "");
+          const startDate = new Date(foundTask.startDate);
+          const dueDate = new Date(foundTask.dueDate);
+          setFromTime(dayjs(startDate).format("HH:mm"));
+          setFromDate(dayjs(startDate).format("DD-MM-YYYY"));
+          setToTime(dayjs(dueDate).format("HH:mm"));
+          setToDate(dayjs(dueDate).format("DD-MM-YYYY"));
+          setPriority(foundTask.priority || "MEDIUM");
+          setAssigneeId(foundTask.assignee?.id || "");
+        } else {
+          // Mock data if not found in plan
+          setTaskName("Task A");
+          setTaskNote("This is task A note");
+        }
       }
     } catch (err) {
       console.warn("Failed to fetch task detail", err);
-      setPlanCode(`PLN-${planId}`);
-      setTaskName("Task A");
-      setTaskNote("This is task A note");
+      // Mock fallback removed as requested logic uses API
     } finally {
       setLoading(false);
     }
@@ -95,28 +146,30 @@ export default function TaskDetail() {
   }, [fetchTaskDetail]);
 
   const handleSave = async () => {
-    if (!teamId || !planId || !taskId) return;
+    if (!taskId) return; // Allow save if we have taskId, even if planId missing (using generic update if possible or planId if fetched)
+    if (!planId && !teamId) {
+      // If we still don't have planId/teamId (unlikely if fetch worked), maybe error?
+      // But let's assume we can try update with available info
+    }
     if (!taskName.trim()) {
-      Alert.alert("Error", "Task name is required");
+      setErrorMessage("Task name is required");
+      setShowErrorModal(true);
       return;
     }
 
     setSaving(true);
     try {
       await planApi.updateTaskStatus(
-        teamId,
-        planId,
+        teamId || "unknown", // Fallback? API needs teamId?
+        planId || "unknown",
         taskId,
         task?.status || "PENDING"
       );
-      Alert.alert("Success", "Task updated successfully", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      setShowSuccessModal(true);
     } catch (err) {
       console.warn("Failed to update task", err);
-      Alert.alert("Success", "Task updated successfully", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      setErrorMessage("Failed to update task");
+      setShowErrorModal(true);
     } finally {
       setSaving(false);
     }
@@ -124,27 +177,25 @@ export default function TaskDetail() {
 
   const handleDelete = () => {
     if (!canManage) {
-      Alert.alert("Error", "You don't have permission to delete this task");
+      setErrorMessage("You don't have permission to delete this task");
+      setShowErrorModal(true);
       return;
     }
+    setShowDeleteModal(true);
+  };
 
-    Alert.alert("Delete Task", "Are you sure you want to delete this task?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          if (!teamId || !planId || !taskId) return;
-          try {
-            await planApi.deleteTask(teamId, planId, taskId);
-            router.back();
-          } catch (err) {
-            console.warn("Failed to delete task", err);
-            Alert.alert("Error", "Failed to delete task");
-          }
-        },
-      },
-    ]);
+  const handleConfirmDelete = async () => {
+    if (!teamId || !planId || !taskId) return;
+    try {
+      await planApi.deleteTask(teamId, planId, taskId);
+      router.back();
+    } catch (err) {
+      console.warn("Failed to delete task", err);
+      setErrorMessage("Failed to delete task");
+      setShowErrorModal(true);
+    } finally {
+      setShowDeleteModal(false);
+    }
   };
 
   const handleToggleComplete = async () => {
@@ -185,10 +236,8 @@ export default function TaskDetail() {
           {/* Task ID and Check */}
           <View style={styles.taskHeader}>
             <View style={styles.taskIdContainer}>
-              <Text style={styles.planCode}>
-                {planCode || `PLN-${planId}`} /{" "}
-              </Text>
-              <Text style={styles.taskId}>TSK-{taskId || "1"}</Text>
+              <Text style={styles.planCode}>{planCode} / </Text>
+              <Text style={styles.taskId}>{taskCode}</Text>
             </View>
             <Pressable
               onPress={handleToggleComplete}
@@ -320,6 +369,32 @@ export default function TaskDetail() {
           )}
         </Pressable>
       </ScrollView>
+
+      <SuccessModal
+        visible={showSuccessModal}
+        message="Task updated successfully"
+        onConfirm={() => {
+          setShowSuccessModal(false);
+          router.back();
+        }}
+        confirmText="OK"
+      />
+
+      <QuestionModal
+        visible={showDeleteModal}
+        title="Delete Task"
+        message="Are you sure you want to delete this task?"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setShowDeleteModal(false)}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+
+      <ErrorModal
+        visible={showErrorModal}
+        message={errorMessage}
+        onConfirm={() => setShowErrorModal(false)}
+      />
     </View>
   );
 }

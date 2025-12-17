@@ -4,16 +4,16 @@ export type PlanStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "OVERDUE";
 
 export interface Plan {
   id: string;
-  code: string; // PLN-1, PLN-2, etc.
-  name: string;
-  title?: string; // Some APIs return title instead of name
+  planCode: string; // Changed from code
+  title: string; // Changed from name/title
   description?: string;
   startDate: string; // ISO date
   dueDate: string; // ISO date
-  progress: number; // 0-100
-  totalTasks: number;
-  completedTasks: number;
-  status: PlanStatus;
+  // progress: number; // 0-100 -- removed from response? or calculated?
+  totalTasksCount: number; // Changed from totalTasks
+  completedTaskCount: number; // Changed from completedTasks
+  tasks?: Task[]; // Included in detail response
+  status?: PlanStatus; // Optional or mapped?
   createdBy?: {
     id: string;
     name: string;
@@ -25,18 +25,23 @@ export type TaskPriority = "HIGH" | "MEDIUM" | "LOW";
 
 export interface Task {
   id: string;
-  name: string;
-  description?: string;
+  content: string; // Changed from name
+  description?: string; // or note?
   startDate: string;
   dueDate: string;
-  status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "OVERDUE";
+  status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "OVERDUE";
   priority?: TaskPriority;
+  completedAt?: string | null;
+  assigneeId?: string;
+  assigneeName?: string;
+  assigneeAvatarUrl?: string;
   assignee?: {
+    // Keep for compatibility if needed, but API returns flat fields
     id: string;
     name: string;
     avatarUrl?: string;
   };
-  planId: string;
+  planId?: string; // Optional in response
 }
 
 export interface PlanListResponse {
@@ -75,11 +80,12 @@ export interface UpdatePlanRequest {
 }
 
 export interface CreateTaskRequest {
-  name: string;
-  description?: string;
+  content: string; // Changed from name
+  note?: string; // Changed from description
   startDate: string;
   dueDate: string;
   assigneeId?: string;
+  priority?: TaskPriority;
 }
 
 export interface SearchPlanRequest {
@@ -96,6 +102,28 @@ export interface TaskStatistics {
   low: number;
   medium: number;
   high: number;
+}
+
+export interface TaskDetailResponse {
+  id: string;
+  taskType: "TEAM" | "PERSONAL";
+  taskCode: string;
+  content: string;
+  note: string;
+  startDate: string;
+  dueDate: string;
+  completedAt: string | null;
+  priority: TaskPriority;
+  additionalData: {
+    planId: string;
+    planCode: string;
+    assigneeId: string;
+    assigneeAvatarUrl: string;
+    assigneeName: string;
+    // Add teamId if it appears later
+  };
+  deletedAt: string | null;
+  status?: string; // Mapped from completedAt?
 }
 
 const planApi = {
@@ -180,10 +208,35 @@ const planApi = {
    * @param teamId - Team ID
    * @param planId - Plan ID
    */
-  async getPlanDetail(teamId: string, planId: string): Promise<Plan> {
-    const url = `/teams/${teamId}/plans/${planId}`;
+  /**
+   * Get plan detail by ID (Flat, includes tasks)
+   * GET /api/plans/{id}
+   */
+  async getPlanById(planId: string): Promise<Plan> {
+    const url = `/plans/${planId}`;
     const data: Plan = await axiosInstance.get(url);
     return data;
+  },
+
+  /**
+   * Get task detail by ID (Generic Plan Task)
+   * GET /api/tasks/{id}
+   */
+  async getTaskById(taskId: string): Promise<TaskDetailResponse> {
+    const url = `/tasks/${taskId}`;
+    const data: TaskDetailResponse = await axiosInstance.get(url);
+    return data;
+  },
+
+  /**
+   * Get plan detail (Legacy / Team Scoped)
+   * @param teamId - Team ID
+   * @param planId - Plan ID
+   */
+  async getPlanDetail(teamId: string, planId: string): Promise<Plan> {
+    // Adapter to new API if needed, or keep as is using new fields
+    // Returning getPlanById for now as valid replacement
+    return this.getPlanById(planId);
   },
 
   /**
@@ -193,7 +246,9 @@ const planApi = {
    */
   async createPlan(teamId: string, data: CreatePlanRequest): Promise<Plan> {
     const url = `/plans`;
-    const res: Plan = await axiosInstance.post(url, data);
+    // data should include teamId if using flat API
+    const payload = { ...data, teamId };
+    const res: Plan = await axiosInstance.post(url, payload);
     return res;
   },
 
@@ -251,11 +306,11 @@ const planApi = {
    * @param data - Task data
    */
   async createTask(
-    teamId: string,
+    teamId: string, // Kept for compatibility but unused in URL
     planId: string,
     data: CreateTaskRequest
   ): Promise<Task> {
-    const url = `/teams/${teamId}/plans/${planId}/tasks`;
+    const url = `/plans/${planId}/tasks`;
     const res: Task = await axiosInstance.post(url, data);
     return res;
   },

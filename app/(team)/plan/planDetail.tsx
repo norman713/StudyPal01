@@ -1,7 +1,8 @@
 import planApi, { Plan, Task } from "@/api/planApi";
+import { getUserIdFromToken, readTokens } from "@/api/tokenStore";
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -14,6 +15,7 @@ import {
 import { Appbar, Text } from "react-native-paper";
 
 import EditPlanCard from "@/components/modal/editPlanCard";
+import ErrorModal from "@/components/modal/error";
 import ProgressCircle from "./components/ProgressCircle";
 import TaskItem from "./components/TaskItem";
 
@@ -25,21 +27,21 @@ type TaskFilter = "ALL" | "MY";
 // ==================== MOCK DATA ====================
 const MOCK_PLAN: Plan = {
   id: "1",
-  code: "PLN-1",
-  name: "This is today plan",
+  planCode: "PLN-1",
+  title: "This is today plan",
   description: "This is plan description if you know you know.",
   startDate: "2025-01-12T12:00:00Z",
   dueDate: "2025-12-12T12:00:00Z",
-  progress: 75.0,
-  totalTasks: 20,
-  completedTasks: 15,
+  // progress: 75.0,
+  totalTasksCount: 20,
+  completedTaskCount: 15,
   status: "IN_PROGRESS",
 };
 
 const MOCK_TASKS: Task[] = [
   {
     id: "1",
-    name: "Task 1",
+    content: "Task 1",
     startDate: "2025-10-27T12:00:00Z",
     dueDate: "2025-10-29T24:00:00Z",
     status: "COMPLETED",
@@ -53,7 +55,7 @@ const MOCK_TASKS: Task[] = [
   },
   {
     id: "2",
-    name: "Task 1",
+    content: "Task 1",
     startDate: "2025-10-27T12:00:00Z",
     dueDate: "2025-10-29T24:00:00Z",
     status: "PENDING",
@@ -67,7 +69,7 @@ const MOCK_TASKS: Task[] = [
   },
   {
     id: "3",
-    name: "Task 1",
+    content: "Task 1",
     startDate: "2025-10-27T12:00:00Z",
     dueDate: "2025-10-29T24:00:00Z",
     status: "PENDING",
@@ -81,7 +83,7 @@ const MOCK_TASKS: Task[] = [
   },
   {
     id: "4",
-    name: "Task 1",
+    content: "Task 1",
     startDate: "2025-10-27T12:00:00Z",
     dueDate: "2025-10-29T24:00:00Z",
     status: "PENDING",
@@ -95,7 +97,7 @@ const MOCK_TASKS: Task[] = [
   },
   {
     id: "5",
-    name: "Task 1",
+    content: "Task 1",
     startDate: "2025-10-27T12:00:00Z",
     dueDate: "2025-10-29T24:00:00Z",
     status: "COMPLETED",
@@ -121,6 +123,17 @@ export default function PlanDetailScreen() {
     role: Role;
   }>();
 
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const { accessToken } = await readTokens();
+      const id = getUserIdFromToken(accessToken);
+      setCurrentUserId(id);
+    };
+    fetchUserId();
+  }, []);
+
   const role: Role = (roleParam as Role) || "MEMBER";
   const canManage = role === "OWNER" || role === "ADMIN";
   // States
@@ -129,6 +142,8 @@ export default function PlanDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>("ALL");
   const [isEditModalVisible, setEditModalVisible] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Fetch data
   const fetchPlanDetail = useCallback(async () => {
@@ -136,24 +151,26 @@ export default function PlanDetailScreen() {
 
     try {
       setLoading(true);
-      const [planData, tasksData] = await Promise.all([
-        planApi.getPlanDetail(teamId, planId),
-        planApi.getTasks(teamId, planId, taskFilter),
-      ]);
+      // New API returns Plan object with embedded tasks
+      const planData = await planApi.getPlanById(planId);
+
       setPlan(planData);
-      setTasks(tasksData.tasks || []);
+      setTasks(planData.tasks || []);
     } catch {
       // Use mock data if API fails
-      setPlan({ ...MOCK_PLAN, id: planId });
       setTasks(MOCK_TASKS.map((t) => ({ ...t, planId })));
+      // Optional: don't show modal for fallback to mock, or show warning?
+      // Keeping mock fallback silent or logging
     } finally {
       setLoading(false);
     }
-  }, [teamId, planId, taskFilter]);
+  }, [teamId, planId]);
 
-  useEffect(() => {
-    fetchPlanDetail();
-  }, [fetchPlanDetail]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchPlanDetail();
+    }, [fetchPlanDetail])
+  );
 
   // Handlers
   const handleToggleTask = async (task: Task) => {
@@ -172,6 +189,8 @@ export default function PlanDetailScreen() {
             : t
         )
       );
+      setErrorMessage("Failed to toggle task status");
+      setShowErrorModal(true);
     }
   };
 
@@ -254,10 +273,13 @@ export default function PlanDetailScreen() {
         {/* Plan Info Card */}
         <View style={styles.card}>
           <View style={styles.planHeader}>
-            <ProgressCircle progress={plan.progress} size={70} />
+            <ProgressCircle
+              progress={(plan.completedTaskCount / plan.totalTasksCount) * 100}
+              size={70}
+            />
             <View style={styles.planMeta}>
-              <Text style={styles.planCode}>{plan.code}</Text>
-              <Text style={styles.planName}>{plan.name}</Text>
+              <Text style={styles.planCode}>{plan.planCode}</Text>
+              <Text style={styles.planName}>{plan.title}</Text>
               <Text style={styles.planDesc} numberOfLines={2}>
                 {plan.description}
               </Text>
@@ -278,7 +300,7 @@ export default function PlanDetailScreen() {
             />
             <StatItem
               label="Completed tasks"
-              value={`${plan.completedTasks}/${plan.totalTasks}`}
+              value={`${plan.completedTaskCount}/${plan.totalTasksCount}`}
             />
           </View>
         </View>
@@ -299,19 +321,35 @@ export default function PlanDetailScreen() {
 
           {/* Task List */}
           <View style={styles.taskList}>
-            {tasks.length === 0 ? (
+            {tasks.filter((t) => {
+              if (taskFilter === "ALL") return true;
+              if (!currentUserId) return true;
+              return (
+                t.assigneeId === currentUserId ||
+                t.assignee?.id === currentUserId
+              );
+            }).length === 0 ? (
               <EmptyTasks />
             ) : (
-              tasks.map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  onToggle={() => handleToggleTask(task)}
-                  teamId={teamId}
-                  planId={planId}
-                  role={role}
-                />
-              ))
+              tasks
+                .filter((t) => {
+                  if (taskFilter === "ALL") return true;
+                  if (!currentUserId) return true;
+                  return (
+                    t.assigneeId === currentUserId ||
+                    t.assignee?.id === currentUserId
+                  );
+                })
+                .map((task) => (
+                  <TaskItem
+                    key={task.id}
+                    task={task}
+                    onToggle={() => handleToggleTask(task)}
+                    teamId={teamId}
+                    planId={planId}
+                    role={role}
+                  />
+                ))
             )}
           </View>
         </View>
@@ -324,6 +362,11 @@ export default function PlanDetailScreen() {
           console.log("Saved Plan Data:", data);
           setEditModalVisible(false); // Close modal after saving
         }}
+      />
+      <ErrorModal
+        visible={showErrorModal}
+        message={errorMessage}
+        onConfirm={() => setShowErrorModal(false)}
       />
     </View>
   );

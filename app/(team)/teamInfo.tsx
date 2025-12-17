@@ -634,7 +634,14 @@ export default function TeamInfoScreen({
                         color="#49454F"
                       />
                     )}
-                    onPress={() => console.log("Recover clicked")}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(team)/trash",
+                        params: {
+                          role,
+                        },
+                      })
+                    }
                     style={{ paddingRight: 0, paddingLeft: 0 }}
                   />
                 )}
