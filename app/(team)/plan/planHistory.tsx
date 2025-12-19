@@ -1,3 +1,4 @@
+import planApi from "@/api/planApi";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -10,48 +11,12 @@ type Role = "OWNER" | "ADMIN" | "MEMBER";
 
 interface ActivityLog {
   id: string;
+  action: string;
+  entityName: string;
   timestamp: string;
-  message: string;
-  user: {
-    id: string;
-    name: string;
-    avatarUrl: string;
-  };
+  actorName: string;
+  actorAvatarUrl?: string;
 }
-
-// ==================== MOCK DATA ====================
-const MOCK_ACTIVITIES: ActivityLog[] = [
-  {
-    id: "1",
-    timestamp: "2025-10-27T12:00:00Z",
-    message: "New plan has been created",
-    user: {
-      id: "1",
-      name: "User",
-      avatarUrl: "https://i.pravatar.cc/40?img=1",
-    },
-  },
-  {
-    id: "2",
-    timestamp: "2025-10-27T12:00:00Z",
-    message: "New plan has been created",
-    user: {
-      id: "1",
-      name: "User",
-      avatarUrl: "https://i.pravatar.cc/40?img=1",
-    },
-  },
-  {
-    id: "3",
-    timestamp: "2025-10-27T12:00:00Z",
-    message: "New plan has been created",
-    user: {
-      id: "1",
-      name: "User",
-      avatarUrl: "https://i.pravatar.cc/40?img=1",
-    },
-  },
-];
 
 // ==================== SUB COMPONENTS ====================
 function ActivityItem({
@@ -69,7 +34,9 @@ function ActivityItem({
         style={{ borderWidth: 1, borderColor: "#E5E7EB" }}
       >
         <Image
-          source={{ uri: activity.user.avatarUrl }}
+          source={{
+            uri: activity.actorAvatarUrl || "https://i.pravatar.cc/150",
+          }}
           className="w-full h-full"
           style={{ resizeMode: "cover" }}
         />
@@ -81,7 +48,8 @@ function ActivityItem({
           {formatTimestamp(activity.timestamp)}
         </Text>
         <Text className="text-[16px] text-gray-800 font-normal">
-          {activity.message}
+          <Text style={{ fontWeight: "bold" }}>{activity.actorName}</Text>{" "}
+          {activity.action} {activity.entityName}
         </Text>
       </View>
     </View>
@@ -104,23 +72,19 @@ export default function PlanHistoryScreen() {
 
   // Fetch data
   const fetchPlanHistory = useCallback(async () => {
-    if (!teamId || !planId) return;
+    if (!planId) return;
 
     try {
       setLoading(true);
-      // TODO: Replace with actual API call when available
-      // const data = await planApi.getPlanHistory(teamId, planId);
-      // setActivities(data);
-
-      // Use mock data for now
-      setActivities(MOCK_ACTIVITIES);
-    } catch {
-      // Use mock data if API fails
-      setActivities(MOCK_ACTIVITIES);
+      const data = await planApi.getPlanHistory(planId);
+      setActivities(data?.content || []);
+    } catch (error) {
+      console.log("Error fetching history:", error);
+      // Keep empty or show error
     } finally {
       setLoading(false);
     }
-  }, [teamId, planId]);
+  }, [planId]);
 
   useEffect(() => {
     fetchPlanHistory();

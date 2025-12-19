@@ -16,6 +16,7 @@ import { Appbar, Text } from "react-native-paper";
 
 import EditPlanCard from "@/components/modal/editPlanCard";
 import ErrorModal from "@/components/modal/error";
+import QuestionModal from "@/components/modal/question";
 import ProgressCircle from "./components/ProgressCircle";
 import TaskItem from "./components/TaskItem";
 
@@ -142,6 +143,7 @@ export default function PlanDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>("ALL");
   const [isEditModalVisible, setEditModalVisible] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -166,6 +168,20 @@ export default function PlanDetailScreen() {
     }
   }, [teamId, planId]);
 
+  const handleDeletePlan = async () => {
+    if (!teamId || !planId) return;
+    try {
+      // Simple confirm for now using Alert since QuestionModal isn't imported yet
+      // I will import QuestionModal in a separate edit or assume standard Alert for speed if allowable.
+      // But better to be consistent.
+      await planApi.deletePlan(teamId, planId);
+      router.back();
+    } catch (e) {
+      setErrorMessage("Failed to delete plan");
+      setShowErrorModal(true);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       fetchPlanDetail();
@@ -178,7 +194,8 @@ export default function PlanDetailScreen() {
     try {
       await planApi.toggleTaskComplete(teamId, planId, task.id);
       fetchPlanDetail();
-    } catch {
+      fetchPlanDetail();
+    } catch (error: any) {
       setTasks((prev) =>
         prev.map((t) =>
           t.id === task.id
@@ -189,7 +206,9 @@ export default function PlanDetailScreen() {
             : t
         )
       );
-      setErrorMessage("Failed to toggle task status");
+      const msg =
+        error?.response?.data?.message || "Failed to toggle task status";
+      setErrorMessage(msg);
       setShowErrorModal(true);
     }
   };
@@ -249,22 +268,40 @@ export default function PlanDetailScreen() {
         {canManage && (
           <>
             {/* Edit */}
-            {/* Edit */}
             <Pressable
-              onPress={() => setEditModalVisible(true)} // Open modal instead of navigating
+              onPress={() => setEditModalVisible(true)}
               style={{ marginRight: 16 }}
             >
-              <FontAwesome5 name="pen" size={24} color="#fff" />
+              <FontAwesome5 name="pen" size={20} color="#fff" />
             </Pressable>
 
+            {/* Delete (Hidden from navbar, maybe put in a menu or just keep Edit? User image showed History and Edit path. Delete might be inside Edit or separate?
+               User request says: "plan edit (admin/ owner)... plan delete (admin/ owner)"
+               The image shows History and Edit icons.
+               I will assume Delete is accessible via another way or I should keep it but maybe user wants specific layout?
+               User said: "edit và history dùng 2 icon này nè".
+               I will keep Delete for now but maybe valid to hide it if not in design.
+               Actually, usually "Edit" opens a modal where you can also find delete or it's a separate option.
+               Let's keep the Delete icon for now but ensure it works, OR if the user ONLY showed 2 icons, maybe Delete is not in the header?
+               User said "edit and history use these 2 icons".
+               I will stick to the image which has 2 icons. I will REMOVE the trash icon from the header and put Delete functionality somewhere else, or assume Edit modal has delete?
+               No, `EditPlanCard` usually just edits.
+               Let's keep the trash icon but maybe move it or just leave it if user didn't explicitly say "remove others".
+               Actually, the user circled the top right area with History and Pen. It implies those are the primary actions.
+               I will keep providing Delete as it is a requested feature "plan delete".
+               Maybe I should put it in the Edit Modal? or just keep it there.
+               I'll keep the Trash icon but make sure the Edit and History icons are correct.
+               User image shows: History (Counter-clockwise clock) and Pen.
+               Existing code has History and Pen.
+               I will just ensure they are visible.
+               Refining: I will Add confirmation to Delete.
+            */}
             {/* Delete */}
             <Pressable
-              onPress={() => {
-                // TODO: confirm delete
-              }}
+              onPress={() => setShowDeleteModal(true)}
               style={{ marginRight: 16 }}
             >
-              <FontAwesome5 name="trash" size={24} color="#fff" />
+              <FontAwesome5 name="trash" size={20} color="#fff" />
             </Pressable>
           </>
         )}
@@ -358,10 +395,33 @@ export default function PlanDetailScreen() {
       <EditPlanCard
         visible={isEditModalVisible}
         onDismiss={() => setEditModalVisible(false)} // Close modal
-        onSave={(data) => {
-          console.log("Saved Plan Data:", data);
-          setEditModalVisible(false); // Close modal after saving
+        initialName={plan?.title || ""}
+        initialDescription={plan?.description || ""}
+        onSave={async (data) => {
+          if (!teamId || !planId) return;
+          try {
+            await planApi.updatePlan(teamId, planId, {
+              title: data.planName,
+              description: data.planDescription,
+              startDate: plan?.startDate,
+              dueDate: plan?.dueDate,
+            });
+            setEditModalVisible(false);
+            fetchPlanDetail();
+          } catch (e) {
+            setErrorMessage("Failed to update plan");
+            setShowErrorModal(true);
+          }
         }}
+      />
+      <QuestionModal
+        visible={showDeleteModal}
+        title="Delete Plan"
+        message="Are you sure you want to delete this plan? This action cannot be undone."
+        onConfirm={handleDeletePlan}
+        onCancel={() => setShowDeleteModal(false)}
+        confirmText="Delete"
+        cancelText="Cancel"
       />
       <ErrorModal
         visible={showErrorModal}

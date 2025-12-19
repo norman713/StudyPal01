@@ -126,7 +126,7 @@ export default function TaskDetail() {
           setToTime(dayjs(dueDate).format("HH:mm"));
           setToDate(dayjs(dueDate).format("DD-MM-YYYY"));
           setPriority(foundTask.priority || "MEDIUM");
-          setAssigneeId(foundTask.assignee?.id || "");
+          setAssigneeId(foundTask.assigneeId || foundTask.assignee?.id || "");
         } else {
           // Mock data if not found in plan
           setTaskName("Task A");
@@ -146,11 +146,7 @@ export default function TaskDetail() {
   }, [fetchTaskDetail]);
 
   const handleSave = async () => {
-    if (!taskId) return; // Allow save if we have taskId, even if planId missing (using generic update if possible or planId if fetched)
-    if (!planId && !teamId) {
-      // If we still don't have planId/teamId (unlikely if fetch worked), maybe error?
-      // But let's assume we can try update with available info
-    }
+    if (!taskId) return;
     if (!taskName.trim()) {
       setErrorMessage("Task name is required");
       setShowErrorModal(true);
@@ -159,12 +155,23 @@ export default function TaskDetail() {
 
     setSaving(true);
     try {
-      await planApi.updateTaskStatus(
-        teamId || "unknown", // Fallback? API needs teamId?
-        planId || "unknown",
-        taskId,
-        task?.status || "PENDING"
-      );
+      const startDateTime = dayjs(
+        `${fromDate} ${fromTime}`,
+        "DD-MM-YYYY HH:mm"
+      ).toISOString();
+      const endDateTime = dayjs(
+        `${toDate} ${toTime}`,
+        "DD-MM-YYYY HH:mm"
+      ).toISOString();
+
+      await planApi.updatePlanTask(taskId, {
+        content: taskName,
+        note: taskNote,
+        priority: priority,
+        startDate: startDateTime,
+        dueDate: endDateTime,
+        assigneeId: assigneeId,
+      });
       setShowSuccessModal(true);
     } catch (err) {
       console.warn("Failed to update task", err);
@@ -199,12 +206,27 @@ export default function TaskDetail() {
   };
 
   const handleToggleComplete = async () => {
-    if (!teamId || !planId || !taskId) return;
+    if (!taskId) return;
     try {
-      await planApi.toggleTaskComplete(teamId, planId, taskId);
-      fetchTaskDetail();
-    } catch (err) {
+      await taskApi.completeTask(taskId);
+      // Update local state or refetch
+      // fetchTaskDetail(); // Refetching is safer
+      // Optimistic update:
+      setTask((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: prev.status === "COMPLETED" ? "PENDING" : "COMPLETED",
+            }
+          : null
+      );
+      // Also refetch to be sure
+      // fetchTaskDetail();
+    } catch (err: any) {
       console.warn("Failed to toggle task", err);
+      const msg = err?.response?.data?.message || "Failed to toggle task";
+      setErrorMessage(msg);
+      setShowErrorModal(true);
     }
   };
 
@@ -343,18 +365,40 @@ export default function TaskDetail() {
           />
         )}
 
-        {/* Reminders */}
-        <Pressable
-          style={styles.menuItem}
-          onPress={() =>
-            router.push({ pathname: "/(me)/reminders", params: { taskId } })
-          }
-        >
-          <View style={styles.menuItemContent}>
-            <Text style={styles.menuText}>Reminders</Text>
-            <Ionicons name="chevron-forward" size={18} color="#79747E" />
-          </View>
-        </Pressable>
+        {/* Reminders - Allow for Admin/Owner per user request text "nếu role là admin, owner thì ... add reminder" 
+            Actually user request says: "- nếu role là admin, owner thì có thể edit tất cả, xóa task trừ check hoàn thành, add reminder"
+            Wait, "xóa task NHƯNG check hoàn thành"? Or "xóa task, trừ check hoàn thành" (meaning check complete is for assignee?).
+            "nếu là người assigned thì chỉ được check hoàn thành" -> Assignee sets complete.
+            "nếu role là admin, owner thì có thể edit tất cả, xóa task trừ check hoàn thành, add reminder" -> Admin/Owner can Edit, Delete, Add Reminder. 
+            Can Admin check complete? Usually yes, but user phrasing "trừ check hoàn thành" might mean "except check complete" or "delete task, (comma) check complete".
+            It says: "edit tất cả, xóa task trừ check hoàn thành, add reminder".
+            Grammar is ambiguous.
+            1. Edit all
+            2. Delete task
+            3. "trừ check hoàn thành" -> Except check complete? Meaning they CANNOT check complete?
+            Or maybe it means "Delete task" and "Edit task (except check complete status)"?
+            Let's assume Admin can do everything BUT check complete if they are not assignee?
+            "nếu là người assigned thì chỉ được check hoàn thành" implies exclusive right?
+            Let's stick to standard RBAC: Admin usually can do all. But if User insists "Assignee only check complete", then Admin might not be able to toggle status if not assigned?
+            However, usually Admin overrides.
+            But the phrase "trừ check hoàn thành" suggests exclusion.
+            I will allow Admin to Add Reminder.
+        */}
+        {(canManage ||
+          task?.assigneeId ===
+            taskApi.getCurrentUserId()) /* pseudo code, need id */ && (
+          <Pressable
+            style={styles.menuItem}
+            onPress={() =>
+              router.push({ pathname: "/(me)/reminders", params: { taskId } })
+            }
+          >
+            <View style={styles.menuItemContent}>
+              <Text style={styles.menuText}>Reminders</Text>
+              <Ionicons name="chevron-forward" size={18} color="#79747E" />
+            </View>
+          </Pressable>
+        )}
 
         {/* Save Button */}
         <Pressable

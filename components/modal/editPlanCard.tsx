@@ -8,17 +8,27 @@ interface EditPlanCardProps {
   visible: boolean; // To control visibility of the modal
   onDismiss: () => void; // To handle dismiss action (close the modal)
   onSave: (data: { planName: string; planDescription: string }) => void; // Save data handler
+  initialName?: string;
+  initialDescription?: string;
 }
 
 const EditPlanCard: React.FC<EditPlanCardProps> = ({
   visible,
   onDismiss,
   onSave,
+  initialName = "",
+  initialDescription = "",
 }) => {
-  const [planName, setPlanName] = useState("Plan A");
-  const [planDescription, setPlanDescription] = useState(
-    "Plan description here"
-  );
+  const [planName, setPlanName] = useState(initialName);
+  const [planDescription, setPlanDescription] = useState(initialDescription);
+
+  // Update state when initial props change or modal becomes visible
+  React.useEffect(() => {
+    if (visible) {
+      setPlanName(initialName);
+      setPlanDescription(initialDescription);
+    }
+  }, [visible, initialName, initialDescription]);
 
   const handleSave = () => {
     onSave({ planName, planDescription });

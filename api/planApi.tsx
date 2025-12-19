@@ -21,6 +21,23 @@ export interface Plan {
   };
 }
 
+export interface ActivityLog {
+  id: string;
+  action: string;
+  entityName: string;
+  timestamp: string; // ISO date
+  actorName: string;
+  actorAvatarUrl?: string;
+}
+
+export interface PlanHistoryResponse {
+  content: ActivityLog[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number;
+}
+
 export type TaskPriority = "HIGH" | "MEDIUM" | "LOW";
 
 export interface Task {
@@ -73,7 +90,7 @@ export interface CreatePlanRequest {
 }
 
 export interface UpdatePlanRequest {
-  name?: string;
+  title?: string;
   description?: string;
   startDate?: string;
   dueDate?: string;
@@ -259,11 +276,11 @@ const planApi = {
    * @param data - Plan data to update
    */
   async updatePlan(
-    teamId: string,
+    teamId: string, // Kept for interface compatibility, but unused in new API
     planId: string,
     data: UpdatePlanRequest
   ): Promise<Plan> {
-    const url = `/teams/${teamId}/plans/${planId}`;
+    const url = `/plans/${planId}`;
     const res: Plan = await axiosInstance.patch(url, data);
     return res;
   },
@@ -274,8 +291,22 @@ const planApi = {
    * @param planId - Plan ID
    */
   async deletePlan(teamId: string, planId: string): Promise<void> {
-    const url = `/teams/${teamId}/plans/${planId}`;
+    const url = `/plans/${planId}`;
     await axiosInstance.delete(url);
+  },
+
+  /**
+   * Get plan history
+   * GET /api/plans/{planId}/history
+   */
+  async getPlanHistory(
+    planId: string,
+    size: number = 20
+  ): Promise<PlanHistoryResponse> {
+    const url = `/plans/${planId}/history`;
+    const params = { size };
+    const data: PlanHistoryResponse = await axiosInstance.get(url, { params });
+    return data;
   },
 
   /**
@@ -334,17 +365,30 @@ const planApi = {
   },
 
   /**
+   * Update plan task details (ADMIN/OWNER)
+   * PATCH /api/plans/tasks/{taskId}
+   */
+  async updatePlanTask(
+    taskId: string,
+    data: UpdatePlanTaskRequest
+  ): Promise<Task> {
+    const url = `/plans/tasks/${taskId}`;
+    const res: Task = await axiosInstance.patch(url, data);
+    return res;
+  },
+
+  /**
    * Delete task (OWNER, ADMIN only)
    * @param teamId - Team ID
    * @param planId - Plan ID
    * @param taskId - Task ID
    */
   async deleteTask(
-    teamId: string,
-    planId: string,
+    teamId: string, // Unused in new API
+    planId: string, // Unused in new API
     taskId: string
   ): Promise<void> {
-    const url = `/teams/${teamId}/plans/${planId}/tasks/${taskId}`;
+    const url = `/plans/tasks/${taskId}`;
     await axiosInstance.delete(url);
   },
 
