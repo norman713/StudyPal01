@@ -157,28 +157,7 @@ export default function Search() {
   return (
     <View className="flex-1 bg-[#F2EFF0] ">
       {/* Header */}
-      <Header
-        avatarLabel="A"
-        items={[
-          { key: "inbox", label: "Inbox", icon: "inbox", badge: 24 },
-          { key: "outbox", label: "Outbox", icon: "send" },
-          { key: "favorites", label: "Favorites", icon: "heart-outline" },
-          { key: "trash", label: "Trash", icon: "trash-can-outline" },
-        ]}
-        activeKey="inbox"
-        onSelect={(k) => {
-          switch (k) {
-            case "inbox":
-              router.push("/inbox");
-              break;
-            case "outbox":
-              router.push("/outbox");
-              break;
-            default:
-              router.push("/");
-          }
-        }}
-      />
+      <Header scope="me" />
       <View className="flex-1 bg-white mx-3 my-3 mb-40">
         {/* Content */}
         <View className="flex-1 my-2">

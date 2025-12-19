@@ -1,217 +1,198 @@
 import userApi, { UserSummary } from "@/api/userApi";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Animated,
-  Dimensions,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { Avatar, Drawer, Portal } from "react-native-paper";
+import { router, useFocusEffect, usePathname } from "expo-router";
+import React, { useCallback, useState } from "react";
+import { Dimensions, Pressable, StyleSheet, Text, View } from "react-native";
+import { Avatar, Portal } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-type Item = { key: string; label: string; icon: string; badge?: number };
+/* =======================
+   TYPES
+======================= */
 
-/**
- * Responsive
- */
+type Scope = "me" | "team";
+type MenuKey = "task" | "document" | "session" | "statistic";
+
+/* =======================
+   CONSTANT
+======================= */
+
 const screenWidth = Dimensions.get("window").width;
-const responsiveWidth = Math.min(screenWidth * 0.5, 320);
+const drawerWidth = Math.min(screenWidth * 0.5, 320);
 
-type Props = {
-  // Header
-  bg?: string; // background color
-  tint?: string; // icon/text color
-  avatarLabel?: string; // right circle text
+/* =======================
+   COMPONENT
+======================= */
 
-  // Menu
-  items: Item[];
-  activeKey?: string;
-  onSelect: (key: string) => void;
-  drawerWidth?: number;
-};
-
-export default function Header({
-  bg = "#90717E",
-  tint = "#FFFFFF",
-  avatarLabel = "A",
-
-  items,
-  activeKey,
-  onSelect,
-  drawerWidth = responsiveWidth,
-}: Props) {
+export default function Header({ scope = "me" }: { scope?: Scope }) {
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const tx = useRef(new Animated.Value(-drawerWidth)).current;
-
   const [user, setUser] = useState<UserSummary | null>(null);
+
+  /* =======================
+     FETCH USER
+  ======================= */
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      const fetchData = async () => {
+
+      const fetchUser = async () => {
         try {
-          // Dùng summary để lấy info nhanh cho header (không cần parse token)
           const data = await userApi.getSummary();
-          if (!cancelled) {
-            setUser(data);
-          }
-        } catch (e) {
-          // silent error
-        }
+          if (!cancelled) setUser(data);
+        } catch {}
       };
-      fetchData();
+
+      fetchUser();
       return () => {
         cancelled = true;
       };
     }, [])
   );
 
-  useEffect(() => {
-    Animated.timing(tx, {
-      toValue: open ? 0 : -drawerWidth,
-      duration: 220,
-      useNativeDriver: Platform.OS !== "web",
-    }).start();
-  }, [open, drawerWidth]);
+  /* =======================
+     ACTIVE CHECK
+  ======================= */
+
+  const isActive = (key: MenuKey) => {
+    // ===== TASK =====
+    if (key === "task") {
+      if (scope === "me") {
+        return pathname === "/";
+      }
+      return pathname === "/team/task";
+    }
+
+    // ===== SESSION (LUÔN DÙNG ME) =====
+    if (key === "session") {
+      return pathname === "/session" || pathname.startsWith("/session/");
+    }
+
+    // ===== DOCUMENT & STATISTIC (THEO SCOPE) =====
+    if (key === "document" || key === "statistic") {
+      if (scope === "me") {
+        return pathname === `/${key}` || pathname.startsWith(`/${key}/`);
+      }
+
+      // team
+      return (
+        pathname === `/team/${key}` || pathname.startsWith(`/team/${key}/`)
+      );
+    }
+
+    return false;
+  };
+
+  /* =======================
+     ROUTE
+  ======================= */
+
+  const go = (key: MenuKey) => {
+    setOpen(false);
+
+    if (scope === "me") {
+      if (key === "task") router.push("/(me)");
+      if (key === "document") router.push("/(me)/document");
+      if (key === "session") router.push("/(me)/session");
+      if (key === "statistic") router.push("/(me)/statistic");
+    } else {
+      if (key === "task") router.push("/(team)/task");
+      if (key === "document") router.push("/(team)/document");
+      if (key === "session") router.push("/(me)/session");
+      if (key === "statistic") router.push("/(team)/statistic");
+    }
+  };
+
+  /* =======================
+     MENU ITEM
+  ======================= */
+
+  const MenuItem = ({
+    label,
+    icon,
+    active,
+    onPress,
+  }: {
+    label: string;
+    icon: keyof typeof MaterialCommunityIcons.glyphMap;
+    active: boolean;
+    onPress: () => void;
+  }) => (
+    <Pressable
+      onPress={onPress}
+      style={[styles.item, active && styles.itemActive]}
+    >
+      <MaterialCommunityIcons
+        name={icon}
+        size={20}
+        color={active ? "#2E2E2E" : "#6A6A6A"}
+      />
+      <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
+    </Pressable>
+  );
 
   return (
-    <View style={{ backgroundColor: bg, paddingTop: insets.top }}>
-      {/* TOP BAR */}
-      <View
-        style={{
-          height: 48,
-          paddingHorizontal: 12,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        {/* left: hamburger */}
+    <View style={{ backgroundColor: "#90717E", paddingTop: insets.top }}>
+      {/* ================= TOP BAR ================= */}
+      <View style={styles.topBar}>
         <Pressable onPress={() => setOpen(true)} hitSlop={10}>
-          <Ionicons name="menu" size={22} color={tint} />
+          <Ionicons name="menu" size={22} color="#FFF" />
         </Pressable>
 
-        {/* right: round avatar with letter */}
+        {/* Avatar */}
         <Pressable onPress={() => router.push("/(me)/profile")} hitSlop={10}>
           {user?.avatarUrl ? (
             <Avatar.Image size={32} source={{ uri: user.avatarUrl }} />
           ) : (
             <Avatar.Text
               size={32}
-              label={
-                user?.name ? user.name.charAt(0).toUpperCase() : avatarLabel
-              }
+              label={user?.name?.charAt(0)?.toUpperCase() ?? "A"}
               style={{ backgroundColor: "#6B4EFF" }}
-              labelStyle={{
-                color: "#FFFFFF",
-                fontWeight: "700",
-                lineHeight: 18,
-              }} // adjust lineHeight for center
+              labelStyle={{ color: "#FFF", fontWeight: "700" }}
             />
           )}
         </Pressable>
       </View>
 
-      {/* SIDEBAR */}
+      {/* ================= SIDE MENU ================= */}
       <Portal>
         {open && (
-          <View
-            style={[
-              StyleSheet.absoluteFillObject,
-              { backgroundColor: "rgba(0,0,0,0.3)", flexDirection: "row" },
-            ]}
-          >
-            {/* Drawer panel */}
-            <Animated.View
-              style={{
-                width: drawerWidth,
-                backgroundColor: "#F5EEF5",
-                transform: [{ translateX: tx }],
-                borderTopRightRadius: 16,
-                borderBottomRightRadius: 16,
-                paddingTop: insets.top + 10,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 18,
-                  fontWeight: "800",
-                  paddingHorizontal: 16,
-                  marginBottom: 12,
-                }}
-              >
-                StudyPal
-              </Text>
+          <View style={styles.overlay}>
+            <View style={[styles.drawer, { paddingTop: insets.top + 12 }]}>
+              <Text style={styles.title}>StudyPal</Text>
 
-              <Text
-                style={{
-                  color: "#6A6A6A",
-                  fontSize: 12,
-                  paddingHorizontal: 16,
-                  marginBottom: 8,
-                }}
-              >
-                Mail
-              </Text>
+              <MenuItem
+                label="Task"
+                icon="target"
+                active={isActive("task")}
+                onPress={() => go("task")}
+              />
 
-              <Drawer.Section style={{ backgroundColor: "transparent" }}>
-                {items.map((it) => {
-                  const active = activeKey === it.key;
-                  return (
-                    <Drawer.Item
-                      key={it.key}
-                      icon={() => (
-                        <MaterialCommunityIcons
-                          name={it.icon as any}
-                          size={20}
-                          color="#6A4E5A"
-                        />
-                      )}
-                      label={it.label}
-                      style={{
-                        marginHorizontal: 12,
-                        borderRadius: 12,
-                        backgroundColor: active ? "#E8DDE4" : "transparent",
-                      }}
-                      onPress={() => {
-                        setOpen(false);
-                        onSelect(it.key);
-                      }}
-                      right={() =>
-                        typeof it.badge === "number" ? (
-                          <View
-                            style={{
-                              minWidth: 28,
-                              height: 22,
-                              borderRadius: 11,
-                              backgroundColor: "#E8DDE4",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              paddingHorizontal: 8,
-                              marginRight: 8,
-                            }}
-                          >
-                            <Text
-                              style={{ color: "#6A4E5A", fontWeight: "700" }}
-                            >
-                              {it.badge}
-                            </Text>
-                          </View>
-                        ) : null
-                      }
-                    />
-                  );
-                })}
-              </Drawer.Section>
-            </Animated.View>
+              <MenuItem
+                label="Document"
+                icon="file-document-outline"
+                active={isActive("document")}
+                onPress={() => go("document")}
+              />
 
-            {/* Overlay click to cancel */}
+              <MenuItem
+                label="Session"
+                icon="clock-outline"
+                active={isActive("session")}
+                onPress={() => go("session")}
+              />
+
+              <MenuItem
+                label="Statistic"
+                icon="chart-bar"
+                active={isActive("statistic")}
+                onPress={() => go("statistic")}
+              />
+            </View>
+
+            {/* click outside to close */}
             <Pressable style={{ flex: 1 }} onPress={() => setOpen(false)} />
           </View>
         )}
@@ -219,3 +200,55 @@ export default function Header({
     </View>
   );
 }
+
+/* =======================
+   STYLES
+======================= */
+
+const styles = StyleSheet.create({
+  topBar: {
+    height: 48,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: "row",
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  drawer: {
+    width: drawerWidth,
+    backgroundColor: "#F5EEF5",
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
+    paddingHorizontal: 12,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    marginBottom: 6,
+  },
+  itemActive: {
+    backgroundColor: "#E6E3E7",
+  },
+  label: {
+    fontSize: 14,
+    color: "#6A6A6A",
+  },
+  labelActive: {
+    fontWeight: "700",
+    color: "#2E2E2E",
+  },
+});

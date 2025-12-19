@@ -101,28 +101,29 @@ export default function TaskScreen() {
 
   return (
     <View className="flex-1 bg-[#F8F6F7]">
-      <Header items={[]} onSelect={() => {}} />
-
-      <FlatList
-        data={[1]}
-        renderItem={null}
-        ListHeaderComponent={
-          <View style={styles.container}>
-            <HeaderSection
-              userName={userData?.name || "User"}
-              taskCount={tasks.length} // Simple count for selected day
-              markedDates={markedDates}
-              selectedDate={selectedDate}
-              onDateSelect={handleDateSelect}
-              onMonthChange={handleMonthChange}
-            />
-            <ChatBotSection />
-            <TaskListSection tasks={tasks} onToggleTask={handleToggleTask} />
-          </View>
-        }
-        keyExtractor={() => "main"}
-        showsVerticalScrollIndicator={false}
-      />
+      <Header scope="me" />
+      <View className="flex-1">
+        <FlatList
+          data={[1]}
+          renderItem={null}
+          ListHeaderComponent={
+            <View style={styles.container}>
+              <HeaderSection
+                userName={userData?.name || "User"}
+                taskCount={tasks.length} // Simple count for selected day
+                markedDates={markedDates}
+                selectedDate={selectedDate}
+                onDateSelect={handleDateSelect}
+                onMonthChange={handleMonthChange}
+              />
+              <ChatBotSection />
+              <TaskListSection tasks={tasks} onToggleTask={handleToggleTask} />
+            </View>
+          }
+          keyExtractor={() => "main"}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
 
       <BottomBar
         activeTab="me"
@@ -153,6 +154,5 @@ export default function TaskScreen() {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    paddingBottom: 100,
   },
 });
