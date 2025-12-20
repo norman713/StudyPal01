@@ -16,6 +16,13 @@ export interface GetDeletedTasksResponse {
   nextCursor: string | null;
 }
 
+export interface TaskAdditionalData {
+  planId?: string;
+  planCode?: string;
+  assigneeId?: string;
+  assigneeAvatarUrl?: string;
+  assigneeName?: string;
+}
 
 export interface PersonalTask {
     id: string;
@@ -27,6 +34,8 @@ export interface PersonalTask {
     taskCode: string;
     completedAt: string | null;
     note?: string;
+    additionalData?: TaskAdditionalData;
+  deletedAt?: string;
 }
 
 const taskApi = {
@@ -183,8 +192,8 @@ export interface RecurrenceRule {
     recurrenceType?: "NONE" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"; // For GET response
     type?: "NONE" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"; // For UPDATE payload
     weekDays: string[] | null; // e.g. ["MONDAY"]
-    recurrenceStartDate: string; // YYYY-MM-DD
-    recurrenceEndDate: string;   // YYYY-MM-DD
+    recurrenceStartDate: string | null; // YYYY-MM-DD
+    recurrenceEndDate: string|null;   // YYYY-MM-DD
 }
 
 export interface Reminder {

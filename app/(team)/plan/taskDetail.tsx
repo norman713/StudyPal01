@@ -3,6 +3,7 @@ import taskApi from "@/api/taskApi";
 import ErrorModal from "@/components/modal/error";
 import QuestionModal from "@/components/modal/question";
 import SuccessModal from "@/components/modal/success";
+import { useAuth } from "@/context/auth";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
@@ -40,6 +41,8 @@ export default function TaskDetail() {
   const [teamId, setTeamId] = useState<string>(teamIdParam || "");
   const [planId, setPlanId] = useState<string>(planIdParam || "");
 
+  const { user } = useAuth();
+
   const role: Role = (roleParam as Role) || "MEMBER";
   const canManage = role === "OWNER" || role === "ADMIN";
 
@@ -61,6 +64,14 @@ export default function TaskDetail() {
   const [toDate, setToDate] = useState(dayjs().format("DD-MM-YYYY"));
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   const [assigneeId, setAssigneeId] = useState<string>("");
+
+  const showApiError = (error: any, fallback?: string) => {
+    const message =
+      error?.response?.data?.message || fallback || "Something went wrong";
+    console.warn("API Error:", message);
+    setErrorMessage(message);
+    setShowErrorModal(true);
+  };
 
   const fetchTaskDetail = useCallback(async () => {
     if (!taskId) return;
@@ -128,14 +139,13 @@ export default function TaskDetail() {
           setPriority(foundTask.priority || "MEDIUM");
           setAssigneeId(foundTask.assigneeId || foundTask.assignee?.id || "");
         } else {
-          // Mock data if not found in plan
-          setTaskName("Task A");
-          setTaskNote("This is task A note");
+          throw new Error("Task not found in plan");
         }
       }
     } catch (err) {
       console.warn("Failed to fetch task detail", err);
-      // Mock fallback removed as requested logic uses API
+      setErrorMessage("Failed to load task details");
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
@@ -158,11 +168,11 @@ export default function TaskDetail() {
       const startDateTime = dayjs(
         `${fromDate} ${fromTime}`,
         "DD-MM-YYYY HH:mm"
-      ).toISOString();
+      ).format("YYYY-MM-DD HH:mm:ss");
       const endDateTime = dayjs(
         `${toDate} ${toTime}`,
         "DD-MM-YYYY HH:mm"
-      ).toISOString();
+      ).format("YYYY-MM-DD HH:mm:ss");
 
       await planApi.updatePlanTask(taskId, {
         content: taskName,
@@ -174,9 +184,7 @@ export default function TaskDetail() {
       });
       setShowSuccessModal(true);
     } catch (err) {
-      console.warn("Failed to update task", err);
-      setErrorMessage("Failed to update task");
-      setShowErrorModal(true);
+      showApiError(err);
     } finally {
       setSaving(false);
     }
@@ -197,9 +205,7 @@ export default function TaskDetail() {
       await planApi.deleteTask(teamId, planId, taskId);
       router.back();
     } catch (err) {
-      console.warn("Failed to delete task", err);
-      setErrorMessage("Failed to delete task");
-      setShowErrorModal(true);
+      showApiError(err);
     } finally {
       setShowDeleteModal(false);
     }
@@ -223,10 +229,7 @@ export default function TaskDetail() {
       // Also refetch to be sure
       // fetchTaskDetail();
     } catch (err: any) {
-      console.warn("Failed to toggle task", err);
-      const msg = err?.response?.data?.message || "Failed to toggle task";
-      setErrorMessage(msg);
-      setShowErrorModal(true);
+      showApiError(err);
     }
   };
 
@@ -365,28 +368,7 @@ export default function TaskDetail() {
           />
         )}
 
-        {/* Reminders - Allow for Admin/Owner per user request text "nếu role là admin, owner thì ... add reminder" 
-            Actually user request says: "- nếu role là admin, owner thì có thể edit tất cả, xóa task trừ check hoàn thành, add reminder"
-            Wait, "xóa task NHƯNG check hoàn thành"? Or "xóa task, trừ check hoàn thành" (meaning check complete is for assignee?).
-            "nếu là người assigned thì chỉ được check hoàn thành" -> Assignee sets complete.
-            "nếu role là admin, owner thì có thể edit tất cả, xóa task trừ check hoàn thành, add reminder" -> Admin/Owner can Edit, Delete, Add Reminder. 
-            Can Admin check complete? Usually yes, but user phrasing "trừ check hoàn thành" might mean "except check complete" or "delete task, (comma) check complete".
-            It says: "edit tất cả, xóa task trừ check hoàn thành, add reminder".
-            Grammar is ambiguous.
-            1. Edit all
-            2. Delete task
-            3. "trừ check hoàn thành" -> Except check complete? Meaning they CANNOT check complete?
-            Or maybe it means "Delete task" and "Edit task (except check complete status)"?
-            Let's assume Admin can do everything BUT check complete if they are not assignee?
-            "nếu là người assigned thì chỉ được check hoàn thành" implies exclusive right?
-            Let's stick to standard RBAC: Admin usually can do all. But if User insists "Assignee only check complete", then Admin might not be able to toggle status if not assigned?
-            However, usually Admin overrides.
-            But the phrase "trừ check hoàn thành" suggests exclusion.
-            I will allow Admin to Add Reminder.
-        */}
-        {(canManage ||
-          task?.assigneeId ===
-            taskApi.getCurrentUserId()) /* pseudo code, need id */ && (
+        {(canManage || task?.assigneeId === user?.id) && (
           <Pressable
             style={styles.menuItem}
             onPress={() =>

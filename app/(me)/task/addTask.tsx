@@ -172,10 +172,13 @@ export default function TaskDetail() {
       await taskApi.createTask(payload);
 
       setIsModalVisible(true); // Show modal on success
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to create task:", error);
       setIsModalVisible(false); // Close any previous modal if error occurs
-      setErrorMessage("Failed to create task. Please try again.");
+      const msg =
+        error?.response?.data?.message ||
+        "Failed to create task. Please try again.";
+      setErrorMessage(msg);
       setShowErrorModal(true);
     } finally {
       setIsLoading(false);

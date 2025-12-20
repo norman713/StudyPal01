@@ -1,11 +1,11 @@
 import memberApi, { Member } from "@/api/memberApi";
 import planApi, { Task } from "@/api/planApi";
+import ErrorModal from "@/components/modal/error";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -50,6 +50,9 @@ export default function PlanCreateScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
 
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showErrorModal, setShowErrorModal] = useState(false);
+
   useEffect(() => {
     if (teamId) {
       memberApi.getAll(teamId).then((res) => {
@@ -67,7 +70,7 @@ export default function PlanCreateScreen() {
       const assignee = members.find((m) => m.userId === draft.assigneeId);
       return {
         id: `draft-${index}`,
-        name: draft.content,
+        content: draft.content,
         description: draft.note,
         startDate: draft.startDate,
         dueDate: draft.dueDate,
@@ -96,11 +99,13 @@ export default function PlanCreateScreen() {
         planApi.getPlanDetail(teamId, planId),
         planApi.getTasks(teamId, planId),
       ]);
-      setPlanName(planData.name);
+      setPlanName(planData.title);
       setPlanDescription(planData.description || "");
       setTasks(tasksData.tasks || []);
     } catch {
       console.log("Failed to load plan data");
+      setErrorMessage("Failed to load plan data");
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
@@ -134,7 +139,8 @@ export default function PlanCreateScreen() {
 
   const handleSave = async () => {
     if (!planName.trim()) {
-      Alert.alert("Error", "Plan name is required");
+      setErrorMessage("Plan name is required");
+      setShowErrorModal(true);
       return;
     }
 
@@ -143,7 +149,7 @@ export default function PlanCreateScreen() {
       if (isEditMode && planId) {
         // Edit Mode
         await planApi.updatePlan(teamId, planId, {
-          name: planName.trim(),
+          title: planName.trim(),
           description: planDescription.trim(),
         });
       } else {
@@ -163,7 +169,9 @@ export default function PlanCreateScreen() {
       router.back();
     } catch (err: any) {
       console.error(err);
-      Alert.alert("Error", "Failed to save plan");
+      const msg = err?.response?.data?.message || "Failed to save plan";
+      setErrorMessage(msg);
+      setShowErrorModal(true);
     } finally {
       setSaving(false);
     }
@@ -318,6 +326,11 @@ export default function PlanCreateScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <ErrorModal
+        visible={showErrorModal}
+        message={errorMessage}
+        onConfirm={() => setShowErrorModal(false)}
+      />
     </View>
   );
 }

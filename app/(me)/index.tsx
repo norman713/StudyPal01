@@ -102,7 +102,7 @@ export default function TaskScreen() {
   return (
     <View className="flex-1 bg-[#F8F6F7]">
       <Header scope="me" />
-      <View className="flex-1">
+      <View className="flex-1 pb-16">
         <FlatList
           data={[1]}
           renderItem={null}
@@ -110,7 +110,7 @@ export default function TaskScreen() {
             <View style={styles.container}>
               <HeaderSection
                 userName={userData?.name || "User"}
-                taskCount={tasks.length} // Simple count for selected day
+                taskCount={tasks.length}
                 markedDates={markedDates}
                 selectedDate={selectedDate}
                 onDateSelect={handleDateSelect}

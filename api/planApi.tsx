@@ -105,6 +105,15 @@ export interface CreateTaskRequest {
   priority?: TaskPriority;
 }
 
+export interface UpdatePlanTaskRequest {
+  content?: string;
+  note?: string;
+  startDate?: string;
+  dueDate?: string;
+  assigneeId?: string;
+  priority?: TaskPriority;
+}
+
 export interface SearchPlanRequest {
   keyword?: string;
   fromDate?: string; // yyyy-MM-dd HH:mm:ss

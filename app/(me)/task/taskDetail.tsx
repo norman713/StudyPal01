@@ -53,6 +53,20 @@ export default function TaskDetail() {
     }
   };
 
+  // helpers show api error
+  const showApiError = (error: any, fallback?: string) => {
+    console.warn("API Error:", error);
+
+    const message =
+      error?.response?.data?.message ||
+      error?.message ||
+      fallback ||
+      "Something went wrong";
+
+    setErrorMessage(message);
+    setShowErrorModal(true);
+  };
+
   // Format time input to HH:mm format
   const formatTime = (text: string) => {
     const raw = text.replace(/\D/g, "").slice(0, 4);
@@ -129,6 +143,7 @@ export default function TaskDetail() {
     try {
       setLoading(true);
       const data = await taskApi.getTaskDetail(taskId);
+      console.log("Fetched Task Detail:", data);
       setTask(data);
       setTaskName(data.content);
       setTaskNote(data.note || "");
@@ -141,10 +156,8 @@ export default function TaskDetail() {
       setToTime(dayjs(dueDate).format("HH:mm"));
       setToDate(dayjs(dueDate).format("DD-MM-YYYY"));
       setPriority(data.priority);
-    } catch (error) {
-      console.warn("Failed to fetch task detail", error);
-      setErrorMessage("Failed to load task details");
-      setShowErrorModal(true);
+    } catch (error: any) {
+      showApiError(error);
     } finally {
       setLoading(false);
     }
@@ -166,12 +179,8 @@ export default function TaskDetail() {
       await taskApi.completeTask(taskId);
       setShowConfirmModal(false);
       fetchTaskDetail();
-    } catch (err) {
-      console.warn("Failed to complete task", err);
-      console.warn("Failed to complete task", err);
-      setShowConfirmModal(false);
-      setErrorMessage("Failed to complete task");
-      setShowErrorModal(true);
+    } catch (err: any) {
+      showApiError(err);
     }
   };
 
@@ -208,10 +217,9 @@ export default function TaskDetail() {
       setLoading(true);
       await taskApi.deleteTask(taskId, scope);
       router.back();
-    } catch (err) {
+    } catch (err: any) {
       console.warn("Failed to delete task", err);
-      console.warn("Failed to delete task", err);
-      setErrorMessage("Failed to delete task");
+      setErrorMessage(err?.response?.data?.message || "Failed to delete task");
       setShowErrorModal(true);
       setLoading(false);
     }
@@ -244,13 +252,7 @@ export default function TaskDetail() {
       setSuccessType("UPDATE");
       setShowSuccessModal(true);
     } catch (err: any) {
-      console.warn("Failed to update task", err);
-      console.log(
-        "Update Task Error Details:",
-        err?.response?.data || err?.message
-      );
-      setErrorMessage("Failed to update task");
-      setShowErrorModal(true);
+      showApiError(err);
     } finally {
       setLoading(false);
     }
@@ -284,7 +286,7 @@ export default function TaskDetail() {
         {/* Task ID and Check */}
         <View className="bg-white p-4 gap-2">
           <View style={styles.taskHeader}>
-            <Text style={styles.taskId}>TSK-{task?.taskCode || "..."}</Text>
+            <Text style={styles.taskId}>{task?.taskCode || "..."}</Text>
             <Pressable
               onPress={handleCheckPress}
               style={[

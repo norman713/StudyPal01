@@ -1,4 +1,5 @@
 import taskApi, { Reminder } from "@/api/taskApi";
+import ErrorModal from "@/components/modal/error";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
@@ -19,6 +20,7 @@ import { Appbar } from "react-native-paper";
 export default function Reminders() {
   const { taskId } = useLocalSearchParams<{ taskId: string }>();
 
+  //States
   // Use the API type directly if possible, or map it.
   // API has { id, remindAt }. This matches what we need roughly.
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -28,6 +30,8 @@ export default function Reminders() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState(new Date());
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>();
 
   const [editingReminderId, setEditingReminderId] = useState<string | null>(
     null
@@ -57,7 +61,7 @@ export default function Reminders() {
       await taskApi.deleteReminder(id);
       setReminders((prev) => prev.filter((r) => r.id !== id));
     } catch (error) {
-      Alert.alert("Error", "Failed to delete reminder");
+      handleApiError(error, "Failed to delete reminder");
     } finally {
       setLoading(false);
     }
@@ -76,6 +80,17 @@ export default function Reminders() {
     setSelectedDate(date);
     setSelectedTime(date);
     setShowDatePicker(true);
+  };
+
+  // helper to handle API errors
+  const handleApiError = (error: any, fallback: string) => {
+    console.log("API Error:", error);
+
+    const message =
+      error?.response?.data?.message || error?.message || fallback;
+
+    setErrorMessage(message);
+    setShowErrorModal(true);
   };
 
   // Helper for UI display
@@ -150,8 +165,8 @@ export default function Reminders() {
       fetchReminders(); // Refresh list to get ID
       setEditingReminderId(null); // Reset
     } catch (error) {
-      Alert.alert(
-        "Error",
+      handleApiError(
+        error,
         editingReminderId
           ? "Failed to update reminder"
           : "Failed to create reminder"
@@ -178,44 +193,48 @@ export default function Reminders() {
           titleStyle={{
             fontSize: 16,
             color: "#FFFFFF",
-            fontFamily: "Poppins_400Regular",
           }}
         />
       </Appbar.Header>
 
-      <ScrollView style={styles.content}>
-        <View style={styles.section}>
+      <ScrollView className="flex-1 p-2">
+        <View className="bg-[#F8F6F7] p-2">
           {/* Section Header */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Reminders</Text>
-            <Pressable onPress={handleAddReminder} style={styles.addButton}>
-              <Ionicons name="add" size={18} color="#90717E" />
+          <View className="flex-row justify-between items-center px-2 mb-3">
+            <Text className="text-[16px] font-PoppinsSemiBold text-[#0F0C0D]">
+              Reminders
+            </Text>
+            <Pressable
+              onPress={handleAddReminder}
+              className="w-5 h-5 justify-center items-center"
+            >
+              <Ionicons name="add" size={20} color="#90717E" />
             </Pressable>
           </View>
 
           {/* Reminders List */}
           {reminders.length > 0 && (
-            <View style={styles.remindersList}>
+            <View className="gap-3">
               {reminders.map((reminder) => (
                 <Pressable
                   key={reminder.id}
-                  style={styles.reminderItem}
+                  className="bg-[#F2EFF0] flex-row justify-between items-center px-2 py-1 rounded-[5px]"
                   onPress={() => handleEditReminder(reminder)}
                 >
-                  <View style={styles.reminderInfo}>
+                  <View className="flex-row items-center gap-2">
                     <Ionicons
                       name="time-outline"
                       size={18}
                       color="#92AAA5"
                       style={styles.clockIcon}
                     />
-                    <Text style={styles.reminderText}>
+                    <Text className="text-[16px] font-PoppinsRegular text-[#0F0C0D]">
                       {formatReminderDisplay(reminder.remindAt)}
                     </Text>
                   </View>
                   <Pressable
                     onPress={() => handleDeleteReminder(reminder.id)}
-                    style={styles.deleteButton}
+                    className="p-1"
                   >
                     <Ionicons name="close" size={18} color="#90717E" />
                   </Pressable>
@@ -299,6 +318,14 @@ export default function Reminders() {
           onChange={handleTimeChange}
         />
       )}
+
+      <ErrorModal
+        visible={showErrorModal}
+        title="Error"
+        message={errorMessage}
+        confirmText="OK"
+        onConfirm={() => setShowErrorModal(false)}
+      />
     </View>
   );
 }
@@ -308,76 +335,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F2EFF0",
   },
-  header: {
-    backgroundColor: "#90717E",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    color: "#F8F6F7",
-    fontSize: 16,
-    fontFamily: "Poppins_400Regular",
-  },
-  content: {
-    flex: 1,
-    padding: 10,
-  },
-  section: {
-    backgroundColor: "#F8F6F7",
-    padding: 10,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 9,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontFamily: "Poppins_600SemiBold",
-    color: "#0F0C0D",
-  },
-  addButton: {
-    width: 18,
-    height: 18,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  remindersList: {
-    gap: 5,
-  },
-  reminderItem: {
-    backgroundColor: "#F2EFF0",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 5,
-  },
-  reminderInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
+
   clockIcon: {
     marginRight: 5,
   },
-  reminderText: {
-    fontSize: 16,
-    fontFamily: "Poppins_400Regular",
-    color: "#0F0C0D",
-  },
-  deleteButton: {
-    padding: 5,
-  },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
