@@ -48,7 +48,7 @@ export default function TaskItem({
   role,
 }: TaskItemProps) {
   const priorityColor = getPriorityColor(task.priority);
-  const isCompleted = task.status === "COMPLETED";
+  const isCompleted = Boolean(task.completedAt);
 
   const handlePress = () => {
     if (teamId && planId) {
@@ -106,22 +106,20 @@ export default function TaskItem({
 
       {/* Check Button - only show if onToggle provided */}
       {onToggle && (
-        <TouchableOpacity
-          onPress={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
-          style={[
-            styles.checkBtn,
-            isCompleted ? styles.checkBtnDone : styles.checkBtnIdle,
-          ]}
-        >
-          <Ionicons
-            name="checkmark"
-            size={18}
-            color={isCompleted ? "#fff" : "#7D8B91"}
-          />
-        </TouchableOpacity>
+        <View pointerEvents="none">
+          <View
+            style={[
+              styles.checkBtn,
+              isCompleted ? styles.checkBtnDone : styles.checkBtnIdle,
+            ]}
+          >
+            <Ionicons
+              name="checkmark"
+              size={18}
+              color={isCompleted ? "#fff" : "#7D8B91"}
+            />
+          </View>
+        </View>
       )}
     </TouchableOpacity>
   );

@@ -64,6 +64,7 @@ export default function TaskDetail() {
   const [toDate, setToDate] = useState(dayjs().format("DD-MM-YYYY"));
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   const [assigneeId, setAssigneeId] = useState<string>("");
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   const showApiError = (error: any, fallback?: string) => {
     const message =
@@ -211,25 +212,28 @@ export default function TaskDetail() {
     }
   };
 
-  const handleToggleComplete = async () => {
+  const handleToggleComplete = () => {
     if (!taskId) return;
+    setShowCompleteModal(true);
+  };
+  const handleConfirmComplete = async () => {
+    if (!taskId) return;
+
     try {
       await taskApi.completeTask(taskId);
-      // Update local state or refetch
-      // fetchTaskDetail(); // Refetching is safer
-      // Optimistic update:
+
       setTask((prev) =>
         prev
           ? {
               ...prev,
-              status: prev.status === "COMPLETED" ? "PENDING" : "COMPLETED",
+              status: "COMPLETED",
             }
           : null
       );
-      // Also refetch to be sure
-      // fetchTaskDetail();
     } catch (err: any) {
       showApiError(err);
+    } finally {
+      setShowCompleteModal(false);
     }
   };
 
@@ -414,6 +418,15 @@ export default function TaskDetail() {
         onCancel={() => setShowDeleteModal(false)}
         confirmText="Delete"
         cancelText="Cancel"
+      />
+      <QuestionModal
+        visible={showCompleteModal}
+        title="Confirm"
+        message="This action cannot be undone. Do you want to mark this task as completed?"
+        confirmText="Yes"
+        cancelText="Cancel"
+        onConfirm={handleConfirmComplete}
+        onCancel={() => setShowCompleteModal(false)}
       />
 
       <ErrorModal

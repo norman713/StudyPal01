@@ -25,93 +25,6 @@ const ACCENT = "#90717E";
 type Role = "OWNER" | "ADMIN" | "MEMBER";
 type TaskFilter = "ALL" | "MY";
 
-// ==================== MOCK DATA ====================
-const MOCK_PLAN: Plan = {
-  id: "1",
-  planCode: "PLN-1",
-  title: "This is today plan",
-  description: "This is plan description if you know you know.",
-  startDate: "2025-01-12T12:00:00Z",
-  dueDate: "2025-12-12T12:00:00Z",
-  // progress: 75.0,
-  totalTasksCount: 20,
-  completedTaskCount: 15,
-  status: "IN_PROGRESS",
-};
-
-const MOCK_TASKS: Task[] = [
-  {
-    id: "1",
-    content: "Task 1",
-    startDate: "2025-10-27T12:00:00Z",
-    dueDate: "2025-10-29T24:00:00Z",
-    status: "COMPLETED",
-    priority: "LOW",
-    assignee: {
-      id: "1",
-      name: "Minh Huy",
-      avatarUrl: "https://i.pravatar.cc/40?img=1",
-    },
-    planId: "1",
-  },
-  {
-    id: "2",
-    content: "Task 1",
-    startDate: "2025-10-27T12:00:00Z",
-    dueDate: "2025-10-29T24:00:00Z",
-    status: "PENDING",
-    priority: "MEDIUM",
-    assignee: {
-      id: "2",
-      name: "Me",
-      avatarUrl: "https://i.pravatar.cc/40?img=2",
-    },
-    planId: "1",
-  },
-  {
-    id: "3",
-    content: "Task 1",
-    startDate: "2025-10-27T12:00:00Z",
-    dueDate: "2025-10-29T24:00:00Z",
-    status: "PENDING",
-    priority: "MEDIUM",
-    assignee: {
-      id: "3",
-      name: "Minh Hoàng",
-      avatarUrl: "https://i.pravatar.cc/40?img=3",
-    },
-    planId: "1",
-  },
-  {
-    id: "4",
-    content: "Task 1",
-    startDate: "2025-10-27T12:00:00Z",
-    dueDate: "2025-10-29T24:00:00Z",
-    status: "PENDING",
-    priority: "HIGH",
-    assignee: {
-      id: "4",
-      name: "Jack 5 củ",
-      avatarUrl: "https://i.pravatar.cc/40?img=4",
-    },
-    planId: "1",
-  },
-  {
-    id: "5",
-    content: "Task 1",
-    startDate: "2025-10-27T12:00:00Z",
-    dueDate: "2025-10-29T24:00:00Z",
-    status: "COMPLETED",
-    priority: "LOW",
-    assignee: {
-      id: "5",
-      name: "Me",
-      avatarUrl: "https://i.pravatar.cc/40?img=5",
-    },
-    planId: "1",
-  },
-];
-
 // ==================== MAIN SCREEN ====================
 export default function PlanDetailScreen() {
   const {
@@ -158,11 +71,10 @@ export default function PlanDetailScreen() {
 
       setPlan(planData);
       setTasks(planData.tasks || []);
-    } catch {
-      // Use mock data if API fails
-      setTasks(MOCK_TASKS.map((t) => ({ ...t, planId })));
-      // Optional: don't show modal for fallback to mock, or show warning?
-      // Keeping mock fallback silent or logging
+    } catch (error) {
+      console.error("Failed to fetch plan detail", error);
+      setErrorMessage("Failed to load plan detail");
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
@@ -171,9 +83,6 @@ export default function PlanDetailScreen() {
   const handleDeletePlan = async () => {
     if (!teamId || !planId) return;
     try {
-      // Simple confirm for now using Alert since QuestionModal isn't imported yet
-      // I will import QuestionModal in a separate edit or assume standard Alert for speed if allowable.
-      // But better to be consistent.
       await planApi.deletePlan(teamId, planId);
       router.back();
     } catch (e) {
@@ -274,28 +183,6 @@ export default function PlanDetailScreen() {
             >
               <FontAwesome5 name="pen" size={20} color="#fff" />
             </Pressable>
-
-            {/* Delete (Hidden from navbar, maybe put in a menu or just keep Edit? User image showed History and Edit path. Delete might be inside Edit or separate?
-               User request says: "plan edit (admin/ owner)... plan delete (admin/ owner)"
-               The image shows History and Edit icons.
-               I will assume Delete is accessible via another way or I should keep it but maybe user wants specific layout?
-               User said: "edit và history dùng 2 icon này nè".
-               I will keep Delete for now but maybe valid to hide it if not in design.
-               Actually, usually "Edit" opens a modal where you can also find delete or it's a separate option.
-               Let's keep the Delete icon for now but ensure it works, OR if the user ONLY showed 2 icons, maybe Delete is not in the header?
-               User said "edit and history use these 2 icons".
-               I will stick to the image which has 2 icons. I will REMOVE the trash icon from the header and put Delete functionality somewhere else, or assume Edit modal has delete?
-               No, `EditPlanCard` usually just edits.
-               Let's keep the trash icon but maybe move it or just leave it if user didn't explicitly say "remove others".
-               Actually, the user circled the top right area with History and Pen. It implies those are the primary actions.
-               I will keep providing Delete as it is a requested feature "plan delete".
-               Maybe I should put it in the Edit Modal? or just keep it there.
-               I'll keep the Trash icon but make sure the Edit and History icons are correct.
-               User image shows: History (Counter-clockwise clock) and Pen.
-               Existing code has History and Pen.
-               I will just ensure they are visible.
-               Refining: I will Add confirmation to Delete.
-            */}
             {/* Delete */}
             <Pressable
               onPress={() => setShowDeleteModal(true)}

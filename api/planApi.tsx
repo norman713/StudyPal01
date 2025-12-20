@@ -4,16 +4,15 @@ export type PlanStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "OVERDUE";
 
 export interface Plan {
   id: string;
-  planCode: string; // Changed from code
-  title: string; // Changed from name/title
+  planCode: string;
+  title: string;
   description?: string;
-  startDate: string; // ISO date
-  dueDate: string; // ISO date
-  // progress: number; // 0-100 -- removed from response? or calculated?
-  totalTasksCount: number; // Changed from totalTasks
-  completedTaskCount: number; // Changed from completedTasks
-  tasks?: Task[]; // Included in detail response
-  status?: PlanStatus; // Optional or mapped?
+  startDate: string;
+  dueDate: string;
+  totalTasksCount: number;
+  completedTaskCount: number;
+  tasks?: Task[];
+  status?: PlanStatus;
   createdBy?: {
     id: string;
     name: string;
