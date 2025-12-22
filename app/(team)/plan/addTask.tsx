@@ -133,20 +133,19 @@ export default function AddTaskScreen() {
           <Text style={styles.sectionTitle}>Detail</Text>
 
           {/* Task Name */}
-          <View style={styles.inputContainer}>
+          <View>
             <Text style={styles.inputLabel}>Task name</Text>
             <TextInput
               mode="outlined"
               label=""
               value={taskName}
               onChangeText={setTaskName}
-              style={styles.input}
               outlineStyle={styles.inputOutline}
               contentStyle={styles.inputContent}
               theme={{
                 roundness: 30,
                 colors: {
-                  background: "#F8F6F7",
+                  background: "#fff",
                   outline: "#79747E",
                 },
               }}
@@ -154,7 +153,7 @@ export default function AddTaskScreen() {
           </View>
 
           {/* Task Note */}
-          <View style={styles.inputContainer}>
+          <View>
             <Text style={styles.inputLabel}>Task note (optional)</Text>
             <TextInput
               mode="outlined"
@@ -163,13 +162,12 @@ export default function AddTaskScreen() {
               onChangeText={setTaskNote}
               multiline
               numberOfLines={4}
-              style={styles.input}
               outlineStyle={styles.inputOutline}
               contentStyle={[styles.inputContent, styles.textAreaContent]}
               theme={{
                 roundness: 30,
                 colors: {
-                  background: "#F8F6F7",
+                  background: "#FFF",
                   outline: "#79747E",
                 },
               }}
@@ -210,7 +208,12 @@ export default function AddTaskScreen() {
         </View>
 
         {/* Priority */}
-        <PrioritySelector priority={priority} onPriorityChange={setPriority} />
+        <View>
+          <PrioritySelector
+            priority={priority}
+            onPriorityChange={setPriority}
+          />
+        </View>
 
         {/* Assignee */}
         {teamId && (
@@ -263,7 +266,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   mainFormSection: {
-    backgroundColor: "#F8F6F7",
+    backgroundColor: "#fff",
     padding: 10,
     flexDirection: "column",
     alignItems: "stretch",
@@ -277,18 +280,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     marginBottom: 0,
   },
-  inputContainer: {
-    marginBottom: 0,
-  },
+
   inputLabel: {
     position: "absolute",
     top: -10,
     left: 12,
-    backgroundColor: "#F8F6F7",
+    backgroundColor: "#fff",
     paddingHorizontal: 4,
     fontSize: 12,
     color: "#49454F",
-    fontFamily: "PoppinsBold",
     zIndex: 1,
   },
   input: {

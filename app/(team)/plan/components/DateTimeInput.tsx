@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -10,
     left: 14,
-    backgroundColor: "#FEF7FF",
+    backgroundColor: "#fff",
     paddingHorizontal: 4,
     fontSize: 12,
     color: "#49454F",
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
     color: "#0F0C0D",
-    backgroundColor: "#FEF7FF",
+    backgroundColor: "#fff",
   },
 
   icon: {

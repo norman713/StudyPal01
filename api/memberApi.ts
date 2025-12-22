@@ -44,6 +44,17 @@ const memberApi = {
     };
     return res;
   },
+    async join(teamCode: string): Promise<{ success: boolean; message: string }> {
+    const url = "/members";
+    const params = { teamCode };
+
+    const res = (await axiosInstance.post(url, null, { params })) as {
+      success: boolean;
+      message: string;
+    };
+
+    return res;
+  },
 
 };
 

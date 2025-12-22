@@ -96,9 +96,9 @@ export default function AssigneeSelector({
   }, [teamId, selectedAssigneeId, onAssigneeChange]);
 
   return (
-    <View className="bg-[#F8F6F7] px-2.5 py-2 gap-2">
+    <View className="bg-[#fff] px-2.5 py-5 mb-5 gap-2">
       {/* Title */}
-      <Text className="text-base font-semibold text-[#0F0C0D] px-2">
+      <Text className="text-[15px] font-semibold text-[#0F0C0D] px-2">
         Assignee
       </Text>
 

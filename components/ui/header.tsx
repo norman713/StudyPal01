@@ -129,7 +129,15 @@ export default function Header({ scope = "me" }: { scope?: Scope }) {
         size={20}
         color={active ? "#2E2E2E" : "#6A6A6A"}
       />
-      <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
+
+      {/* 👇 QUAN TRỌNG */}
+      <Text
+        style={[styles.label, active && styles.labelActive]}
+        numberOfLines={1}
+        ellipsizeMode="clip"
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 
@@ -246,6 +254,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     color: "#6A6A6A",
+    flex: 1,
   },
   labelActive: {
     fontWeight: "700",

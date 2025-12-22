@@ -288,16 +288,14 @@ export default function TaskDetail() {
             <Text style={styles.inputLabel}>Task name</Text>
             <TextInput
               mode="outlined"
-              label=""
               value={taskName}
               onChangeText={setTaskName}
-              style={styles.input}
               outlineStyle={styles.inputOutline}
               contentStyle={styles.inputContent}
               theme={{
                 roundness: 30,
                 colors: {
-                  background: "#F8F6F7",
+                  background: "#FFF",
                   outline: "#79747E",
                 },
               }}
@@ -314,13 +312,12 @@ export default function TaskDetail() {
               onChangeText={setTaskNote}
               multiline
               numberOfLines={4}
-              style={styles.input}
               outlineStyle={styles.inputOutline}
               contentStyle={[styles.inputContent, styles.textAreaContent]}
               theme={{
                 roundness: 30,
                 colors: {
-                  background: "#F8F6F7",
+                  background: "#fff",
                   outline: "#79747E",
                 },
               }}
@@ -459,7 +456,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   mainFormSection: {
-    backgroundColor: "#F8F6F7",
+    backgroundColor: "#fff",
     padding: 10,
     flexDirection: "column",
     alignItems: "stretch",
@@ -513,11 +510,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -10,
     left: 12,
-    backgroundColor: "#F8F6F7",
+    backgroundColor: "#fff",
     paddingHorizontal: 4,
     fontSize: 12,
     color: "#49454F",
-    fontFamily: "PoppinsBold",
     zIndex: 1,
   },
   input: {
@@ -545,7 +541,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   menuItem: {
-    backgroundColor: "#F8F6F7",
+    backgroundColor: "#fff",
     padding: 10,
     flexDirection: "column",
     alignItems: "stretch",

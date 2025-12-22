@@ -102,7 +102,7 @@ export default function PrioritySelector({
 
 const styles = StyleSheet.create({
   section: {
-    backgroundColor: "#F8F6F7",
+    backgroundColor: "#fff",
     padding: 10,
     flexDirection: "column",
     alignItems: "stretch",

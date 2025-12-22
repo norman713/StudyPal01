@@ -1,3 +1,5 @@
+import memberApi from "@/api/memberApi";
+import teamApi, { TeamPreviewResponse } from "@/api/teamApi";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
@@ -5,11 +7,17 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import JoinTeamModal from "./components/joinTeam";
 
 export default function ScanQRScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const insets = useSafeAreaInsets();
+
+  const [preview, setPreview] = useState<TeamPreviewResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [teamCode, setTeamCode] = useState<string | null>(null);
 
   /* =======================
      REQUEST CAMERA PERMISSION
@@ -23,13 +31,24 @@ export default function ScanQRScreen() {
   /* =======================
      CAMERA SCAN
   ======================= */
-  const onBarcodeScanned = ({ data }: { data: string }) => {
+  const onBarcodeScanned = async ({ data }: { data: string }) => {
     if (scanned) return;
     setScanned(true);
 
-    console.log("QR FROM CAMERA:", data);
+    try {
+      setLoading(true);
 
-    // router.replace(`/join-team?code=${data}`);
+      setTeamCode(data); // 👈 LƯU CODE Ở ĐÂY
+
+      const res = await teamApi.getPreviewByCode(data);
+      setPreview(res);
+      setShowModal(true);
+    } catch {
+      Alert.alert("Invalid QR", "Team not found or QR expired");
+      setScanned(false);
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* =======================
@@ -64,6 +83,30 @@ export default function ScanQRScreen() {
       </View>
     );
   }
+  const handleJoinTeam = async () => {
+    if (!teamCode) return;
+
+    try {
+      setLoading(true);
+
+      const res = await memberApi.join(teamCode);
+
+      Alert.alert("Success", res.message);
+
+      setShowModal(false);
+      setScanned(false);
+      router.push("/(team)/search");
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "Cannot join team";
+
+      Alert.alert("Error", message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -146,6 +189,24 @@ export default function ScanQRScreen() {
           </View>
         </TouchableOpacity>
       </View>
+      {preview && (
+        <JoinTeamModal
+          visible={showModal}
+          avatar={preview.avatarUrl ?? "https://via.placeholder.com/80"}
+          teamName={preview.name}
+          description={preview.description ?? ""}
+          ownerName={preview.creatorName}
+          ownerAvatar={
+            preview.creatorAvatarUrl ?? "https://via.placeholder.com/40"
+          }
+          membersCount={preview.totalMembers}
+          onJoin={handleJoinTeam}
+          onClose={() => {
+            setShowModal(false);
+            setScanned(false);
+          }}
+        />
+      )}
     </View>
   );
 }

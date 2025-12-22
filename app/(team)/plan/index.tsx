@@ -160,41 +160,36 @@ export default function PlanScreen() {
 
   return (
     <View style={styles.container}>
-      <Header
-        items={[]}
-        onSelect={() => {}}
-        // @ts-ignore - Prop types mismatch with old Header component if any
-        // We really should use the new props we added to PlanHeader (Header.tsx)
-      />
-      {/* Wait, the Header above is the Global Header. PlanHeader is the component we modified. */}
+      <Header scope="team" />
+      <View className="flex-1 pb-16">
+        <FlatList
+          data={[1]}
+          renderItem={null}
+          ListHeaderComponent={
+            <View style={styles.content}>
+              <PlanHeader
+                userName={userSummary?.name || "User"}
+                taskCount={taskStats.total || 0}
+                markedDates={markedDates}
+                selectedDate={selectedDate}
+                onDateSelect={handleDateSelect}
+                onMonthChange={handleMonthChange}
+              />
 
-      <FlatList
-        data={[1]}
-        renderItem={null}
-        ListHeaderComponent={
-          <View style={styles.content}>
-            <PlanHeader
-              userName={userSummary?.name || "User"}
-              taskCount={taskStats.total || 0}
-              markedDates={markedDates}
-              selectedDate={selectedDate}
-              onDateSelect={handleDateSelect}
-              onMonthChange={handleMonthChange}
-            />
+              <ChatBotSection />
 
-            <ChatBotSection />
-
-            <PlanList
-              plans={plans}
-              loading={loading}
-              onPlanPress={handlePlanPress}
-              onSeeAll={handleSeeAllPlans}
-            />
-          </View>
-        }
-        keyExtractor={() => "main"}
-        showsVerticalScrollIndicator={false}
-      />
+              <PlanList
+                plans={plans}
+                loading={loading}
+                onPlanPress={handlePlanPress}
+                onSeeAll={handleSeeAllPlans}
+              />
+            </View>
+          }
+          keyExtractor={() => "main"}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
 
       {/* Sử dụng FAB sẵn có của BottomBar */}
       <BottomBar

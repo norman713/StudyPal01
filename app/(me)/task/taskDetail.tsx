@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -10,
     left: 12,
-    backgroundColor: "#FEF7FF",
+    backgroundColor: "#fff",
     paddingHorizontal: 4,
     fontSize: 12,
     color: "#49454F",
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Poppins_400Regular",
     color: "#0F0C0D",
-    backgroundColor: "#FEF7FF",
+    backgroundColor: "#fff",
   },
   textArea: {
     minHeight: 110,
@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
     color: "#1E1E1E",
   },
   menuItem: {
-    backgroundColor: "#F8F6F7",
+    backgroundColor: "#fff",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
