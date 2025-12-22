@@ -29,6 +29,23 @@ type Props = {
 /* =======================
    COMPONENT
 ======================= */
+function parseHHMMFromDigits(input: string): string {
+  const digits = input.replace(/\D/g, "").slice(0, 4);
+
+  if (digits.length === 0) return "";
+
+  if (digits.length <= 2) {
+    const m = Math.min(Number(digits), 59);
+    return `00:${m.toString().padStart(2, "0")}`;
+  }
+
+  let h = Number(digits.slice(0, digits.length - 2));
+  let m = Number(digits.slice(-2));
+
+  if (m > 59) m = 59;
+
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+}
 
 export default function SessionSettingsModal({
   visible,
@@ -36,9 +53,9 @@ export default function SessionSettingsModal({
   onClose,
   onSave,
 }: Props) {
-  const [totalTime, setTotalTime] = useState("03:00:00");
-  const [focusTime, setFocusTime] = useState("00:30:00");
-  const [breakTime, setBreakTime] = useState("00:10:00");
+  const [totalTime, setTotalTime] = useState("03:00");
+  const [focusTime, setFocusTime] = useState("00:30");
+  const [breakTime, setBreakTime] = useState("00:10");
 
   const [musicLink, setMusicLink] = useState("");
   const [musics, setMusics] = useState<MusicItemType[]>([]);
@@ -191,7 +208,6 @@ export default function SessionSettingsModal({
 /* =======================
    SUB COMPONENTS
 ======================= */
-
 function TimeRow({
   label,
   value,
@@ -204,9 +220,15 @@ function TimeRow({
   return (
     <View className="flex-row items-center justify-between mb-3">
       <Text className="text-[14px] text-gray-700">{label}</Text>
+
       <TextInput
-        value={value}
-        onChangeText={onChange}
+        keyboardType="number-pad"
+        placeholder="HH:MM"
+        value={value} // ✅ hiển thị HH:MM
+        onChangeText={(text) => {
+          const digits = text.replace(/\D/g, "");
+          onChange(parseHHMMFromDigits(digits));
+        }}
         className="border border-gray-300 rounded-lg px-3 py-1.5 w-[110px] text-center text-[14px]"
       />
     </View>
