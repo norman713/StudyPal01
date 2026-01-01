@@ -1,3 +1,4 @@
+import { readTokens } from "@/api/tokenStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useHeaderHeight } from "@react-navigation/elements";
 import * as Crypto from "expo-crypto";
@@ -45,12 +46,28 @@ export default function ChatbotScreen() {
       const uiMessages = res.messages.map(mapToUIMessage);
       setMessages(uiMessages);
     } catch (e) {
-      console.error("Failed to load messages", e);
+      console.error("Failed to load messages mobile", e);
     }
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
+    try {
+      const { accessToken } = await readTokens();
+
+      const res = await fetch(
+        `${process.env.EXPO_PUBLIC_API_URL}/chatbot/messages`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      console.log("🧪 TEST FETCH STATUS:", res.status);
+    } catch (e) {
+      console.log("🧪 TEST FETCH ERROR:", e);
+    }
 
     const idempotencyKey = Crypto.randomUUID();
     const prompt = input;
