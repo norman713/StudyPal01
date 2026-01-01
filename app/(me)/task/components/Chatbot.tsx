@@ -1,19 +1,28 @@
+import { router } from "expo-router";
 import React from "react";
-import { StyleSheet, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
 export default function ChatBotSection() {
+  const goToChatbot = () => {
+    router.push("/(me)/ChatbotScreen");
+  };
+
   return (
-    <View style={styles.container}>
-      {/* <Image
-        source={require("../../../assets/bot.png")}
-        style={styles.avatar}
-      /> */}
-      <TextInput
-        placeholder="🤖 Hi! How can I assist you today?"
-        style={styles.input}
-      />
-      <TextInput placeholder="Ask me something..." style={styles.input} />
-    </View>
+    <Pressable onPress={goToChatbot}>
+      {/* pointerEvents="none" để click xuyên qua TextInput */}
+      <View style={styles.container} pointerEvents="none">
+        <TextInput
+          placeholder="🤖 Hi! How can I assist you today?"
+          style={styles.input}
+          editable={false}
+        />
+        <TextInput
+          placeholder="Ask me something..."
+          style={styles.input}
+          editable={false}
+        />
+      </View>
+    </Pressable>
   );
 }
 
@@ -25,11 +34,6 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     marginBottom: 20,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    marginRight: 10,
   },
   input: {
     flex: 1,

@@ -84,12 +84,12 @@ function FolderItem({
       {isMenuOpen && (
         <View className="absolute right-0 top-14 w-44 bg-white rounded-xl shadow-lg border border-gray-100 z-50">
           <Pressable onPress={onRecover} className="px-4 py-3">
-            <Text className="text-[13px] text-black">Recover</Text>
+            <Text className="text-[13px] text-black">Edit name</Text>
           </Pressable>
 
           <View className=" bg-gray-100" />
           <Pressable onPress={onDelete} className="px-4 py-3">
-            <Text className="text-[13px] text-black">Delete permanently</Text>
+            <Text className="text-[13px] text-black">Details</Text>
           </Pressable>
         </View>
       )}
