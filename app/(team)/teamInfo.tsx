@@ -548,7 +548,17 @@ export default function TeamInfoScreen({
                       color="#49454F"
                     />
                   )}
-                  onPress={() => router.push("/(team)/chat")}
+                  onPress={() => {
+                    console.log("Navigating to chat from TeamInfo. ID:", id);
+                    if (!id) {
+                      Alert.alert("Error", "Team ID is missing");
+                      return;
+                    }
+                    router.push({
+                      pathname: "/(team)/chat",
+                      params: { teamId: id },
+                    });
+                  }}
                   style={{ paddingRight: 0, paddingLeft: 0 }}
                 />
                 <List.Item

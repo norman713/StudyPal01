@@ -41,12 +41,17 @@
           }
         }
       ],
-      "expo-secure-store",
-      "expo-barcode-scanner"
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1cde1306-18bb-4599-80f2-b62e2bc40095"
+      }
     }
   }
 }

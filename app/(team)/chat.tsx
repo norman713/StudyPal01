@@ -1,161 +1,410 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useRef, useState } from "react";
+import * as ImagePicker from "expo-image-picker";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
   Image,
-  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { chatApi, Message } from "../../api/chatApi";
+import memberApi, { Member } from "../../api/memberApi";
+import teamApi, { TeamInfoResponse } from "../../api/teamApi";
+import { getUserIdFromToken, readTokens } from "../../api/tokenStore";
 
 const ACCENT = "#90717E";
-const CURRENT_USER = "Ditto";
 
-type Message = {
-  id: string;
-  text: string;
-  time: string;
-  user: string;
-  image?: string;
-};
-
-const messages: Message[] = [
-  {
-    id: "1",
-    text: "Hi I’m Pikachu!",
-    time: "12:12 12-12-12",
-    user: "Pikachu",
-  },
-  {
-    id: "2",
-    text: "Alright Pikachu get me orange juice.",
-    time: "12:12 12-12-12",
-    user: "Ditto",
-  },
-  {
-    id: "3",
-    text: "i dong wana go work",
-    time: "12:12 12-12-12",
-    user: "Ditto",
-    image: "https://images.unsplash.com/photo-1583511655826-05700442b31b?w=500",
-  },
-  {
-    id: "4",
-    text: "Oh! Doubleganger!",
-    time: "12:12 12-12-12",
-    user: "Pikachu",
-  },
-];
+// Default avatars just in case
+const DEFAULT_AVATAR = "https://i.pravatar.cc/150?img=12";
 
 export default function TeamChatScreen() {
-  const [newMessage, setNewMessage] = useState("");
-  const scrollRef = useRef<ScrollView>(null);
+  const router = useRouter();
+  const { teamId } = useLocalSearchParams<{ teamId: string }>();
 
-  const handleSend = () => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [teamInfo, setTeamInfo] = useState<TeamInfoResponse | null>(null);
+  const [members, setMembers] = useState<Record<string, Member>>({});
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  const flatListRef = useRef<FlatList>(null);
+  const ws = useRef<WebSocket | null>(null);
+
+  // Initial Data Fetch
+  useEffect(() => {
+    console.log("TeamChatScreen mounted. TeamID:", teamId);
+    if (!teamId) {
+      console.log("No teamId found, aborting init");
+      return;
+    }
+
+    const init = async () => {
+      try {
+        console.log("Starting chat init...");
+        setLoading(true);
+
+        // 1. Get Tokens & User ID
+        const tokens = await readTokens();
+        console.log(
+          "Tokens read:",
+          tokens.accessToken ? "Token exists" : "No token"
+        );
+        const myId = getUserIdFromToken(tokens.accessToken);
+        console.log("My User ID:", myId);
+        setCurrentUserId(myId);
+
+        // 2. Fetch Team Info
+        console.log("Fetching team info for:", teamId);
+        const info = await teamApi.getInfo(teamId);
+        // Handle varying response structures (some projects wrap in data, some don't)
+        const teamData = (info as any).data || info;
+        console.log("Team Info received:", teamData);
+        setTeamInfo(teamData);
+
+        // 3. Fetch Members (to map names)
+        console.log("Fetching members...");
+        const membersRes = await memberApi.getAll(teamId, undefined, 100);
+        console.log("Members count:", membersRes.members.length);
+        const memMap: Record<string, Member> = {};
+        membersRes.members.forEach((m) => {
+          memMap[m.userId] = m;
+        });
+        setMembers(memMap);
+
+        // 4. Fetch History
+        console.log("Fetching message history...");
+        const msgs = await chatApi.getMessages(teamId, 50);
+        console.log("History received. Count:", msgs.messages?.length);
+        // Ensure messages are valid array
+        setMessages(msgs.messages || []);
+
+        // 6. Mark latest message as read if it's not from me
+        if (msgs.messages && msgs.messages.length > 0) {
+          const latestMsg = msgs.messages[0];
+          // "Sender thì không mark, receiver đang active trong chat thì phải mark"
+          // "tin nhắn với index đầu tiên" (index 0 is newest in our list)
+          if (latestMsg.user?.id !== myId) {
+            console.log("Marking latest message as read:", latestMsg.id);
+            chatApi
+              .markMessageRead(latestMsg.id)
+              .catch((err) => console.log("Mark read failed", err));
+          }
+        }
+
+        // 5. Connect WebSocket
+        if (tokens.accessToken) {
+          console.log("Connecting WebSocket...");
+          connectWebSocket(tokens.accessToken, teamId, myId);
+        } else {
+          console.log("No access token for WS");
+        }
+      } catch (error) {
+        console.error("Chat init error details:", error);
+        Alert.alert("Error", "Failed to load chat.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    init();
+
+    return () => {
+      if (ws.current) {
+        ws.current.close();
+      }
+    };
+  }, [teamId]);
+
+  const connectWebSocket = (
+    token: string,
+    tId: string,
+    myUserId: string | null
+  ) => {
+    // ws://103.211.201.112:8080/ws/chat?access_token={token}&team_id={teamId}
+    const wsUrl = `ws://103.211.201.112:8080/ws/chat?access_token=${token}&team_id=${tId}`;
+    console.log("WS URL:", wsUrl);
+
+    ws.current = new WebSocket(wsUrl);
+
+    ws.current.onopen = () => {
+      console.log("WS Connected OPEN");
+    };
+
+    ws.current.onmessage = (e) => {
+      try {
+        const parsed = JSON.parse(e.data);
+
+        // Expect structure: { type: "SEND", data: { ... } }
+        if (parsed.type === "SEND" && parsed.data) {
+          const msgData = parsed.data;
+          // The backend sends the full message object now, which matches our new interface
+          const newMsg: Message = msgData;
+
+          setMessages((prev) => {
+            if (prev.find((m) => m.id === newMsg.id)) return prev;
+            return [newMsg, ...prev];
+          });
+
+          // Mark as read if from someone else
+          if (newMsg.id && newMsg.user?.id !== myUserId) {
+            console.log("WS: Mark read", newMsg.id);
+            chatApi.markMessageRead(newMsg.id).catch(() => {});
+          }
+        }
+      } catch (err) {
+        console.log("WS Parse error", err);
+      }
+    };
+
+    ws.current.onerror = (e) => {
+      console.log("WS Error:", e);
+    };
+
+    ws.current.onclose = (e) => {
+      console.log("WS Closed:", e.reason);
+    };
+  };
+
+  const handleSend = async () => {
+    console.log("Handle Send Triggered. Text:", newMessage);
     if (!newMessage.trim()) return;
+    if (!teamId) {
+      console.log("No teamId for send");
+      return;
+    }
+
+    const content = newMessage.trim();
     setNewMessage("");
+
+    try {
+      console.log("Sending message via API...");
+      await chatApi.sendMessage(teamId, content);
+      console.log("Message sent successfully via API");
+      // Wait for WS to update UI
+    } catch (error) {
+      console.error("Send error details:", error);
+      Alert.alert("Error", "Failed to send message.");
+      setNewMessage(content);
+    }
+  };
+
+  const handlePickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      console.log("Image picked:", asset);
+      if (!teamId) return;
+
+      try {
+        const fileName = asset.fileName || "photo.jpg";
+        const fileType = asset.mimeType || "image/jpeg";
+        const file = {
+          uri: asset.uri,
+          name: fileName,
+          type: fileType,
+        };
+
+        console.log("Uploading file:", file);
+        await chatApi.sendMessage(teamId, "", file);
+        console.log("File uploaded successfully");
+      } catch (error) {
+        console.error("Upload error details:", error);
+        Alert.alert("Error", "Failed to upload image.");
+      }
+    }
+  };
+
+  const renderItem = ({ item }: { item: Message }) => {
+    // Fallback if user object is missing (shouldn't happen with new API)
+    const senderId = item.user?.id || "";
+    const isMe = senderId === currentUserId;
+
+    // Direct user info from message
+    const avatarUrl = item.user?.avatarUrl || DEFAULT_AVATAR;
+    const senderName = item.user?.name || "Unknown";
+
+    const date = new Date(item.createdAt);
+    const timeStr = date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    return (
+      <View className={`mb-3 flex-col ${isMe ? "items-end" : "items-start"}`}>
+        <View className={`flex-row ${isMe ? "justify-end" : "justify-start"}`}>
+          {!isMe && (
+            <Image
+              source={{ uri: avatarUrl }}
+              className="w-10 h-10 rounded-full mr-2"
+            />
+          )}
+
+          <View
+            className={`max-w-[75%] px-3 py-2 shadow-sm ${
+              isMe
+                ? "bg-[#90717E] rounded-2xl rounded-tr-sm"
+                : "bg-white rounded-2xl rounded-tl-sm border border-gray-100"
+            }`}
+          >
+            {!isMe && (
+              <Text className="text-[12px] font-bold text-[#1D1B20] mb-1">
+                {senderName}
+              </Text>
+            )}
+
+            {/* Attachments */}
+            {item.attachments && item.attachments.length > 0 && (
+              <View className="mb-1">
+                {item.attachments.map((att) => {
+                  if (att.type === "IMAGE") {
+                    return (
+                      <Image
+                        key={att.id}
+                        source={{ uri: att.url }}
+                        className="w-[200px] h-[140px] rounded-lg mb-1 bg-gray-200"
+                        resizeMode="cover"
+                      />
+                    );
+                  }
+                  return null;
+                })}
+              </View>
+            )}
+
+            {/* Text Content */}
+            {item.content ? (
+              <Text
+                className={`text-[15px] leading-5 ${
+                  isMe ? "text-white" : "text-[#1D1B20]"
+                }`}
+              >
+                {item.content}
+              </Text>
+            ) : null}
+
+            {/* Timestamp */}
+            <Text
+              className={`text-[10px] mt-1 self-end ${
+                isMe ? "text-white/80" : "text-gray-400"
+              }`}
+            >
+              {timeStr}
+            </Text>
+          </View>
+        </View>
+
+        {/* Read Receipts */}
+        {isMe && item.readBy && item.readBy.length > 0 && (
+          <View className="flex-row mt-1 mr-1 justify-end">
+            {item.readBy
+              .filter((u) => u.id !== currentUserId) // Don't show myself
+              .map((u, index) => (
+                <Image
+                  key={u.id}
+                  source={{ uri: u.avatarUrl || DEFAULT_AVATAR }}
+                  className="w-4 h-4 rounded-full border border-white -ml-1"
+                  style={{ zIndex: index }}
+                />
+              ))}
+            {/* Optional: Add a "+N" counter if too many readers */}
+          </View>
+        )}
+      </View>
+    );
   };
 
   return (
-    <View className="flex-1 bg-[#F5F5F5]">
+    <SafeAreaView edges={["top"]} className="flex-1 bg-[#F5F5F5]">
       {/* ===== HEADER ===== */}
-      <View className="flex-row items-center gap-3 bg-[#90717E] px-4 pt-12 pb-3">
-        <Ionicons name="arrow-back" size={24} color="#fff" />
+      <View className="flex-row items-center gap-3 bg-[#90717E] px-4 py-3 pb-3">
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
 
-        <Image
-          source={{ uri: "https://i.pravatar.cc/150?img=12" }}
-          className="w-10 h-10 rounded-full"
-        />
+        {teamInfo?.avatarUrl ? (
+          <Image
+            source={{ uri: teamInfo.avatarUrl }}
+            className="w-10 h-10 rounded-full"
+          />
+        ) : (
+          <View className="w-10 h-10 rounded-full bg-white/20 items-center justify-center">
+            <Text className="text-white font-bold">
+              {teamInfo?.name?.[0] || "?"}
+            </Text>
+          </View>
+        )}
 
         <View className="flex-1">
-          <Text className="text-white text-[16px] font-semibold">
-            This is pokemon world
+          <Text
+            className="text-white text-[16px] font-semibold"
+            numberOfLines={1}
+          >
+            {teamInfo?.name || "Loading..."}
           </Text>
-          <Text className="text-white/80 text-[12px]">8 members</Text>
+          <Text className="text-white/80 text-[12px]">
+            {teamInfo ? `${teamInfo.totalMembers} members` : ""}
+          </Text>
         </View>
       </View>
 
-      {/* ===== CHAT ===== */}
-      <ScrollView
-        ref={scrollRef}
-        className="flex-1 px-3 pt-4"
-        onContentSizeChange={() =>
-          scrollRef.current?.scrollToEnd({ animated: true })
-        }
+      {/* ===== CHAT LIST ===== */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+        style={{ flex: 1 }}
       >
-        {messages.map((msg) => {
-          const isMe = msg.user === CURRENT_USER;
+        {loading ? (
+          <View className="flex-1 justify-center items-center">
+            <ActivityIndicator size="large" color={ACCENT} />
+          </View>
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{
+              paddingHorizontal: 12,
+              paddingVertical: 16,
+            }}
+            inverted
+          />
+        )}
 
-          return (
-            <View
-              key={msg.id}
-              className={`mb-3 flex-row ${
-                isMe ? "justify-end" : "justify-start"
-              }`}
-            >
-              {!isMe && (
-                <Image
-                  source={{ uri: "https://i.pravatar.cc/150?img=1" }}
-                  className="w-8 h-8 rounded-full mr-2"
-                />
-              )}
+        {/* ===== INPUT ===== */}
+        <View className="flex-row items-center gap-3 bg-white px-3 py-2 pb-4">
+          <TouchableOpacity onPress={handlePickImage}>
+            <Ionicons name="attach" size={22} color="#B8B8B8" />
+          </TouchableOpacity>
 
-              <View
-                className={`max-w-[75%] rounded-2xl px-3 py-2 ${
-                  isMe ? "bg-[#90717E] rounded-tr-md" : "bg-white rounded-tl-md"
-                }`}
-              >
-                {!isMe && (
-                  <Text className="text-[12px] font-semibold text-[#1D1B20] mb-1">
-                    {msg.user}
-                  </Text>
-                )}
+          <TextInput
+            value={newMessage}
+            onChangeText={setNewMessage}
+            placeholder="Ask anything"
+            placeholderTextColor="#B8B8B8"
+            className="flex-1 bg-[#F2F2F2] rounded-full px-4 py-2 text-[14px]"
+            multiline
+          />
 
-                {msg.image && (
-                  <Image
-                    source={{ uri: msg.image }}
-                    className="w-[200px] h-[140px] rounded-xl mb-2"
-                  />
-                )}
-
-                <Text
-                  className={`text-[14px] ${
-                    isMe ? "text-white" : "text-[#1D1B20]"
-                  }`}
-                >
-                  {msg.text}
-                </Text>
-
-                <Text
-                  className={`text-[10px] mt-1 self-end ${
-                    isMe ? "text-white/70" : "text-[#9E9E9E]"
-                  }`}
-                >
-                  {msg.time}
-                </Text>
-              </View>
-            </View>
-          );
-        })}
-      </ScrollView>
-
-      {/* ===== INPUT ===== */}
-      <View className="flex-row items-center gap-3 bg-white px-3 py-2">
-        <Ionicons name="attach" size={22} color="#B8B8B8" />
-
-        <TextInput
-          value={newMessage}
-          onChangeText={setNewMessage}
-          placeholder="Ask anything"
-          placeholderTextColor="#B8B8B8"
-          className="flex-1 bg-[#F2F2F2] rounded-full px-4 py-2 text-[14px]"
-        />
-
-        <TouchableOpacity onPress={handleSend}>
-          <Ionicons name="send" size={22} color={ACCENT} />
-        </TouchableOpacity>
-      </View>
-    </View>
+          <TouchableOpacity onPress={handleSend}>
+            <Ionicons name="send" size={22} color={ACCENT} />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

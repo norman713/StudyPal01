@@ -156,10 +156,14 @@ export default function LoginPage() {
       setErrorMessage("");
       router.replace("/(team)/search");
     } catch (err: any) {
-      const apiMessage =
-        err?.response?.data?.message || "Email or password is incorrect.";
+      console.error("Login error:", err);
+
+      const apiMessage = err?.response?.data?.message;
+
       setShowError(true);
-      setErrorMessage(apiMessage);
+      setErrorMessage(
+        Array.isArray(apiMessage) ? apiMessage.join(", ") : apiMessage
+      );
     } finally {
       setLoading(false);
     }
