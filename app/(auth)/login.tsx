@@ -156,8 +156,6 @@ export default function LoginPage() {
       setErrorMessage("");
       router.replace("/(team)/search");
     } catch (err: any) {
-      console.error("Login error:", err);
-
       const apiMessage = err?.response?.data?.message;
       setShowError(true);
       setErrorMessage(
@@ -199,13 +197,13 @@ export default function LoginPage() {
         </View>
 
         {/* Bottom section */}
-        <View className="bg-white  min-h-screen rounded-t-[50px] px-12 py-10 ">
-          <Text className="text-[#90717E] font-PoppinsSemiBold text-[28px] mb-8">
+        <View className="bg-white  min-h-screen rounded-t-[50px] px-12 py-5 ">
+          <Text className="text-[#90717E] font-PoppinsSemiBold text-[28px] mb-3">
             Login
           </Text>
 
           {/* Enter login input */}
-          <View className="gap-7">
+          <View className="gap-4">
             <TextInput
               mode="outlined"
               label="Enter email"
@@ -238,13 +236,14 @@ export default function LoginPage() {
               }}
             />
           </View>
+
           <Pressable onPress={handleForgotPassword}>
-            <Text className="font-PoppinsSemiBold text-[#90717E] text-right mt-7 text-[16px]">
+            <Text className="font-PoppinsSemiBold text-[#90717E] text-right mt-5 text-[16px]">
               Forgot Password
             </Text>
           </Pressable>
           {/* Button section */}
-          <View className="gap-2 py-6">
+          <View className="gap-2 py-5">
             <Button
               mode="contained"
               buttonColor="#90717E"
@@ -261,7 +260,7 @@ export default function LoginPage() {
             </Button>
 
             {/* Divider */}
-            <View className="flex-row items-center px-2">
+            <View className="flex-row items-center px-2 gap-2">
               <View className="flex-1 h-[1px] bg-[#49454F]" />
               <Text className=" text-[#49454F] font-PoppinsRegular">
                 Or login with
@@ -291,7 +290,7 @@ export default function LoginPage() {
           </View>
 
           {/* Sign up section */}
-          <View className="flex-row justify-center mt-4">
+          <View className="flex-row justify-center mt-2">
             <Text className="text-[16px] text-[#000000] font-PoppinsRegular">
               Don’t have an account?{" "}
             </Text>

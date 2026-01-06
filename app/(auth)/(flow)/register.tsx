@@ -4,7 +4,15 @@ import Loading from "@/components/loading";
 import ErrorModal from "@/components/modal/error";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Modal, StyleSheet, Text, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Button, TextInput } from "react-native-paper";
 
 export const screenConfig = {
@@ -81,90 +89,101 @@ export default function RegisterPage() {
   };
 
   return (
-    <View className="gap-10">
-      <Text className="text-[#90717E] font-PoppinsSemiBold text-[28px]">
-        Sign up
-      </Text>
-      {/* Text input */}
-      <View className="gap-7">
-        <TextInput
-          label="Enter your username"
-          mode="outlined"
-          value={username}
-          onChangeText={(username) => setUsername(username)}
-          theme={{
-            roundness: 30,
-            colors: {
-              background: "#FFFFFF",
-            },
-          }}
-        />
-        <TextInput
-          label="Enter your email"
-          mode="outlined"
-          value={email}
-          onChangeText={(email) => setEmail(email)}
-          theme={{
-            roundness: 30,
-            colors: {
-              background: "#FFFFFF",
-            },
-          }}
-        />
-        <TextInput
-          mode="outlined"
-          label="Enter your password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-          right={
-            <TextInput.Icon
-              icon={showPassword ? "eye" : "eye-off"}
-              onPress={() => setShowPassword(!showPassword)}
-            />
-          }
-          theme={{
-            roundness: 30,
-            colors: {
-              background: "#FFFFFF",
-            },
-          }}
-        />
-        <TextInput
-          mode="outlined"
-          label="Retype your password"
-          value={retypePassword}
-          onChangeText={setRetypePassword}
-          secureTextEntry={!showRetypePassword}
-          right={
-            <TextInput.Icon
-              icon={showRetypePassword ? "eye" : "eye-off"}
-              onPress={() => setShowRetypePassword(!showRetypePassword)}
-            />
-          }
-          theme={{
-            roundness: 30,
-            colors: {
-              background: "#FFFFFF",
-            },
-          }}
-        />
-      </View>
-      <Button
-        className="mt-6"
-        mode="contained"
-        buttonColor="#90717E"
-        contentStyle={{ height: 44 }}
-        labelStyle={{
-          fontSize: 16,
-          fontFamily: "PoppinsRegular",
-          color: "#fff",
-        }}
-        theme={{ roundness: 100 }}
-        onPress={handleSignUp}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 80 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        Sign up
-      </Button>
+        <View className="gap-8">
+          <Text className="text-[#90717E] font-PoppinsSemiBold text-[28px]">
+            Sign up
+          </Text>
+          {/* Text input */}
+          <View className="gap-6">
+            <TextInput
+              label="Enter your username"
+              mode="outlined"
+              value={username}
+              onChangeText={(username) => setUsername(username)}
+              theme={{
+                roundness: 30,
+                colors: {
+                  background: "#FFFFFF",
+                },
+              }}
+            />
+            <TextInput
+              label="Enter your email"
+              mode="outlined"
+              value={email}
+              onChangeText={(email) => setEmail(email)}
+              theme={{
+                roundness: 30,
+                colors: {
+                  background: "#FFFFFF",
+                },
+              }}
+            />
+            <TextInput
+              mode="outlined"
+              label="Enter your password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              right={
+                <TextInput.Icon
+                  icon={showPassword ? "eye" : "eye-off"}
+                  onPress={() => setShowPassword(!showPassword)}
+                />
+              }
+              theme={{
+                roundness: 30,
+                colors: {
+                  background: "#FFFFFF",
+                },
+              }}
+            />
+            <TextInput
+              mode="outlined"
+              label="Retype your password"
+              value={retypePassword}
+              onChangeText={setRetypePassword}
+              secureTextEntry={!showRetypePassword}
+              right={
+                <TextInput.Icon
+                  icon={showRetypePassword ? "eye" : "eye-off"}
+                  onPress={() => setShowRetypePassword(!showRetypePassword)}
+                />
+              }
+              theme={{
+                roundness: 30,
+                colors: {
+                  background: "#FFFFFF",
+                },
+              }}
+            />
+          </View>
+          <Button
+            className="mt-6"
+            mode="contained"
+            buttonColor="#90717E"
+            contentStyle={{ height: 44 }}
+            labelStyle={{
+              fontSize: 16,
+              fontFamily: "PoppinsRegular",
+              color: "#fff",
+            }}
+            theme={{ roundness: 100 }}
+            onPress={handleSignUp}
+          >
+            Sign up
+          </Button>
+        </View>
+      </ScrollView>
       {loading && (
         <Modal transparent visible statusBarTranslucent animationType="fade">
           <View
@@ -188,6 +207,6 @@ export default function RegisterPage() {
         confirmText="Cancel"
         onConfirm={() => setShowError(false)}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }

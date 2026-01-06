@@ -71,18 +71,7 @@ export default function ScanQRScreen() {
   /* =======================
      PERMISSION UI
   ======================= */
-  if (!permission?.granted) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Text>Camera permission required</Text>
-        <TouchableOpacity onPress={requestPermission}>
-          <Text style={{ marginTop: 8, color: "#90717E" }}>
-            Grant permission
-          </Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+
   const handleJoinTeam = async () => {
     if (!teamCode) return;
 
