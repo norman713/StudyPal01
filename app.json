@@ -8,9 +8,11 @@
     "scheme": "studypal",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+
     "ios": {
       "supportsTablet": true
     },
+
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -22,11 +24,13 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.nitb.StudyPal"
     },
+
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png",
       "bundler": "metro"
     },
+
     "plugins": [
       "expo-router",
       [
@@ -41,17 +45,29 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
+
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
+
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "1cde1306-18bb-4599-80f2-b62e2bc40095"
+        "projectId": "63a9367c-bd68-4b52-9791-541447bf191e"
       }
-    }
+    },
+
+    "owner": "norman713"
   }
 }

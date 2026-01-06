@@ -159,7 +159,6 @@ export default function LoginPage() {
       console.error("Login error:", err);
 
       const apiMessage = err?.response?.data?.message;
-
       setShowError(true);
       setErrorMessage(
         Array.isArray(apiMessage) ? apiMessage.join(", ") : apiMessage

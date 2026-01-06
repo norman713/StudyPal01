@@ -4,13 +4,14 @@ import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "ax
 import { clearTokens, expFromJwt, readTokens, REFRESH_KEY, saveTokens } from "./tokenStore";
 
 const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+console.log("🚀 API_URL:", apiUrl);
 
 // ---- Tạo 2 client ----
 // - axiosInstance: client chính (có interceptor attach token, retry sau refresh)
 // - refreshClient: client "sạch" dùng gọi /auth/refresh (tránh loop interceptor)
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: apiUrl,
-  withCredentials: true,
+  // withCredentials: true,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -19,7 +20,7 @@ const axiosInstance: AxiosInstance = axios.create({
 
 const refreshClient: AxiosInstance = axios.create({
   baseURL: apiUrl,
-  withCredentials: true,
+  // withCredentials: true,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -52,35 +53,71 @@ function resolveQueue(token: string | null) {
 }
 
 // ---- Request Interceptor: attach Bearer (nếu không phải public) ----
+
+// axiosInstance.interceptors.request.use(
+//   async (config: InternalAxiosRequestConfig) => {
+//     if (!isAuthPublic(config.url)) {
+//       const { accessToken } = await readTokens();
+//       if (accessToken) {
+//         config.headers = config.headers ?? {};
+//         (config.headers as Record<string, string>)["Authorization"] = `Bearer ${accessToken}`;
+//       }
+//     } else if (config.headers && "Authorization" in config.headers) {
+//       delete (config.headers as Record<string, unknown>)["Authorization"];
+//     }
+
+//     // logging nhẹ
+//     // if (__DEV__) {
+//     //   console.log(
+//     //     "Request:",
+//     //     config.method?.toUpperCase(),
+//     //     (config.baseURL || "") + (config.url || ""),
+//     //     "Auth:",
+//     //     (config.headers as any)?.Authorization ? "Bearer..." : "none",
+//     //     "withCredentials:",
+//     //     config.withCredentials
+//     //   );
+//     // }
+
+//     return config;
+//   },
+//   (error: AxiosError) => Promise.reject(error)
+// );
 axiosInstance.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    const url = (config.baseURL || "") + (config.url || "");
+
     if (!isAuthPublic(config.url)) {
       const { accessToken } = await readTokens();
+
+      console.log("🔐 REQUEST CHECK:", {
+        url,
+        hasToken: !!accessToken,
+        tokenPreview: accessToken ? accessToken.slice(0, 10) + "..." : null,
+      });
+
       if (accessToken) {
         config.headers = config.headers ?? {};
-        (config.headers as Record<string, string>)["Authorization"] = `Bearer ${accessToken}`;
+        (config.headers as Record<string, string>)["Authorization"] =
+          `Bearer ${accessToken}`;
       }
-    } else if (config.headers && "Authorization" in config.headers) {
-      delete (config.headers as Record<string, unknown>)["Authorization"];
+    } else {
+      console.log("🌐 PUBLIC REQUEST:", url);
+      if (config.headers && "Authorization" in config.headers) {
+        delete (config.headers as Record<string, unknown>)["Authorization"];
+      }
     }
 
-    // logging nhẹ
-    // if (__DEV__) {
-    //   console.log(
-    //     "Request:",
-    //     config.method?.toUpperCase(),
-    //     (config.baseURL || "") + (config.url || ""),
-    //     "Auth:",
-    //     (config.headers as any)?.Authorization ? "Bearer..." : "none",
-    //     "withCredentials:",
-    //     config.withCredentials
-    //   );
-    // }
+    console.log("➡️ FINAL HEADERS:", {
+      url,
+      Authorization: (config.headers as any)?.Authorization ?? null,
+    });
 
     return config;
   },
   (error: AxiosError) => Promise.reject(error)
 );
+
 
 // ---- Response Interceptor: auto refresh khi 401 và retry 1 lần ----
 axiosInstance.interceptors.response.use(

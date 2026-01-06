@@ -59,6 +59,22 @@ export interface FileItemApi {
   updatedAt: string;
 }
 
+export interface FileDetail {
+  id: string;
+  name: string;
+  extension: string;
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string;
+  updatedAt: string;
+  bytes: number;
+}
+
+export interface UpdateFileResponse {
+  success: boolean;
+  message: string;
+}
+
 export interface GetFilesResponse {
   files: FileItemApi[];
   total: number;
@@ -222,6 +238,38 @@ const folderApi = {
     const url = `/files/${fileId}`;
     const data = await axiosInstance.delete(url);
     return data;
+  },
+
+  // GET file detail
+  async getFileDetail(fileId: string): Promise<FileDetail> {
+    const url = `/files/${fileId}`;
+    const res = await axiosInstance.get(url);
+    return res as unknown as FileDetail;
+  },
+
+  // PATCH update file
+  async updateFile(fileId: string, name: string): Promise<UpdateFileResponse> {
+    const url = `/files/${fileId}`;
+    const data: UpdateFileResponse = await axiosInstance.patch(url, { name });
+    return data;
+  },
+
+  async searchFiles(
+    folderId: string,
+    keyword: string,
+    params?: { cursor?: string; size?: number }
+  ): Promise<GetFilesResponse> {
+    const res = await axiosInstance.get(`/folders/${folderId}/files/search`, {
+      params: { keyword, ...params },
+    });
+    return res as unknown as GetFilesResponse;
+  },
+
+  async moveFile(fileId: string, newFolderId: string): Promise<any> {
+    const res = await axiosInstance.patch(`/files/${fileId}/move`, null, {
+      params: { newFolderId },
+    });
+    return res;
   },
 };
 

@@ -1,9 +1,12 @@
-import folderApi, { FileItemApi } from "@/api/folderApi";
+import folderApi, { FileDetail, FileItemApi } from "@/api/folderApi";
 import QuestionModal from "@/components/modal/question";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
-import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import * as FileSystem from "expo-file-system";
+import * as FileSystemLegacy from "expo-file-system/legacy";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import * as Sharing from "expo-sharing";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -11,6 +14,7 @@ import {
   Image,
   Linking,
   Modal,
+  Platform,
   Pressable,
   Text,
   TextInput,
@@ -19,13 +23,6 @@ import {
 import { Appbar } from "react-native-paper";
 import { WebView } from "react-native-webview";
 
-type FileItem = {
-  id: string;
-  name: string;
-  uri: string;
-  date: string;
-  size?: number;
-};
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <View className="flex-row justify-between">
@@ -54,31 +51,58 @@ export default function FileScreen() {
   const [renaming, setRenaming] = useState(false);
 
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [detailFile, setDetailFile] = useState<FileItemApi | null>(null);
+  const [detailFile, setDetailFile] = useState<FileDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
-  // Fetch files on mount
-  useEffect(() => {
-    if (folderId) {
-      fetchFiles();
-    }
-  }, [folderId]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Fetch files on mount and focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (folderId) {
+        if (searchQuery.trim()) {
+          handleSearch();
+        } else {
+          fetchFiles();
+        }
+      }
+    }, [folderId, searchQuery])
+  );
 
   const fetchFiles = async () => {
     if (!folderId) return;
     try {
       setLoading(true);
       const res = await folderApi.getFiles(folderId);
-      // Ensure we set files array
       setFiles(res.files || []);
     } catch (e: any) {
       console.error("Fetch files failed", e);
-      if (e.response) {
-        console.error("Error data:", e.response.data);
-        console.error("Error status:", e.response.status);
-      }
       setError("Failed to load files");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!folderId) return;
+    if (!searchQuery.trim()) {
+      // If empty, revert to normal fetch
+      fetchFiles();
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setIsSearching(true);
+      const res = await folderApi.searchFiles(folderId, searchQuery);
+      setFiles(res.files || []);
+    } catch (e) {
+      console.error("Search failed", e);
+      Alert.alert("Error", "Failed to search files");
+    } finally {
+      setLoading(false);
+      setIsSearching(false);
     }
   };
 
@@ -87,10 +111,22 @@ export default function FileScreen() {
     setEditFile(file);
     setNewFileName(file.name);
   };
-  const onOpenDetail = (file: FileItemApi) => {
+  const onOpenDetail = async (file: FileItemApi) => {
     setActiveMenuId(null);
-    setDetailFile(file);
     setIsDetailOpen(true);
+    setDetailFile(null); // Clear previous detail
+    setDetailLoading(true);
+
+    try {
+      const detail = await folderApi.getFileDetail(file.id);
+      setDetailFile(detail);
+    } catch (e) {
+      console.error("Get detail failed", e);
+      Alert.alert("Error", "Failed to get file details");
+      setIsDetailOpen(false);
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   // ===== PICK DOCUMENT =====
@@ -236,8 +272,87 @@ export default function FileScreen() {
     }
   };
 
-  const handleRenameFile = () => {
-    // TODO: implement rename file API later
+  const handleRenameFile = async () => {
+    if (!editFile || !newFileName.trim()) return;
+    try {
+      setRenaming(true);
+      await folderApi.updateFile(editFile.id, newFileName);
+      setEditFile(null);
+      await fetchFiles();
+    } catch (e) {
+      console.error("Rename failed", e);
+      Alert.alert("Error", "Failed to rename file");
+    } finally {
+      setRenaming(false);
+    }
+  };
+
+  const handleDownload = async (item: FileItemApi) => {
+    setActiveMenuId(null);
+    try {
+      setLoading(true);
+
+      const filename = item.name;
+      const fileUri = `${FileSystemLegacy.documentDirectory}${filename}`;
+
+      const baseUrl = process.env.EXPO_PUBLIC_API_URL;
+      const downloadUrl = item.url.startsWith("http")
+        ? item.url
+        : `${baseUrl}${item.url}`;
+
+      const { uri } = await FileSystemLegacy.downloadAsync(
+        downloadUrl,
+        fileUri
+      );
+
+      let safSuccess = false;
+
+      if (Platform.OS === "android") {
+        // @ts-ignore
+        const SAF = FileSystem.StorageAccessFramework;
+        if (SAF) {
+          try {
+            const permissions = await SAF.requestDirectoryPermissionsAsync();
+            if (permissions.granted) {
+              const base64 = await FileSystemLegacy.readAsStringAsync(uri, {
+                encoding: FileSystemLegacy.EncodingType.Base64,
+              });
+
+              let mimeType = "application/octet-stream";
+              if (filename.endsWith(".pdf")) mimeType = "application/pdf";
+              else if (filename.endsWith(".jpg") || filename.endsWith(".png"))
+                mimeType = "image/jpeg";
+
+              const newUri = await SAF.createFileAsync(
+                permissions.directoryUri,
+                filename,
+                mimeType
+              );
+              await SAF.writeAsStringAsync(newUri, base64, {
+                encoding: FileSystemLegacy.EncodingType.Base64,
+              });
+              Alert.alert("Success", "File saved to selected folder");
+              safSuccess = true;
+            }
+          } catch (safError) {
+            console.log("SAF failed, falling back to share", safError);
+          }
+        }
+      }
+
+      if (!safSuccess) {
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri);
+        } else {
+          Alert.alert("Success", "File downloaded");
+        }
+      }
+    } catch (e) {
+      console.error("Download failed", e);
+      Alert.alert("Error", "Failed to download file");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -245,7 +360,6 @@ export default function FileScreen() {
       className="flex-1 bg-[#F8F6F7]"
       onPress={() => setActiveMenuId(null)}
     >
-      {/* APP BAR */}
       <Appbar.Header mode="small" style={{ backgroundColor: "#90717E" }}>
         <Appbar.BackAction color="#F8F6F7" onPress={() => router.back()} />
         <Appbar.Content
@@ -256,6 +370,32 @@ export default function FileScreen() {
           <Ionicons name="add" size={26} color="#F8F6F7" />
         </Pressable>
       </Appbar.Header>
+
+      {/* SEARCH BAR */}
+      <View className="px-4 py-2 bg-[#F8F6F7]">
+        <View className="flex-row items-center bg-white rounded-xl px-3 py-2 border border-gray-200">
+          <Ionicons name="search" size={20} color="#9CA3AF" />
+          <TextInput
+            className="flex-1 ml-2 text-base text-gray-800"
+            placeholder="Search files..."
+            placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <Pressable
+              onPress={() => {
+                setSearchQuery("");
+                fetchFiles();
+              }}
+            >
+              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+            </Pressable>
+          )}
+        </View>
+      </View>
 
       {/* FILE LIST */}
       <FlatList
@@ -334,13 +474,16 @@ export default function FileScreen() {
 
                   <MenuItem
                     label="Download"
-                    onPress={() => Linking.openURL(item.url)}
+                    onPress={() => handleDownload(item)}
                   />
                   <MenuItem
                     label="Move"
                     onPress={() => {
                       setActiveMenuId(null);
-                      router.push("/(me)/documentMove");
+                      router.push({
+                        pathname: "/(me)/documentMove",
+                        params: { fileId: item.id },
+                      });
                     }}
                   />
 
@@ -512,9 +655,7 @@ export default function FileScreen() {
             <Pressable
               disabled={renaming || !newFileName.trim()}
               onPress={handleRenameFile}
-              className={`py-3 rounded-full items-center ${
-                renaming || !newFileName.trim() ? "bg-gray-300" : "bg-[#90717E]"
-              }`}
+              className={`py-3 rounded-full items-center ${renaming || !newFileName.trim() ? "bg-gray-300" : "bg-[#90717E]"}`}
             >
               {renaming ? (
                 <ActivityIndicator color="#fff" />
@@ -538,17 +679,35 @@ export default function FileScreen() {
           <View className="absolute bottom-0 left-0 right-0 bg-[#F7F2F4] rounded-t-3xl px-6 pt-4 pb-8">
             {/* DRAG INDICATOR */}
             <View className="w-20 h-1 bg-gray-400 rounded-full self-center mb-4" />
+            <Text className="text-xl font-bold text-center mb-6">Details</Text>
 
-            {!detailFile ? (
-              <ActivityIndicator size="small" color="#90717E" />
+            {detailLoading || !detailFile ? (
+              <View className="py-10">
+                <ActivityIndicator size="large" color="#90717E" />
+              </View>
             ) : (
-              <View className="px-5">
-                <DetailRow label="Name" value="-" />
-                <DetailRow label="Created at" value="-" />
-                <DetailRow label="Created by" value="-" />
-                <DetailRow label="Last updated at" value="-" />
-                <DetailRow label="Last updated by" value="-" />
-                <DetailRow label="Size" value="-" />
+              <View className="px-5 gap-3">
+                <DetailRow label="Name" value={detailFile.name} />
+                <DetailRow label="Extension" value={detailFile.extension} />
+                <DetailRow label="Size" value={detailFile.bytes + " bytes"} />
+                <DetailRow label="Created by" value={detailFile.createdBy} />
+                <DetailRow
+                  label="Created at"
+                  value={
+                    detailFile.createdAt
+                      ? new Date(detailFile.createdAt).toLocaleString("en-GB")
+                      : "-"
+                  }
+                />
+                <DetailRow label="Updated by" value={detailFile.updatedBy} />
+                <DetailRow
+                  label="Last updated at"
+                  value={
+                    detailFile.updatedAt
+                      ? new Date(detailFile.updatedAt).toLocaleString("en-GB")
+                      : "-"
+                  }
+                />
               </View>
             )}
           </View>

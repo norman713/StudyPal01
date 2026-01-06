@@ -1,7 +1,10 @@
+import folderApi, { FileItemApi, FolderListItem } from "@/api/folderApi";
 import { Ionicons } from "@expo/vector-icons";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   BackHandler,
   FlatList,
   Modal,
@@ -10,164 +13,243 @@ import {
   TextInput,
   View,
 } from "react-native";
-
-/* =======================
-   TYPES
-======================= */
-
-type Folder = {
-  id: string;
-  name: string;
-  files: number;
-};
-
-/* =======================
-   MOCK DATA
-======================= */
-
-const FOLDERS: Folder[] = [
-  { id: "a", name: "Folder A", files: 4 },
-  { id: "b", name: "Folder B", files: 4 },
-  { id: "c", name: "Folder C", files: 4 },
-];
-
-/* =======================
-   FOLDER ITEM
-======================= */
-
-function FolderItem({
-  folder,
-  isMenuOpen,
-  onPress,
-  onMorePress,
-}: {
-  folder: Folder;
-  isMenuOpen: boolean;
-  onPress: () => void;
-  onMorePress: () => void;
-}) {
-  return (
-    <View className="mx-4 mb-3">
-      <Pressable
-        onPress={onPress}
-        className="bg-[#F2EFF0] rounded-2xl px-4 py-3 flex-row items-center justify-between"
-      >
-        <View className="flex-row items-center gap-3">
-          <View className="w-12 h-12 rounded-full bg-[#E3DBDF] items-center justify-center">
-            <Ionicons name="folder-outline" size={24} color="#90717E" />
-          </View>
-
-          <View>
-            <Text className="text-[16px] font-bold">{folder.name}</Text>
-            <Text className="text-[14px] text-gray-500">
-              {folder.files} files
-            </Text>
-          </View>
-        </View>
-
-        <Pressable hitSlop={10} onPress={onMorePress}>
-          <Ionicons name="ellipsis-vertical" size={18} color="#6A4E5A" />
-        </Pressable>
-      </Pressable>
-
-      {isMenuOpen && (
-        <View className="absolute right-2 top-14 w-40 bg-white rounded-xl shadow-lg z-50">
-          <Pressable className="px-4 py-3">
-            <Text className="text-sm">Edit name</Text>
-          </Pressable>
-          <Pressable className="px-4 py-3">
-            <Text className="text-sm">Details</Text>
-          </Pressable>
-        </View>
-      )}
-    </View>
-  );
-}
-
-/* =======================
-   SCREEN
-======================= */
+import { Appbar } from "react-native-paper";
 
 export default function DocumentScreen() {
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const { fileId } = useLocalSearchParams<{ fileId: string }>();
+
+  // State
+  const [currentFolder, setCurrentFolder] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [folders, setFolders] = useState<FolderListItem[]>([]);
+  const [files, setFiles] = useState<FileItemApi[]>([]);
+
+  const [loading, setLoading] = useState(false);
+  const [processing, setProcessing] = useState(false);
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  // Statistics (Mock or API? Image shows static text "2GB...", keeping mock for now as API doesn't fully support usage yet)
+  const usedGB = 2;
+  const totalGB = 10;
+  const progressPercent = (usedGB / totalGB) * 100;
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      if (currentFolder) {
+        // Fetch files in folder
+        const res = await folderApi.getFiles(currentFolder.id);
+        setFiles(res.files || []);
+      } else {
+        // Fetch folder list
+        const res = await folderApi.getFolders();
+        setFolders(res.folders || []);
+      }
+    } catch (e) {
+      console.error("Fetch failed", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
-      const onBackPress = () => true;
+      fetchData();
+
+      const onBackPress = () => {
+        if (currentFolder) {
+          setCurrentFolder(null); // Go back to folder list
+          return true;
+        }
+        router.back();
+        return true;
+      };
+
       const sub = BackHandler.addEventListener(
         "hardwareBackPress",
         onBackPress
       );
       return () => sub.remove();
-    }, [])
+    }, [currentFolder])
   );
 
-  const usedGB = 2;
-  const totalGB = 10;
-  const progressPercent = (usedGB / totalGB) * 100;
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return;
+    try {
+      setCreating(true);
+      await folderApi.createFolder({ name: newFolderName });
+      setNewFolderName("");
+      setShowCreateModal(false);
+      fetchData();
+    } catch (e) {
+      Alert.alert("Error", "Failed to create folder");
+    } finally {
+      setCreating(false);
+    }
+  };
 
-  return (
-    <View className="flex-1 bg-[#F2EFF0]">
-      {/* CUSTOM HEADER */}
-      <View className="bg-[#90717E] px-4 pt-12 pb-4 flex-row items-center justify-between">
-        <Pressable onPress={() => router.back()}>
-          <Ionicons name="close" size={24} color="#fff" />
-        </Pressable>
+  const handleMoveFile = async () => {
+    if (!fileId || !currentFolder) return;
 
-        <Text className="text-white font-bold text-[16px]">
-          Select destination
+    try {
+      setProcessing(true);
+      await folderApi.moveFile(fileId, currentFolder.id);
+      Alert.alert("Success", "File moved successfully", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    } catch (e) {
+      console.error("Move file failed", e);
+      Alert.alert("Error", "Failed to move file");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // --- RENDERS ---
+
+  const renderFolderList = () => (
+    <View>
+      {/* Header Info */}
+      <View className="px-4 pt-4 pb-3">
+        <Text className="text-[16px] font-bold mb-2">Folders</Text>
+        <View className="h-2 bg-gray-200 rounded-full overflow-hidden">
+          <View
+            className="h-full bg-[#90717E]"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </View>
+        <Text className="text-sm text-center mt-2">
+          {usedGB}GB has been used out of a total of {totalGB}GB
         </Text>
-
-        <Pressable onPress={() => setShowCreateModal(true)}>
-          <Ionicons name="add" size={26} color="#fff" />
-        </Pressable>
       </View>
 
-      {/* CONTENT */}
-      <View className="flex-1 bg-white">
-        <FlatList
-          data={FOLDERS}
-          keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerClassName="pb-32"
-          ListHeaderComponent={
-            <View className="px-4 pt-4 pb-3">
-              <Text className="text-[16px] font-bold mb-2">Folders</Text>
-
-              {/* PROGRESS */}
-              <View className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                <View
-                  className="h-full bg-[#90717E]"
-                  style={{ width: `${progressPercent}%` }}
-                />
+      <FlatList
+        data={folders}
+        keyExtractor={(item) => item.id}
+        refreshing={loading}
+        onRefresh={fetchData}
+        contentContainerClassName="pb-32"
+        renderItem={({ item }) => (
+          <Pressable
+            onPress={() => setCurrentFolder({ id: item.id, name: item.name })}
+            className="mx-4 mb-3 bg-[#F2EFF0] rounded-2xl px-4 py-3 flex-row items-center justify-between"
+          >
+            <View className="flex-row items-center gap-3">
+              <View className="w-12 h-12 rounded-full bg-[#E3DBDF] items-center justify-center">
+                <Ionicons name="folder-outline" size={24} color="#90717E" />
               </View>
-
-              <Text className="text-sm text-center mt-2">
-                {usedGB}GB has been used out of a total of {totalGB}GB
-              </Text>
+              <View>
+                <Text className="text-[16px] font-bold">{item.name}</Text>
+                <Text className="text-[14px] text-gray-500">
+                  {item.fileCount} files
+                </Text>
+              </View>
             </View>
-          }
-          renderItem={({ item }) => (
-            <FolderItem
-              folder={item}
-              isMenuOpen={openMenuId === item.id}
-              onPress={() =>
-                router.push({
-                  pathname: "/(me)/file",
-                  params: {
-                    folderId: item.id,
-                    folderName: item.name,
-                  },
-                })
-              }
-              onMorePress={() =>
-                setOpenMenuId(openMenuId === item.id ? null : item.id)
-              }
-            />
-          )}
+            <Ionicons name="chevron-forward" size={20} color="#6A4E5A" />
+          </Pressable>
+        )}
+      />
+    </View>
+  );
+
+  const renderFileList = () => (
+    <View className="flex-1">
+      {/* Search Bar mimic */}
+      <View className="px-4 py-2">
+        <View className="flex-row items-center bg-[#F2EFF0] rounded-full px-4 py-2">
+          <Text className="text-gray-400 flex-1">Search by file name</Text>
+          <Ionicons name="search" size={20} color="#9CA3AF" />
+        </View>
+      </View>
+
+      <Text className="px-4 py-2 font-bold text-[16px]">Files</Text>
+
+      <FlatList
+        data={files}
+        keyExtractor={(item) => item.id}
+        refreshing={loading}
+        onRefresh={fetchData}
+        contentContainerClassName="pb-32"
+        ListEmptyComponent={
+          <Text className="text-center text-gray-400 mt-10">No files</Text>
+        }
+        renderItem={({ item }) => (
+          <View className="mx-4 mb-3 bg-[#F2EFF0] rounded-2xl px-4 py-3 flex-row items-center justify-between">
+            <View className="flex-row items-center gap-3 flex-1">
+              <View className="w-12 h-12 rounded-xl bg-[#90717E] items-center justify-center">
+                <Ionicons name="document-outline" size={24} color="#FFF" />
+              </View>
+              <View className="flex-1">
+                <Text numberOfLines={1} className="text-[15px] font-bold">
+                  {item.name}
+                </Text>
+                <Text className="text-[12px] text-gray-500">
+                  Last updated: {new Date(item.updatedAt).toLocaleDateString()}
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="ellipsis-vertical" size={20} color="#6A4E5A" />
+          </View>
+        )}
+      />
+    </View>
+  );
+
+  return (
+    <View className="flex-1 bg-white">
+      <Appbar.Header mode="small" style={{ backgroundColor: "#90717E" }}>
+        <Appbar.Action
+          icon="close"
+          color="#fff"
+          onPress={() => {
+            if (currentFolder)
+              setCurrentFolder(null); // behaves like back
+            else router.back();
+          }}
         />
+        <Appbar.Content
+          title="Select destination"
+          titleStyle={{ color: "#fff", fontWeight: "700", fontSize: 16 }}
+        />
+        {!currentFolder && (
+          <Appbar.Action
+            icon="plus"
+            color="#fff"
+            onPress={() => setShowCreateModal(true)}
+          />
+        )}
+      </Appbar.Header>
+
+      <View className="flex-1">
+        {currentFolder ? renderFileList() : renderFolderList()}
+      </View>
+
+      {/* BOTTOM ACTIONS */}
+      <View className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 flex-row gap-4">
+        <Pressable
+          disabled={!currentFolder || processing}
+          onPress={handleMoveFile}
+          className={`flex-1 py-3 rounded-full items-center ${currentFolder ? "bg-[#90717E]" : "bg-gray-300"}`}
+        >
+          {processing ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-white font-bold text-base">Move</Text>
+          )}
+        </Pressable>
+
+        <Pressable
+          disabled={processing}
+          onPress={() => router.back()}
+          className="flex-1 py-3 rounded-full items-center bg-[#C2D6CA]" // Matches green/grey tone in image
+        >
+          <Text className="text-black font-bold text-base">Cancel</Text>
+        </Pressable>
       </View>
 
       {/* CREATE FOLDER MODAL */}
@@ -180,23 +262,22 @@ export default function DocumentScreen() {
                 <Ionicons name="close" size={22} color="#7A7A7A" />
               </Pressable>
             </View>
-
             <TextInput
               placeholder="Enter folder name"
               value={newFolderName}
               onChangeText={setNewFolderName}
               className="border border-gray-300 rounded-xl px-4 py-3 mb-5"
             />
-
             <Pressable
-              className="bg-[#90717E] py-3 rounded-full items-center"
-              onPress={() => {
-                console.log("Create folder:", newFolderName);
-                setShowCreateModal(false);
-                setNewFolderName("");
-              }}
+              disabled={creating || !newFolderName.trim()}
+              className={`py-3 rounded-full items-center ${creating || !newFolderName.trim() ? "bg-gray-300" : "bg-[#90717E]"}`}
+              onPress={handleCreateFolder}
             >
-              <Text className="text-white font-semibold">Save</Text>
+              {creating ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text className="text-white font-semibold">Save</Text>
+              )}
             </Pressable>
           </View>
         </View>

@@ -12,6 +12,9 @@ export default function RootLayout() {
     PoppinsSemiBold: require("../assets/fonts/Poppins-SemiBold.ttf"),
     PoppinsRegular: require("../assets/fonts/Poppins-Regular.ttf"),
   });
+  useEffect(() => {
+    console.log("🚀 API URL (APK):", process.env.EXPO_PUBLIC_API_URL);
+  }, []);
 
   useEffect(() => {
     if (loaded) {
