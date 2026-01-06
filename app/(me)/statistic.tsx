@@ -1,3 +1,4 @@
+import { FontAwesome5 } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -10,7 +11,7 @@ export default function StatisticPage() {
   const [duration, setDuration] = useState("30 days");
 
   return (
-    <View className="flex-1  bg-white">
+    <View className="flex-1  bg-[#F2EFF0]">
       {/* Header */}
       <Appbar.Header mode="small" style={{ backgroundColor: "#90717E" }}>
         <Appbar.BackAction color="#F8F6F7" onPress={() => router.back()} />
@@ -22,51 +23,57 @@ export default function StatisticPage() {
 
       <ScrollView className="px-4">
         {/* Duration */}
-        <Text className="mt-4 mb-2 font-PoppinsSemiBold text-base text-[#3A2E33]">
-          Duration
-        </Text>
+        <View className="bg-white p-2 mb-3 mt-3">
+          <View className=" flex-row items-center justify-between">
+            <Text className="mt-4 mb-2 font-PoppinsSemiBold text-base text-[#3A2E33]">
+              Duration
+            </Text>
+            <FontAwesome5 name="calendar" size={17} color="black" />
+          </View>
 
-        <View className="flex-row flex-wrap gap-3 mb-6">
-          {DURATION_OPTIONS.map((item) => {
-            const active = item === duration;
-            return (
-              <Pressable
-                key={item}
-                onPress={() => setDuration(item)}
-                className={`px-4 py-2 rounded-full ${
-                  active ? "bg-[#9B7B87]" : "bg-[#B8C6B6]"
-                }`}
-              >
-                <Text
-                  className={`font-semibold text-sm ${
-                    active ? "text-white" : "text-black]"
+          <View className="flex-row flex-wrap gap-3 mb-6">
+            {DURATION_OPTIONS.map((item) => {
+              const active = item === duration;
+              return (
+                <Pressable
+                  key={item}
+                  onPress={() => setDuration(item)}
+                  className={`px-4 py-2 rounded-full ${
+                    active ? "bg-[#9B7B87]" : "bg-[#B8C6B6]"
                   }`}
                 >
-                  {item}
-                </Text>
-              </Pressable>
-            );
-          })}
+                  <Text
+                    className={`font-semibold text-sm ${
+                      active ? "text-white" : "text-black]"
+                    }`}
+                  >
+                    {item}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
-
         {/* Sessions analysis */}
-        <Text className="mb-3 font-PoppinsSemiBold text-base text-[#3A2E33]">
-          My sessions analysis
-        </Text>
+        <View className="bg-white p-2">
+          <Text className="mb-3 font-PoppinsSemiBold text-base text-[#3A2E33]">
+            My sessions analysis
+          </Text>
 
-        <View className="flex-row gap-4 mb-8">
-          <StatCard value="75" label="Study sessions finished" />
-          <StatCard2 value="24" label="Spent on study sessions" />
-        </View>
+          <View className="flex-row gap-4 mb-8">
+            <StatCard value="75" label="Study sessions finished" />
+            <StatCard2 value="24" label="Spent on study sessions" />
+          </View>
 
-        {/* Tasks analysis */}
-        <Text className="mb-3 font-PoppinsSemiBold text-base text-[#3A2E33]">
-          My tasks analysis
-        </Text>
+          {/* Tasks analysis */}
+          <Text className="mb-3 font-PoppinsSemiBold text-base text-[#3A2E33]">
+            My tasks analysis
+          </Text>
 
-        <View className="items-center mb-10">
-          <DonutChart />
-          <Legend />
+          <View className="items-center mb-10">
+            <DonutChart />
+            <Legend />
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -156,19 +163,25 @@ function Legend() {
 
   return (
     <View className="mt-5 w-full px-2">
-      <View className="flex-row flex-wrap justify-between gap-y-3">
+      <View className="flex-row justify-between gap-x-4">
         {items.map((item) => (
-          <View key={item.label} className="flex-row items-center w-1/2">
-            <View
-              className="w-4 h-4 mr-3"
-              style={{ backgroundColor: item.color }}
-            />
-
-            <Text className="text-base font-PoppinsMedium text-[#3A2E33]">
-              {item.label}
-              <Text className="text-[#6B555F] font-PoppinsRegular">
-                {item.value}
+          <View
+            key={item.label}
+            className="flex-col items-center justify-center"
+          >
+            {/* Box with color and label in one row */}
+            <View className="flex-row items-center">
+              <View
+                className="w-5 h-5 mr-2"
+                style={{ backgroundColor: item.color }}
+              />
+              <Text className="text-[13px] font-normal text-[#3A2E33]">
+                {item.label}
               </Text>
+            </View>
+            {/* Number (percentage) in separate row */}
+            <Text className="text-black font-PoppinsBold text-[13px] mt-1">
+              {item.value}
             </Text>
           </View>
         ))}

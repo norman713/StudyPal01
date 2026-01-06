@@ -186,7 +186,7 @@ export default function ProfileScreen({}: ProfileScreenProps) {
             left={(p) => <List.Icon {...p} icon="cog-outline" />}
             right={(p) => <List.Icon {...p} icon="chevron-right" />}
             onPress={() => {
-              // router.push("/(me)/edit-profile");
+              router.push("/(me)/editProfile");
             }}
           />
 
