@@ -55,8 +55,8 @@ export default function StatisticPage() {
         </Text>
 
         <View className="flex-row gap-4 mb-8">
-          <StatCard value="75%" label="Study sessions finished" />
-          <StatCard value="24h" label="Spent on study sessions" />
+          <StatCard value="75" label="Study sessions finished" />
+          <StatCard2 value="24" label="Spent on study sessions" />
         </View>
 
         {/* Tasks analysis */}
@@ -77,23 +77,40 @@ export default function StatisticPage() {
 
 function StatCard({ value, label }: { value: string; label: string }) {
   return (
-    <View className="flex-1 bg-[#EFE9EC] rounded-2xl p-5 items-center">
-      <Text className="text-3xl font-PoppinsSemiBold text-[#8C6E79]">
+    <View className="flex-1 bg-[#E3DBDF] rounded-2xl p-5 items-center">
+      <Text className="text-[35px] font-PoppinsBold text-[#8C6E79]">
         {value}
+        <Text className="text-[20px] font-PoppinsBold text-[#8C6E79]">%</Text>
       </Text>
-      <Text className="mt-2 text-center text-sm text-[#6B555F]">{label}</Text>
+      <Text className="mt-2 text-center font-normal text-[13px] text-black">
+        {label}
+      </Text>
+    </View>
+  );
+}
+function StatCard2({ value, label }: { value: string; label: string }) {
+  return (
+    <View className="flex-1 bg-[#F2EFF0] rounded-2xl p-5 items-center">
+      <Text className="text-[35px] font-PoppinsBold text-[#92AAA5]">
+        {value}
+        <Text className="text-[20px] font-PoppinsBold text-[#92AAA5]">h</Text>
+      </Text>
+
+      <Text className="mt-2 text-center font-normal text-[13px] text-black">
+        {label}
+      </Text>
     </View>
   );
 }
 
 function DonutChart() {
   const size = 160;
-  const strokeWidth = 18;
+  const strokeWidth = 30;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
   const segments = [
-    { percent: 50, color: "#FF5A5A" }, // High
+    { percent: 50, color: "#FF5F57" }, // High
     { percent: 20, color: "#FFC83D" }, // Medium
     { percent: 15, color: "#3CD070" }, // Low
     { percent: 15, color: "#9B7B87" }, // Unfinished
@@ -131,23 +148,27 @@ function DonutChart() {
 
 function Legend() {
   const items = [
-    { label: "High", color: "#FF5A5A", value: "40%" },
+    { label: "High", color: "#FF5F57", value: "40%" },
     { label: "Medium", color: "#FFC83D", value: "20%" },
     { label: "Low", color: "#3CD070", value: "15%" },
     { label: "Unfinished", color: "#9B7B87", value: "15%" },
   ];
 
   return (
-    <View className="mt-4 w-full">
-      <View className="flex-row flex-wrap justify-between gap-y-2">
+    <View className="mt-5 w-full px-2">
+      <View className="flex-row flex-wrap justify-between gap-y-3">
         {items.map((item) => (
           <View key={item.label} className="flex-row items-center w-1/2">
             <View
-              className="w-3 h-3 rounded mr-2"
+              className="w-4 h-4 mr-3"
               style={{ backgroundColor: item.color }}
             />
-            <Text className="text-sm text-[#3A2E33]">
-              {item.label} <Text className="text-[#6B555F]">{item.value}</Text>
+
+            <Text className="text-base font-PoppinsMedium text-[#3A2E33]">
+              {item.label}
+              <Text className="text-[#6B555F] font-PoppinsRegular">
+                {item.value}
+              </Text>
             </Text>
           </View>
         ))}

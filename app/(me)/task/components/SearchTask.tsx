@@ -208,17 +208,20 @@ export default function SearchTasksScreen() {
       {/* ADD NEW TASK BUTTON */}
       <View className="items-center mb-6">
         <TouchableOpacity
-          onPress={() => console.log("Add new task")}
+          onPress={() => router.push("/(me)/task/addTask")}
           activeOpacity={0.7}
         >
           <Image
             source={addButtonImg}
-            style={{ width: 70, height: 70 }}
+            style={{ width: 60, height: 60 }}
             resizeMode="contain"
           />
         </TouchableOpacity>
 
-        <Text className="text-[#90717E] mt-2" style={{ fontSize: 16 }}>
+        <Text
+          className="text-[#90717E] font-normal mt-2"
+          style={{ fontSize: 16 }}
+        >
           Add new task
         </Text>
       </View>
