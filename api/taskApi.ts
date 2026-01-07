@@ -3,25 +3,25 @@ import axiosInstance from "./axiosConfig";
 export type TaskPriority = "HIGH" | "MEDIUM" | "LOW";
 
 export interface DeletedTask {
-  id: string;
-  planCode: string;
-  content: string;
-  startDate: string;   // ISO string
-  dueDate: string;     
-  deletedAt: string;   
+    id: string;
+    planCode: string;
+    content: string;
+    startDate: string;   // ISO string
+    dueDate: string;
+    deletedAt: string;
 }
 export interface GetDeletedTasksResponse {
-  tasks: DeletedTask[];
-  total: number;
-  nextCursor: string | null;
+    tasks: DeletedTask[];
+    total: number;
+    nextCursor: string | null;
 }
 
 export interface TaskAdditionalData {
-  planId?: string;
-  planCode?: string;
-  assigneeId?: string;
-  assigneeAvatarUrl?: string;
-  assigneeName?: string;
+    planId?: string;
+    planCode?: string;
+    assigneeId?: string;
+    assigneeAvatarUrl?: string;
+    assigneeName?: string;
 }
 
 export interface PersonalTask {
@@ -35,7 +35,7 @@ export interface PersonalTask {
     completedAt: string | null;
     note?: string;
     additionalData?: TaskAdditionalData;
-  deletedAt?: string;
+    deletedAt?: string;
 }
 
 const taskApi = {
@@ -60,30 +60,41 @@ const taskApi = {
         const data: PersonalTask[] = await axiosInstance.get(url, { params });
         return data;
     },
+
+    /**
+     * Get user task statistics
+     * GET /api/tasks/statistics
+     */
+    async getStatistics(fromDate: string, toDate: string): Promise<TaskStatisticsResponse> {
+        const url = `/tasks/statistics`;
+        const params = { fromDate, toDate };
+        const data: TaskStatisticsResponse = await axiosInstance.get(url, { params });
+        return data;
+    },
     /**
  * Get deleted tasks
  * GET /api/tasks/deleted
  */
-/**
- * Get deleted tasks
- * GET /api/tasks/deleted
- */
-async getDeletedTasks(params: {
-  teamId?: string;
-  cursor?: string;
-  size?: number;
-}): Promise<GetDeletedTasksResponse> {
-  const url = `/tasks/deleted`;
+    /**
+     * Get deleted tasks
+     * GET /api/tasks/deleted
+     */
+    async getDeletedTasks(params: {
+        teamId?: string;
+        cursor?: string;
+        size?: number;
+    }): Promise<GetDeletedTasksResponse> {
+        const url = `/tasks/deleted`;
 
-  const data: GetDeletedTasksResponse = await axiosInstance.get(url, {
-    params: {
-      size: 10,
-      ...params,
+        const data: GetDeletedTasksResponse = await axiosInstance.get(url, {
+            params: {
+                size: 10,
+                ...params,
+            },
+        });
+
+        return data;
     },
-  });
-
-  return data;
-},
 
     /**
      * Search tasks
@@ -193,7 +204,7 @@ export interface RecurrenceRule {
     type?: "NONE" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"; // For UPDATE payload
     weekDays: string[] | null; // e.g. ["MONDAY"]
     recurrenceStartDate: string | null; // YYYY-MM-DD
-    recurrenceEndDate: string|null;   // YYYY-MM-DD
+    recurrenceEndDate: string | null;   // YYYY-MM-DD
 }
 
 export interface Reminder {
@@ -228,6 +239,14 @@ export interface CreateTaskRequest {
     dueDate: string;
     priority: TaskPriority;
     note?: string;
+}
+
+export interface TaskStatisticsResponse {
+    total: number;
+    unfinished: number;
+    low: number;
+    medium: number;
+    high: number;
 }
 
 export default taskApi;

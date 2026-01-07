@@ -101,20 +101,23 @@ export default function EditProfileScreen() {
         ? dayjs(dateOfBirth).format("YYYY-MM-DD")
         : undefined;
 
-      console.log("Saving Profile Data:", {
+      // Log yêu cầu gửi trước khi thực hiện cập nhật
+      console.log("Request to update profile:", {
         name,
         gender,
-        dobString,
-        avatar: avatar?.uri,
+        dateOfBirth: dobString,
+        avatar: avatar?.uri, // Đường dẫn URI của avatar nếu có
       });
 
+      // Gửi request cập nhật hồ sơ
       await userApi.updateUser({
         name,
         gender,
         dateOfBirth: dobString,
-        avatar: avatar || undefined,
+        avatar: avatar || undefined, // Nếu avatar không có thì gửi undefined
       });
 
+      // Quay lại màn hình trước
       router.back();
     } catch (error: any) {
       console.log("Update profile error:", error);

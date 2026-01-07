@@ -539,7 +539,7 @@ export default function TeamInfoScreen({
                   title="Chat"
                   titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
                   left={(p) => (
-                    <Ionicons name="folder-open" size={24} color="#49454F" />
+                    <Ionicons name="chatbubble" size={24} color="#49454F" />
                   )}
                   right={(p) => (
                     <Ionicons

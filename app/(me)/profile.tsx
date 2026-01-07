@@ -119,7 +119,7 @@ export default function ProfileScreen({}: ProfileScreenProps) {
                         letterSpacing: 1,
                         color: "#fff",
                       }}
-                      style={{ backgroundColor: "#90717E" }}
+                      style={{ backgroundColor: "#6B4EFF" }}
                     />
                   )}
                 </View>
@@ -195,7 +195,12 @@ export default function ProfileScreen({}: ProfileScreenProps) {
             left={(p) => <List.Icon {...p} icon="lock-reset" />}
             right={(p) => <List.Icon {...p} icon="chevron-right" />}
             onPress={() => {
-              // router.push("/(me)/reset-password");
+              router.push({
+                pathname: "/(auth)/(flow)/reset",
+                params: {
+                  email: user.email ?? "",
+                },
+              });
             }}
           />
           <List.Item

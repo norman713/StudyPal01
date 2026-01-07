@@ -1,7 +1,8 @@
 import ErrorModal from "@/components/modal/error";
 import SuccessModal from "@/components/modal/success";
 import { Ionicons } from "@expo/vector-icons";
-import dayjs from "dayjs"; // NEW
+import DateTimePicker from "@react-native-community/datetimepicker";
+import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -40,6 +41,12 @@ export default function TaskDetail() {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Handle DateTimePicker visibility
+  const [showFromTimePicker, setShowFromTimePicker] = useState(false);
+  const [showFromDatePicker, setShowFromDatePicker] = useState(false);
+  const [showToTimePicker, setShowToTimePicker] = useState(false);
+  const [showToDatePicker, setShowToDatePicker] = useState(false);
+
   // Format time input to HH:mm format
   const formatTime = (text: string) => {
     const raw = text.replace(/\D/g, "").slice(0, 4);
@@ -66,6 +73,9 @@ export default function TaskDetail() {
     }
 
     return result;
+  };
+  const parseDateTime = (dateStr: string, timeStr: string) => {
+    return dayjs(`${dateStr} ${timeStr}`, "DD-MM-YYYY HH:mm");
   };
 
   // Format date input to DD-MM-YYYY format
@@ -121,21 +131,13 @@ export default function TaskDetail() {
         return "#27C840";
     }
   };
-
-  const parseDateTime = (dateStr: string, timeStr: string) => {
-    // dateStr: DD-MM-YYYY, timeStr: HH:mm
-    return dayjs(`${dateStr} ${timeStr}`, "DD-MM-YYYY HH:mm");
-  };
-
   const handleSave = async () => {
-    // 1. Validate required fields
     if (!taskName.trim()) {
       setErrorMessage("Please enter a task name.");
       setShowErrorModal(true);
       return;
     }
 
-    // 2. Validate Date/Time format (Simple regex or dayjs isValid)
     const startDateTime = parseDateTime(fromDate, fromTime);
     const endDateTime = parseDateTime(toDate, toTime);
 
@@ -150,31 +152,32 @@ export default function TaskDetail() {
       return;
     }
 
-    // 3. Validate Logic: End > Start
     if (endDateTime.isBefore(startDateTime)) {
       setErrorMessage("End time must be after start time.");
       setShowErrorModal(true);
       return;
     }
 
-    // 4. API Call
     try {
       setIsLoading(true);
       const payload = {
         content: taskName,
         startDate: startDateTime.format("YYYY-MM-DD HH:mm:ss"),
         dueDate: endDateTime.format("YYYY-MM-DD HH:mm:ss"),
-        priority: priority.toUpperCase() as TaskPriority, // "high" -> "HIGH"
+        priority: priority.toUpperCase() as TaskPriority,
         note: taskNote,
       };
-
       console.log("Saving task payload:", payload);
-      await taskApi.createTask(payload);
 
-      setIsModalVisible(true); // Show modal on success
+      // API Call to create the task
+      const response = await taskApi.createTask(payload);
+
+      // Log the response from API
+      console.log("API Response:", response);
+
+      setIsModalVisible(true);
     } catch (error: any) {
       console.error("Failed to create task:", error);
-      setIsModalVisible(false); // Close any previous modal if error occurs
       const msg =
         error?.response?.data?.message ||
         "Failed to create task. Please try again.";
@@ -246,21 +249,28 @@ export default function TaskDetail() {
             {/* From Date */}
             <View style={[styles.inputContainer, styles.halfWidth]}>
               <Text style={styles.inputLabel}>From date</Text>
-              <View style={styles.inputWithIcon}>
-                <TextInput
-                  style={styles.input}
-                  value={fromDate}
-                  onChangeText={(text) => setFromDate(formatDate(text))} // Format date as DD-MM-YYYY
-                  placeholder="DD-MM-YYYY"
-                  keyboardType="numeric"
-                />
+              <Pressable onPress={() => setShowFromDatePicker(true)}>
+                <Text style={styles.input}>{fromDate}</Text>
                 <Ionicons
                   name="calendar-outline"
                   size={24}
                   color="#49454F"
                   style={styles.icon}
                 />
-              </View>
+              </Pressable>
+
+              {showFromDatePicker && (
+                <DateTimePicker
+                  value={new Date(now.format())}
+                  mode="date"
+                  display="calendar"
+                  onChange={(event, selectedDate) => {
+                    const date = selectedDate || new Date();
+                    setShowFromDatePicker(false);
+                    setFromDate(dayjs(date).format("DD-MM-YYYY"));
+                  }}
+                />
+              )}
             </View>
           </View>
 
@@ -288,21 +298,28 @@ export default function TaskDetail() {
             {/* To Date */}
             <View style={[styles.inputContainer, styles.halfWidth]}>
               <Text style={styles.inputLabel}>To date</Text>
-              <View style={styles.inputWithIcon}>
-                <TextInput
-                  style={styles.input}
-                  value={toDate}
-                  onChangeText={(text) => setToDate(formatDate(text))} // Format date as DD-MM-YYYY
-                  placeholder="DD-MM-YYYY"
-                  keyboardType="numeric"
-                />
+              <Pressable onPress={() => setShowToDatePicker(true)}>
+                <Text style={styles.input}>{toDate}</Text>
                 <Ionicons
                   name="calendar-outline"
                   size={24}
                   color="#49454F"
                   style={styles.icon}
                 />
-              </View>
+              </Pressable>
+
+              {showToDatePicker && (
+                <DateTimePicker
+                  value={new Date(now.format())}
+                  mode="date"
+                  display="calendar" // Use the calendar display
+                  onChange={(event, selectedDate) => {
+                    const date = selectedDate || new Date();
+                    setShowToDatePicker(false);
+                    setToDate(dayjs(date).format("DD-MM-YYYY"));
+                  }}
+                />
+              )}
             </View>
           </View>
         </View>

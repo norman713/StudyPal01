@@ -154,7 +154,7 @@ export default function LoginPage() {
 
       setShowError(false);
       setErrorMessage("");
-      router.replace("/(team)/search");
+      router.replace("/(me)");
     } catch (err: any) {
       const apiMessage = err?.response?.data?.message;
       setShowError(true);

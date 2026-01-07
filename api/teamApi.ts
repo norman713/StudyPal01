@@ -42,63 +42,78 @@ export interface TeamPreviewResponse {
   totalMembers: number;
 }
 
+export interface TeamTaskStatisticsResponse {
+  total: number;
+  unfinished: number;
+  low: number;
+  medium: number;
+  high: number;
+}
+
 const teamApi = {
-async getPreviewByCode(teamCode: string): Promise<TeamPreviewResponse> {
-  const url = `/teams/${teamCode}/preview`;
-  const data: TeamPreviewResponse = await axiosInstance.get(url);
-  return data;
-},
+  async getTaskStatistics(teamId: string, fromDate: string, toDate: string, memberId?: string): Promise<TeamTaskStatisticsResponse> {
+    const url = `/teams/${teamId}/tasks/statistics`;
+    const body = { fromDate, toDate, memberId };
+    const data: TeamTaskStatisticsResponse = await axiosInstance.post(url, body);
+    return data;
+  },
 
-async searchTeams(
-  filter: "JOINED" | "OWNED",
-  keyword?: string,
-  cursor?: string,
-  size: number = 10
-): Promise<TeamListResponse> {
-  const url = "/teams/search";
-  const params = { filter, keyword, cursor, size };
+  async getPreviewByCode(teamCode: string): Promise<TeamPreviewResponse> {
+    const url = `/teams/${teamCode}/preview`;
+    const data: TeamPreviewResponse = await axiosInstance.get(url);
+    return data;
+  },
 
-  const data: TeamListResponse = await axiosInstance.get(url, { params });
-  return data;
-},
+  async searchTeams(
+    filter: "JOINED" | "OWNED",
+    keyword?: string,
+    cursor?: string,
+    size: number = 10
+  ): Promise<TeamListResponse> {
+    const url = "/teams/search";
+    const params = { filter, keyword, cursor, size };
+
+    const data: TeamListResponse = await axiosInstance.get(url, { params });
+    return data;
+  },
 
 
 
-    async create(name: string, description: string): Promise<CreateTeamResponse> {
+  async create(name: string, description: string): Promise<CreateTeamResponse> {
     const url = "/teams";
     const res = (await axiosInstance.post(url, { name, description })) as CreateTeamResponse;
     return res;
   },
-  
+
 
 
   async getInfo(teamId: string) {
-  const url = `/teams/${teamId}`;
-  const res = await axiosInstance.get(url);
-  return res;
-},
+    const url = `/teams/${teamId}`;
+    const res = await axiosInstance.get(url);
+    return res;
+  },
 
-async delete(teamId: string) {
-  const url = `/teams/${teamId}`;
-  return await axiosInstance.delete(url);
-},
+  async delete(teamId: string) {
+    const url = `/teams/${teamId}`;
+    return await axiosInstance.delete(url);
+  },
 
   async update(teamId: string, data: { name?: string; description?: string }) {
     const url = `/teams/${teamId}`;
     return await axiosInstance.patch(url, data);
   },
   async getQR(teamId: string, width: number, height: number): Promise<string> {
-  const url = `/teams/${teamId}/qr`;
-  const params = { width, height };
-  const res = await axiosInstance.get(url, { params }) as { qrCode: string };
-  return res.qrCode;
-},
+    const url = `/teams/${teamId}/qr`;
+    const params = { width, height };
+    const res = await axiosInstance.get(url, { params }) as { qrCode: string };
+    return res.qrCode;
+  },
 
-async resetQR(teamId: string): Promise<{ success: boolean; message: string }> {
-  const url = `/teams/${teamId}/code`;
-  const res = await axiosInstance.patch(url) as { success: boolean; message: string };
-  return res;
-},
+  async resetQR(teamId: string): Promise<{ success: boolean; message: string }> {
+    const url = `/teams/${teamId}/code`;
+    const res = await axiosInstance.patch(url) as { success: boolean; message: string };
+    return res;
+  },
   async getSetting(teamId: string): Promise<TeamNotificationSetting> {
     const url = `/team-notification-settings/${teamId}`;
     const res = await axiosInstance.get(url);

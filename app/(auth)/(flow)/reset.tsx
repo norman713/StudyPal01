@@ -4,7 +4,8 @@ import Loading from "@/components/loading";
 import ErrorModal from "@/components/modal/error";
 import SuccessModal from "@/components/modal/success";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Modal, StyleSheet, Text, View } from "react-native";
 import { Button, TextInput } from "react-native-paper";
@@ -16,9 +17,12 @@ export const screenConfig = {
 export default function ResetPage() {
   //Hooks
   const router = useRouter();
+  const { email: emailParam } = useLocalSearchParams<{ email?: string }>();
+
+  const [email, setEmail] = useState(emailParam ?? "");
 
   //States
-  const [email, setEmail] = useState("");
+
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [retypePassword, setRetypePassword] = useState("");
@@ -31,12 +35,20 @@ export default function ResetPage() {
 
   // lấy email từ AsyncStorage
   useEffect(() => {
+    // Nếu đã có email từ route → dùng luôn
+    if (emailParam) {
+      setEmail(emailParam);
+      return;
+    }
+
+    // Fallback cho flow forgot password
     const loadEmail = async () => {
       const resetEmail = await AsyncStorage.getItem("resetEmail");
       if (resetEmail) setEmail(resetEmail);
     };
+
     loadEmail();
-  }, []);
+  }, [emailParam]);
 
   //Handlers
   const handleResetPassword = async () => {
@@ -131,6 +143,7 @@ export default function ResetPage() {
       <Button
         className="mt-6"
         mode="contained"
+        buttonColor="#90717E"
         contentStyle={{ height: 44 }}
         labelStyle={{ fontSize: 16, fontFamily: "PoppinsRegular" }}
         theme={{ roundness: 100 }}

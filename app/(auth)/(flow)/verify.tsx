@@ -12,14 +12,14 @@ export const screenConfig = {
 };
 
 export default function VerifyPage() {
-  //Hooks
+  // Hooks
   const { purpose, email } = useLocalSearchParams<{
     purpose?: "register" | "reset";
     email?: string;
   }>();
   const router = useRouter();
 
-  //States
+  // States
   const [code, setCode] = useState("");
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
   const [modalVisible, setModalVisible] = useState(false);
@@ -28,7 +28,7 @@ export default function VerifyPage() {
   const [loadingResend, setLoadingResend] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  //Effects
+  // Effects
   useEffect(() => {
     if (timeLeft <= 0) return;
     const timer = setInterval(() => {
@@ -46,14 +46,14 @@ export default function VerifyPage() {
       .padStart(2, "0")}`;
   };
 
-  // helper dùng chung
+  // Helper function
   const openError = (msg: string) => {
     setErrorMessage(msg);
     setErrorVisible(true);
   };
 
   /**
-   * Handler
+   * Handler for sending code
    */
   const handleSendCode = async () => {
     const codeTrim = code.trim();
@@ -66,13 +66,23 @@ export default function VerifyPage() {
     setLoading(true);
     try {
       if (purpose === "register") {
-        await authApi.verifyRegister(emailTrim, codeTrim);
+        const response = await authApi.verifyRegister(emailTrim, codeTrim);
+        console.log("Registration API response:", response); // Log kết quả API đăng ký
+        if (!response.success) {
+          return openError(response.message || "Verification failed");
+        }
+        setModalVisible(true); // Chỉ hiển thị modal success nếu thành công
       } else {
         const res = await authApi.verifyReset(emailTrim, codeTrim);
-        if (!res.success)
+        console.log("Reset password API response:", res); // Log kết quả API đặt lại mật khẩu
+        if (!res.success) {
+          // Log message và hiển thị modal lỗi khi xác minh thất bại
+          console.log("Error: ", res.message || "Verification failed");
           return openError(res.message || "Verification failed");
+        }
+        // Chỉ hiển thị modal success nếu xác minh thành công
+        setModalVisible(true);
       }
-      setModalVisible(true);
     } catch (e: any) {
       const apiMessage =
         e?.response?.data?.message ||
@@ -85,6 +95,9 @@ export default function VerifyPage() {
     }
   };
 
+  /**
+   * Handler for resending the verification code
+   */
   const handleResendCode = async () => {
     const emailTrim = (email || "").trim();
     if (!emailTrim) return openError("Missing email. Please try again.");
@@ -96,7 +109,7 @@ export default function VerifyPage() {
         purpose === "reset" ? "RESET_PASSWORD" : "REGISTER",
         emailTrim
       );
-      setTimeLeft(300);
+      setTimeLeft(300); // Reset timer for resend
     } catch (e: any) {
       const apiMessage =
         e?.response?.data?.message ||
@@ -109,6 +122,9 @@ export default function VerifyPage() {
     }
   };
 
+  /**
+   * Handler for confirming the modal after successful verification
+   */
   const handleConfirmModal = () => {
     setModalVisible(false);
     if (purpose === "reset") {
@@ -135,11 +151,12 @@ export default function VerifyPage() {
           value={code}
           onChangeText={(code) => setCode(code)}
           theme={{ roundness: 30 }}
+          style={{ backgroundColor: "white" }}
         />
       </View>
 
       {/* Countdown */}
-      <Text className="text-[#90717E] font-PoppinsRegular text-[14px]">
+      <Text className="text-[#92AAA5] font-PoppinsRegular text-[14px]">
         Please enter the verification code we just sent to your email address.
         {"\n"}This code expires in{" "}
         <Text className="font-PoppinsSemiBold text-[#90717E]">
@@ -150,9 +167,10 @@ export default function VerifyPage() {
 
       {/* Verify Button */}
       <Button
-        className="mt-6"
+        className="mt-3"
         mode="contained"
         contentStyle={{ height: 44 }}
+        buttonColor="#90717E"
         labelStyle={{ fontSize: 16, fontFamily: "PoppinsRegular" }}
         theme={{ roundness: 100 }}
         onPress={handleSendCode}

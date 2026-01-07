@@ -79,6 +79,7 @@ export interface TaskDraft {
   assigneeId?: string;
   priority: TaskPriority;
   note?: string;
+  tempId: string;
 }
 
 export interface CreatePlanRequest {

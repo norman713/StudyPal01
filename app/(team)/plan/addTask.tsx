@@ -3,6 +3,7 @@ import ErrorModal from "@/components/modal/error";
 import { planCreationStore } from "@/utils/planCreationStore";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
+import { nanoid } from "nanoid/non-secure";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -60,7 +61,7 @@ export default function AddTaskScreen() {
   const handleCreate = async () => {
     if (!validate()) return;
     if (!teamId) return;
-
+    const tempId = nanoid();
     setLoading(true);
     try {
       // Parse dates
@@ -84,6 +85,7 @@ export default function AddTaskScreen() {
       if (isNewPlan) {
         // Save to local store
         planCreationStore.addTask({
+          tempId,
           content: taskName.trim(),
           note: taskNote.trim(),
           startDate: dayjs(startDate).format("YYYY-MM-DD HH:mm:ss"),
@@ -91,6 +93,7 @@ export default function AddTaskScreen() {
           assigneeId: assigneeId || undefined,
           priority,
         });
+
         router.back();
       } else {
         // Direct API call for existing plan
@@ -106,6 +109,10 @@ export default function AddTaskScreen() {
       }
     } catch (err: any) {
       console.warn("Failed to create task", err);
+
+      if (!planId || planId === "new") {
+        planCreationStore.removeTask(tempId);
+      }
 
       const apiMessage =
         err?.response?.data?.message || err?.message || "Failed to create task";

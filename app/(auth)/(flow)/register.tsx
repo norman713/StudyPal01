@@ -42,10 +42,11 @@ export default function RegisterPage() {
   };
   //Handlers
   const handleSignUp = async () => {
-    // reset modal
+    // Reset modal error state
     setShowError(false);
     setErrorMessage("");
 
+    // Kiểm tra xem các trường có bị bỏ trống không
     if (
       !username.trim() ||
       !email.trim() ||
@@ -57,11 +58,14 @@ export default function RegisterPage() {
       return;
     }
 
+    // Kiểm tra mật khẩu và retypePassword có khớp không
     if (password !== retypePassword) {
       setErrorMessage("Passwords do not match");
       setShowError(true);
       return;
     }
+
+    // Kiểm tra mật khẩu có hợp lệ không
     if (!PASSWORD_RULE.test(password) || !PASSWORD_RULE.test(retypePassword)) {
       openError(
         "Password must be at least 3 characters long and contain both letters and numbers."
@@ -71,17 +75,40 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      await authApi.register(username.trim(), email.trim(), password);
-      router.push({
-        pathname: "/(auth)/(flow)/verify",
-        params: {
-          purpose: "register",
-          email: email.trim(),
-          name: username.trim(),
-        },
-      });
+      // Gọi API đăng ký
+      const response = await authApi.register(
+        username.trim(),
+        email.trim(),
+        password
+      );
+
+      // Kiểm tra kết quả từ API
+      if (response.success) {
+        // Nếu đăng ký thành công, chuyển hướng đến trang xác minh
+        router.push({
+          pathname: "/(auth)/(flow)/verify",
+          params: {
+            purpose: "register",
+            email: email.trim(),
+            name: username.trim(),
+          },
+        });
+      } else {
+        // Nếu API trả về lỗi, hiển thị lỗi và không chuyển hướng
+        setErrorMessage(response.message || "Registration failed");
+        setShowError(true);
+      }
     } catch (e: any) {
-      setErrorMessage(e?.response?.data?.message || "Registration failed");
+      // Log lỗi API nếu có
+      console.log("API error:", e);
+
+      // Nếu có lỗi từ API, hiển thị thông báo lỗi
+      const apiMessage =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        e?.message ||
+        "Registration failed";
+      setErrorMessage(apiMessage);
       setShowError(true);
     } finally {
       setLoading(false);

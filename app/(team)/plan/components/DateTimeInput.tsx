@@ -1,6 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import dayjs from "dayjs";
+import React, { useState } from "react";
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 interface DateTimeInputProps {
   label: string;
@@ -15,6 +23,8 @@ export default function DateTimeInput({
   onChangeText,
   icon,
 }: DateTimeInputProps) {
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   const handleChange = (text: string) => {
     const digits = text.replace(/\D/g, "");
 
@@ -69,21 +79,45 @@ export default function DateTimeInput({
     onChangeText(text);
   };
 
+  // Function to handle date change in DateTimePicker
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      onChangeText(dayjs(selectedDate).format("DD-MM-YYYY"));
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Floating label */}
       <Text style={styles.label}>{label}</Text>
 
       <View style={styles.inputWithIcon}>
-        <TextInput
-          value={value}
-          onChangeText={handleChange}
-          keyboardType="number-pad"
-          style={styles.input}
-        />
+        {icon === "calendar-outline" ? (
+          <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+            <Text style={styles.input}>{value}</Text>
+          </TouchableOpacity>
+        ) : (
+          <TextInput
+            value={value}
+            onChangeText={handleChange}
+            keyboardType="number-pad"
+            style={styles.input}
+          />
+        )}
 
         <Ionicons name={icon} size={22} color="#49454F" style={styles.icon} />
       </View>
+
+      {/* DateTimePicker for date selection */}
+      {showDatePicker && icon === "calendar-outline" && (
+        <DateTimePicker
+          value={new Date()}
+          mode="date"
+          display="calendar" // Use calendar display for date selection
+          onChange={onDateChange}
+        />
+      )}
     </View>
   );
 }

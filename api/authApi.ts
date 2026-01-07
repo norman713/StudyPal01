@@ -24,15 +24,15 @@ const authApi = {
   // register
   // 1. call api auth/register to send code
   // 2. call api verify/register to verify code sent
-    register(name:string, email:string, password:string){
-    const url="/auth/register";
-    const body={name, email, password};
-    return axiosInstance.post(url,body);
+ register(name: string, email: string, password: string): Promise<ApiResponse> {
+    const url = "/auth/register";
+    const body = { name, email, password };
+    return axiosInstance.post(url, body);
   },
   
-    verifyRegister( email: string, code: string) {
+  verifyRegister(email: string, code: string): Promise<ApiResponse> {
     const url = "/auth/verify/register";
-    const body = { email, code};
+    const body = { email, code };
     return axiosInstance.post(url, body);
   },
 
