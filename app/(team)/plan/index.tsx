@@ -1,11 +1,11 @@
 import planApi, { Plan } from "@/api/planApi";
+import ChatBotSection from "@/app/(me)/task/components/Chatbot";
 import BottomBar from "@/components/ui/buttom";
 import Header from "@/components/ui/header";
 import dayjs from "dayjs";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { Alert, FlatList, StyleSheet, View } from "react-native";
-import ChatBotSection from "./components/PlanScreen/Chatbot";
 import PlanHeader from "./components/PlanScreen/Header";
 import PlanList from "./components/PlanScreen/PlanList";
 

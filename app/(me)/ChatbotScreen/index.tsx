@@ -1,4 +1,3 @@
-import { readTokens } from "@/api/tokenStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useHeaderHeight } from "@react-navigation/elements";
 import * as Crypto from "expo-crypto";
@@ -28,6 +27,7 @@ export default function ChatbotScreen() {
   const headerHeight = useHeaderHeight();
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [input, setInput] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
   const flatListRef = useRef<FlatList<UIMessage>>(null);
   const [quotaUsage, setQuotaUsage] = useState<{
     usedQuota: number;
@@ -67,28 +67,18 @@ export default function ChatbotScreen() {
 
   const handleSend = async () => {
     if (!input.trim()) return;
-    try {
-      const { accessToken } = await readTokens();
-      console.log("Access Token:", accessToken);
-      const res = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/chatbot/messages`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
 
-      console.log("🧪 TEST FETCH STATUS:", res.status);
-    } catch (e) {
-      console.log("🧪 TEST FETCH ERROR:", e);
-    }
+    // 🚫 BLOCK nếu đang stream
+    if (isStreaming) return;
+
+    setIsStreaming(true);
 
     const idempotencyKey = Crypto.randomUUID();
     const prompt = input;
 
     const userId = `${idempotencyKey}-user`;
     const botId = `${idempotencyKey}-bot`;
+
     setMessages((prev) => [
       { id: botId, role: "bot", content: "" },
       { id: userId, role: "user", content: prompt },
@@ -97,7 +87,6 @@ export default function ChatbotScreen() {
 
     setInput("");
 
-    // 2️⃣ SSE ONLY — KHÔNG fetch lại
     sendChatbotSSE({
       payload: { prompt },
       idempotencyKey,
@@ -116,9 +105,17 @@ export default function ChatbotScreen() {
             m.id === botId ? { ...m, content: "❌ Bot error" } : m
           )
         );
+        setIsStreaming(false); // 🔓 unlock
+      },
+
+      onDone: async () => {
+        await new Promise((r) => setTimeout(r, 300));
+        await fetchQuotaUsage();
+        setIsStreaming(false); // 🔓 unlock
       },
     });
   };
+
   // Calculate the usage percentage
   const calculateQuotaPercentage = () => {
     if (!quotaUsage || quotaUsage.dailyQuota === 0) return 0;
@@ -160,9 +157,9 @@ export default function ChatbotScreen() {
         style={{ flex: 1 }}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
-        onContentSizeChange={() =>
-          flatListRef.current?.scrollToEnd({ animated: true })
-        }
+        // onContentSizeChange={() =>
+        //   flatListRef.current?.scrollToEnd({ animated: true })
+        // }
         renderItem={({ item }) => (
           <View
             className={`flex-row mb-3 ${
@@ -226,10 +223,15 @@ export default function ChatbotScreen() {
           placeholder="Ask anything"
           className="flex-1 text-xl"
           value={input}
+          editable={!isStreaming}
           onChangeText={setInput}
         />
-        <TouchableOpacity onPress={handleSend}>
-          <Ionicons name="send" size={22} color="#8B5D6A" />
+        <TouchableOpacity onPress={handleSend} disabled={isStreaming}>
+          <Ionicons
+            name="send"
+            size={22}
+            color={isStreaming ? "#B0B0B0" : "#8B5D6A"}
+          />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

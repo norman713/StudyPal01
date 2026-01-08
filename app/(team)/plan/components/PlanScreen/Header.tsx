@@ -4,7 +4,6 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Calendar } from "react-native-calendario";
 
 const DAY_SIZE = 40;
-const DAY_RADIUS = 10;
 
 interface HeaderApiProps {
   userName: string;
@@ -100,7 +99,7 @@ export default function HeaderSection({
             activeDayContainerStyle: {
               margin: 2,
               backgroundColor: "transparent",
-              borderRadius: 10,
+
               padding: 0,
             },
 
@@ -115,12 +114,6 @@ export default function HeaderSection({
             const isTaskDay = taskSet.has(dateStr);
             const isSelected =
               selectedDate && dateStr === getDateStr(selectedDate);
-
-            // Priority: Selected (Brown) > TaskDay (Red) > Today (Green)
-            // Wait, requirement says:
-            // Green = Today
-            // Red = Deadline
-            // Brown = Selected
 
             let bg = "transparent";
             let color = "#0F0C0D"; // Default black
@@ -145,7 +138,6 @@ export default function HeaderSection({
                 style={{
                   width: DAY_SIZE,
                   height: DAY_SIZE,
-                  borderRadius: DAY_RADIUS,
                   backgroundColor: bg,
                   alignItems: "center",
                   justifyContent: "center",

@@ -1,5 +1,6 @@
 import inviteApi from "@/api/inviteApi";
 import userApi from "@/api/userApi";
+import ErrorModal from "@/components/modal/error";
 import QuestionModal from "@/components/modal/question";
 import SuccessModal from "@/components/modal/success";
 import {
@@ -55,6 +56,8 @@ export default function InviteUserScreen() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
+  const [errorOpen, setErrorOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     console.log("Invite screen teamId:", teamId);
@@ -132,13 +135,19 @@ export default function InviteUserScreen() {
       setConfirmOpen(false); // Close confirm modal only on success
       setTimeout(() => setSuccessOpen(true), 300); // Open success modal
     } catch (err: any) {
-      console.error("[inviteUser] Error:", err);
-      // Alert error to user
-      Alert.alert(
-        "Invitation Failed",
-        err?.response?.data?.message || "Something went wrong."
-      );
-      setConfirmOpen(false); // Close anyway or keep open? keep open is better for retry, but maybe close for now.
+      const apiMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Something went wrong.";
+
+      // Log để debug
+      console.log("[inviteUser] API error message:", apiMessage);
+      console.log("[inviteUser] Full error:", err?.response?.data || err);
+
+      setConfirmOpen(false);
+      setErrorMessage(apiMessage);
+      setErrorOpen(true);
     }
   };
 
@@ -209,19 +218,23 @@ export default function InviteUserScreen() {
         ) : (
           <Searchbar
             placeholder="Search by name or email"
+            placeholderTextColor="rgba(255,255,255,0.65)"
             value={query}
             onChangeText={setQuery}
             autoFocus
             style={{
               flex: 1,
-              marginRight: 8,
-              backgroundColor: "#fff",
+              backgroundColor: "#90717E",
               elevation: 0,
               borderRadius: 8,
             }}
-            inputStyle={{ fontSize: 15 }}
-            icon={() => null} // ❌ bỏ icon search
-            clearIcon={() => null} // ❌ bỏ dấu X trong input
+            inputStyle={{
+              fontSize: 15,
+              color: "#FFFFFF",
+              fontWeight: "400",
+            }}
+            icon={() => null}
+            clearIcon={() => null}
           />
         )}
 
@@ -279,7 +292,7 @@ export default function InviteUserScreen() {
       ======================= */}
       <QuestionModal
         visible={confirmOpen}
-        title="Invite user?"
+        title="Invite user"
         message={
           selectedUser
             ? `Do you want to invite ${selectedUser.name} (${selectedUser.email}) to your team?`
@@ -303,6 +316,14 @@ export default function InviteUserScreen() {
         message={`You have successfully invited ${selectedUser?.name} to the team.`}
         confirmText="OK"
         onConfirm={handleSuccessClose}
+      />
+
+      <ErrorModal
+        visible={errorOpen}
+        title="Invitation Failed"
+        message={errorMessage}
+        confirmText="OK"
+        onConfirm={() => setErrorOpen(false)}
       />
     </View>
   );

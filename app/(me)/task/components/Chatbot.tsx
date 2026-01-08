@@ -1,42 +1,23 @@
 import { router } from "expo-router";
 import React from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Image, Pressable, View } from "react-native";
 
+const chatbotImage = require("../../../../assets/images/Chatbot.png");
 export default function ChatBotSection() {
-  const goToChatbot = () => {
-    router.push("/(me)/ChatbotScreen");
-  };
-
   return (
-    <Pressable onPress={goToChatbot}>
-      {/* pointerEvents="none" để click xuyên qua TextInput */}
-      <View style={styles.container} pointerEvents="none">
-        <TextInput
-          placeholder="🤖 Hi! How can I assist you today?"
-          style={styles.input}
-          editable={false}
-        />
-        <TextInput
-          placeholder="Ask me something..."
-          style={styles.input}
-          editable={false}
-        />
-      </View>
+    <Pressable
+      onPress={() => router.push("/(me)/ChatbotScreen")}
+      className="mb-5"
+    >
+      {({ pressed }) => (
+        <View className="bg-white  py-2">
+          <Image
+            source={chatbotImage}
+            className="w-full h-12"
+            resizeMode="contain"
+          />
+        </View>
+      )}
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  input: {
-    flex: 1,
-    height: 40,
-  },
-});
