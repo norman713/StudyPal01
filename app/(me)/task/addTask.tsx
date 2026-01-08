@@ -1,20 +1,13 @@
 import ErrorModal from "@/components/modal/error";
 import SuccessModal from "@/components/modal/success";
-import { convertUserToSystemTime } from "@/utils/timezone";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
+
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { Appbar } from "react-native-paper";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Appbar, TextInput } from "react-native-paper";
 import taskApi, { TaskPriority } from "../../../api/taskApi";
 
 type TPriority = "high" | "medium" | "low";
@@ -24,17 +17,16 @@ export default function TaskDetail() {
   const taskId = params.taskId as string;
 
   // Default values: Current date and time
+  const now = dayjs();
   const [taskName, setTaskName] = useState(""); // Empty initially
   const [taskNote, setTaskNote] = useState("");
 
-  // states
-  const now = dayjs();
   const [fromTime, setFromTime] = useState(now.format("HH:mm"));
-  const [fromDate, setFromDate] = useState(now.format("DD-MM-YYYY"));
+  const [fromDate, setFromDate] = useState(new Date());
+  const [toDate, setToDate] = useState(dayjs().add(7, "day").toDate());
 
   const nextHour = now.add(1, "hour");
   const [toTime, setToTime] = useState(nextHour.format("HH:mm"));
-  const [toDate, setToDate] = useState(nextHour.format("DD-MM-YYYY"));
 
   const [priority, setPriority] = useState<TPriority>("medium"); // Default medium
   const [isLoading, setIsLoading] = useState(false);
@@ -49,148 +41,59 @@ export default function TaskDetail() {
   const [showToDatePicker, setShowToDatePicker] = useState(false);
 
   // Format time input to HH:mm format
-  const formatTime = (text: string) => {
-    const raw = text.replace(/\D/g, "").slice(0, 4);
 
-    const hourRaw = raw.slice(0, 2);
-    const minuteRaw = raw.slice(2, 4);
-
-    // validate hour khi đủ 2 số
-    if (hourRaw.length === 2) {
-      const hour = Number(hourRaw);
-      if (hour < 0 || hour > 23) return "";
-    }
-
-    // validate minute khi đủ 2 số
-    if (minuteRaw.length === 2) {
-      const minute = Number(minuteRaw);
-      if (minute < 0 || minute > 59) return `${hourRaw}:`;
-    }
-
-    let result = hourRaw;
-
-    if (raw.length > 2) {
-      result += ":" + minuteRaw;
-    }
-
-    return result;
-  };
-  const parseDateTime = (dateStr: string, timeStr: string) => {
-    return dayjs(`${dateStr} ${timeStr}`, "DD-MM-YYYY HH:mm");
+  const formatDateDisplay = (date: Date) => {
+    return dayjs(date).format("DD/MM/YYYY");
   };
 
-  // Format date input to DD-MM-YYYY format
-  const formatDate = (text: string) => {
-    const raw = text.replace(/\D/g, "").slice(0, 8);
-
-    const dayRaw = raw.slice(0, 2);
-    const monthRaw = raw.slice(2, 4);
-    const yearRaw = raw.slice(4, 8);
-
-    // validate day khi đủ 2 số
-    if (dayRaw.length === 2) {
-      const day = Number(dayRaw);
-      if (day < 1 || day > 31) return "";
-    }
-
-    // validate month khi đủ 2 số
-    if (monthRaw.length === 2) {
-      const month = Number(monthRaw);
-      if (month < 1 || month > 12) return `${dayRaw}-`;
-    }
-
-    let result = dayRaw;
-
-    if (raw.length > 2) {
-      result += "-" + monthRaw;
-    }
-
-    if (raw.length > 4) {
-      result += "-" + yearRaw;
-    }
-
-    // validate full date khi đủ 8 số
-    if (raw.length === 8) {
-      const day = Number(dayRaw);
-      const month = Number(monthRaw);
-      const year = Number(yearRaw);
-
-      const maxDay = dayjs(`${year}-${month}-01`).daysInMonth();
-      if (day > maxDay) return "";
-    }
-
-    return result;
-  };
-
-  const getPriorityColor = (p: TPriority) => {
-    switch (p) {
-      case "high":
-        return "#FF5F57";
-      case "medium":
-        return "#FEBC2F";
-      case "low":
-        return "#27C840";
-    }
-  };
   const handleSave = async () => {
     if (!taskName.trim()) {
       setErrorMessage("Please enter a task name.");
       setShowErrorModal(true);
       return;
     }
-
-    const startDateTime = parseDateTime(fromDate, fromTime);
-    const endDateTime = parseDateTime(toDate, toTime);
-
-    if (!startDateTime.isValid()) {
-      setErrorMessage("Invalid Start Date or Time.");
-      setShowErrorModal(true);
-      return;
-    }
-    if (!endDateTime.isValid()) {
-      setErrorMessage("Invalid End Date or Time.");
-      setShowErrorModal(true);
-      return;
-    }
-
-    if (endDateTime.isBefore(startDateTime)) {
-      setErrorMessage("End time must be after start time.");
-      setShowErrorModal(true);
-      return;
-    }
-
     try {
       setIsLoading(true);
+
+      // Payload cho API request, định dạng startDate và dueDate theo chuẩn "YYYY-MM-DD HH:mm:ss"
       const payload = {
         content: taskName,
-        startDate: convertUserToSystemTime(startDateTime),
-        dueDate: convertUserToSystemTime(endDateTime),
+        startDate: `${dayjs(fromDate).format("YYYY-MM-DD")} ${fromTime}:00`,
+        dueDate: `${dayjs(toDate).format("YYYY-MM-DD")} ${toTime}:00`,
         priority: priority.toUpperCase() as TaskPriority,
         note: taskNote,
       };
-      console.log("Saving task payload:", payload);
-      console.log("START:", convertUserToSystemTime(startDateTime));
-      console.log("DUE:", convertUserToSystemTime(endDateTime));
 
-      // API Call to create the task
+      console.log("[DEBUG] Saving task payload:", payload);
+      console.log("[DEBUG] From Time:", fromTime);
+      console.log("[DEBUG] To Time:", toTime);
+      // Gửi request đến API để tạo task
       const response = await taskApi.createTask(payload);
 
-      // Log the response from API
-      console.log("API Response:", response);
-
-      setIsModalVisible(true);
+      console.log("[DEBUG] API Response:", response);
+      setIsModalVisible(true); // Hiển thị modal thành công
     } catch (error: any) {
-      console.error("Failed to create task:", error);
+      let apiMessage = "Failed to create task. Please try again.";
 
-      // Kết hợp thông báo lỗi từ API và giá trị dueDate vào thông báo lỗi
-      const msg = error?.response?.data?.message
-        ? `${error.response.data.message} (Due date received: ${endDateTime.format("YYYY-MM-DD HH:mm:ss")})`
-        : `Failed to create task. Due date received: ${endDateTime.format("YYYY-MM-DD HH:mm:ss")}. Please try again.`;
+      // Xử lý lỗi từ API
+      if (error?.response?.data) {
+        if (typeof error.response.data.message === "string") {
+          apiMessage = error.response.data.message;
+        } else if (Array.isArray(error.response.data.message)) {
+          apiMessage = error.response.data.message.join("\n");
+        } else {
+          console.error("[DEBUG] Full error.data:", error.response.data);
+        }
+      } else if (error?.message) {
+        apiMessage = error.message;
+      }
 
-      setErrorMessage(msg);
-      setShowErrorModal(true);
+      console.error("[DEBUG] Failed to create task:", apiMessage);
+
+      setErrorMessage(apiMessage);
+      setShowErrorModal(true); // Hiển thị modal lỗi
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Tắt trạng thái loading
     }
   };
 
@@ -199,7 +102,6 @@ export default function TaskDetail() {
       {/* Header */}
       <Appbar.Header mode="small" style={styles.header}>
         <Appbar.BackAction color="#F8F6F7" onPress={() => router.back()} />
-
         <Appbar.Content title="Add new task" titleStyle={styles.headerTitle} />
       </Appbar.Header>
 
@@ -216,7 +118,6 @@ export default function TaskDetail() {
               placeholder="Enter task name"
             />
           </View>
-
           {/* Task Note */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Task note (optional)</Text>
@@ -229,179 +130,155 @@ export default function TaskDetail() {
               textAlignVertical="top"
             />
           </View>
-
           {/* From Time and Date */}
           <View style={styles.row}>
             {/* From Time */}
             <View style={[styles.inputContainer, styles.halfWidth]}>
               <Text style={styles.inputLabel}>From time</Text>
-              <View style={styles.inputWithIcon}>
-                <TextInput
-                  style={styles.input}
-                  value={fromTime}
-                  onChangeText={(text) => setFromTime(formatTime(text))}
-                  placeholder="HH:mm"
-                  keyboardType="numeric"
-                />
+              <Pressable onPress={() => setShowFromTimePicker(true)}>
+                <Text style={styles.input}>{fromTime}</Text>
                 <Ionicons
                   name="time-outline"
                   size={24}
                   color="#49454F"
                   style={styles.icon}
                 />
-              </View>
+              </Pressable>
+
+              {showFromTimePicker && (
+                <DateTimePicker
+                  value={dayjs(
+                    `${fromDate} ${fromTime}`,
+                    "DD-MM-YYYY HH:mm"
+                  ).toDate()}
+                  mode="time"
+                  display="spinner"
+                  is24Hour={true}
+                  onChange={(event, selectedTime) => {
+                    setShowFromTimePicker(false);
+                    if (selectedTime) {
+                      // Thêm giây mặc định là 00
+                      const fullTime = `${selectedTime.getHours().toString().padStart(2, "0")}:${selectedTime
+                        .getMinutes()
+                        .toString()
+                        .padStart(2, "0")}:00`;
+                      setFromTime(fullTime);
+                    }
+                  }}
+                />
+              )}
             </View>
 
             {/* From Date */}
             <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.inputLabel}>From date</Text>
-              <Pressable onPress={() => setShowFromDatePicker(true)}>
-                <Text style={styles.input}>{fromDate}</Text>
-                <Ionicons
-                  name="calendar-outline"
-                  size={24}
-                  color="#49454F"
-                  style={styles.icon}
-                />
-              </Pressable>
-
+              <TextInput
+                mode="outlined"
+                label="From date"
+                value={formatDateDisplay(fromDate)}
+                editable={false}
+                outlineStyle={{ borderRadius: 999 }}
+                right={
+                  <TextInput.Icon
+                    icon={() => (
+                      <Ionicons
+                        name="calendar-outline"
+                        size={24}
+                        color="#49454F"
+                      />
+                    )}
+                    onPress={() => setShowFromDatePicker(true)}
+                  />
+                }
+              />
               {showFromDatePicker && (
                 <DateTimePicker
-                  value={new Date(now.format())}
+                  value={fromDate}
                   mode="date"
-                  display="calendar"
+                  display="default"
                   onChange={(event, selectedDate) => {
-                    const date = selectedDate || new Date();
                     setShowFromDatePicker(false);
-                    setFromDate(dayjs(date).format("DD-MM-YYYY"));
+                    if (event.type === "set" && selectedDate) {
+                      setFromDate(selectedDate);
+                    }
                   }}
                 />
               )}
             </View>
           </View>
 
+          {/* To Time and Date */}
           <View style={styles.row}>
             {/* To Time */}
             <View style={[styles.inputContainer, styles.halfWidth]}>
               <Text style={styles.inputLabel}>To time</Text>
-              <View style={styles.inputWithIcon}>
-                <TextInput
-                  style={styles.input}
-                  value={toTime}
-                  onChangeText={(text) => setToTime(formatTime(text))} // Format time as HH:mm
-                  placeholder="HH:mm"
-                  keyboardType="numeric"
-                />
+              <Pressable onPress={() => setShowToTimePicker(true)}>
+                <Text style={styles.input}>{toTime}</Text>
                 <Ionicons
                   name="time-outline"
                   size={24}
                   color="#49454F"
                   style={styles.icon}
                 />
-              </View>
-            </View>
-
-            {/* To Date */}
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.inputLabel}>To date</Text>
-              <Pressable onPress={() => setShowToDatePicker(true)}>
-                <Text style={styles.input}>{toDate}</Text>
-                <Ionicons
-                  name="calendar-outline"
-                  size={24}
-                  color="#49454F"
-                  style={styles.icon}
-                />
               </Pressable>
 
-              {showToDatePicker && (
+              {showToTimePicker && (
                 <DateTimePicker
-                  value={new Date(now.format())}
-                  mode="date"
-                  display="calendar" // Use the calendar display
-                  onChange={(event, selectedDate) => {
-                    const date = selectedDate || new Date();
-                    setShowToDatePicker(false);
-                    setToDate(dayjs(date).format("DD-MM-YYYY"));
+                  value={dayjs(
+                    `${toDate} ${toTime}`,
+                    "DD-MM-YYYY HH:mm"
+                  ).toDate()}
+                  mode="time"
+                  display="spinner"
+                  is24Hour={true}
+                  onChange={(event, selectedTime) => {
+                    setShowToTimePicker(false);
+                    if (selectedTime) {
+                      const fullTime = `${selectedTime.getHours().toString().padStart(2, "0")}:${selectedTime
+                        .getMinutes()
+                        .toString()
+                        .padStart(2, "0")}:00`;
+                      setToTime(fullTime);
+                    }
                   }}
                 />
               )}
             </View>
-          </View>
-        </View>
 
-        {/* Priority */}
-        <View className="bg-white p-4 mb-4 mt-4">
-          <Text className="text-[16px] font-PoppinsSemiBold">Priority</Text>
-          <View className="flex-row justify-between mt-4">
-            <Pressable
-              style={styles.priorityOption}
-              onPress={() => setPriority("high")}
-            >
-              <View
-                style={[
-                  styles.radio,
-                  priority === "high" && styles.radioSelected,
-                  { borderColor: getPriorityColor("high") },
-                ]}
-              >
-                {priority === "high" && (
-                  <View
-                    style={[
-                      styles.radioInner,
-                      { backgroundColor: getPriorityColor("high") },
-                    ]}
+            {/* To Date */}
+            <View style={[styles.inputContainer, styles.halfWidth]}>
+              <TextInput
+                mode="outlined"
+                label="To date"
+                value={formatDateDisplay(toDate)}
+                editable={false}
+                outlineStyle={{ borderRadius: 999 }}
+                right={
+                  <TextInput.Icon
+                    icon={() => (
+                      <Ionicons
+                        name="calendar-outline"
+                        size={24}
+                        color="#49454F"
+                      />
+                    )}
+                    onPress={() => setShowToDatePicker(true)}
                   />
-                )}
-              </View>
-              <Text style={styles.priorityText}>High</Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.priorityOption}
-              onPress={() => setPriority("medium")}
-            >
-              <View
-                style={[
-                  styles.radio,
-                  priority === "medium" && styles.radioSelected,
-                  { borderColor: getPriorityColor("medium") },
-                ]}
-              >
-                {priority === "medium" && (
-                  <View
-                    style={[
-                      styles.radioInner,
-                      { backgroundColor: getPriorityColor("medium") },
-                    ]}
-                  />
-                )}
-              </View>
-              <Text style={styles.priorityText}>Medium</Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.priorityOption}
-              onPress={() => setPriority("low")}
-            >
-              <View
-                style={[
-                  styles.radio,
-                  priority === "low" && styles.radioSelected,
-                  { borderColor: getPriorityColor("low") },
-                ]}
-              >
-                {priority === "low" && (
-                  <View
-                    style={[
-                      styles.radioInner,
-                      { backgroundColor: getPriorityColor("low") },
-                    ]}
-                  />
-                )}
-              </View>
-              <Text style={styles.priorityText}>Low</Text>
-            </Pressable>
+                }
+              />
+              {showToDatePicker && (
+                <DateTimePicker
+                  value={toDate}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowToDatePicker(false);
+                    if (event.type === "set" && selectedDate) {
+                      setToDate(selectedDate);
+                    }
+                  }}
+                />
+              )}
+            </View>
           </View>
         </View>
 
@@ -410,6 +287,7 @@ export default function TaskDetail() {
           <Text className="text-white text-lg font-PoppinsRegular">Save</Text>
         </Pressable>
       </ScrollView>
+
       {/* Success Modal */}
       <SuccessModal
         visible={isModalVisible}
@@ -427,7 +305,6 @@ export default function TaskDetail() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   header: {
     backgroundColor: "#90717E",

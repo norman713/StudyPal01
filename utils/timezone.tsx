@@ -5,38 +5,45 @@ import utc from "dayjs/plugin/utc";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-/**
- * Timezone chuẩn của hệ thống (BE đang dùng)
- * FE sẽ convert mọi time về timezone này trước khi gửi API
- */
 export const SYSTEM_TIME_ZONE = "Asia/Ho_Chi_Minh";
 
 /**
- * Detect timezone của user (theo device)
+ * Parse input từ FE (Date | string) → dayjs chuẩn
+ * @param date Date | string | dayjs.Dayjs
  */
-export const getUserTimeZone = (): string => {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+const parseToDayjs = (date: Date | string | dayjs.Dayjs): dayjs.Dayjs => {
+  if (dayjs.isDayjs(date)) return date;
+  if (date instanceof Date) return dayjs(date);
+  return dayjs(date); // string
 };
 
 /**
- * Convert time user chọn → system timezone → string gửi BE
- * @param date Dayjs (theo giờ user)
+ * FE → BE
+ * Input: Date | string | dayjs
+ * Output: yyyy-MM-dd HH:mm:ss (system timezone)
  */
-export const convertUserToSystemTime = (date: dayjs.Dayjs): string => {
-  const userTZ = getUserTimeZone();
+export const convertUserToSystemTime = (
+  date: Date | string | dayjs.Dayjs
+): string => {
+  const parsed = parseToDayjs(date);
 
-  return date
-    .tz(userTZ, true) // giữ nguyên giờ user chọn
-    .tz(SYSTEM_TIME_ZONE) // convert sang system timezone
-    .format("YYYY-MM-DD HH:mm:ss");
+  // Convert sang system timezone
+  const result = parsed.tz(SYSTEM_TIME_ZONE).format("YYYY-MM-DD HH:mm:ss");
+
+  if (__DEV__) {
+    console.log("[convertUserToSystemTime]");
+    console.log("Input :", parsed.format());
+    console.log("Output:", result);
+  }
+
+  return result;
 };
 
 /**
- * Convert time từ BE (system timezone) → giờ user để hiển thị
- * @param dateStr string yyyy-MM-dd HH:mm:ss
+ * BE → FE
+ * Input: yyyy-MM-dd HH:mm:ss (system timezone)
+ * Output: dayjs object theo giờ user
  */
 export const convertSystemToUserTime = (dateStr: string): dayjs.Dayjs => {
-  const userTZ = getUserTimeZone();
-
-  return dayjs.tz(dateStr, SYSTEM_TIME_ZONE).tz(userTZ);
+  return dayjs.tz(dateStr, SYSTEM_TIME_ZONE).local();
 };

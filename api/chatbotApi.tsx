@@ -79,20 +79,27 @@ const chatbotApi = {
     files?: any[]
   ): Promise<void> {
     const formData = new FormData();
+    const requestBody = JSON.stringify(payload);
 
     if (Platform.OS === "web") {
       formData.append(
         "request",
-        new Blob([JSON.stringify(payload)], {
+        new Blob([requestBody], {
           type: "application/json",
         })
       );
     } else {
-      formData.append("request", JSON.stringify(payload));
+      // React Native: Use the specific object format like in chatApi.ts
+      formData.append("request", {
+        string: requestBody,
+        type: "application/json",
+      } as any);
     }
 
     if (files?.length) {
       files.forEach((file) => {
+        // Ensure file has necessary properties for RN if needed,
+        // relying on caller passing correct file objects for now but appending directly
         formData.append("files", file as any);
       });
     }
@@ -100,8 +107,18 @@ const chatbotApi = {
     await axiosInstance.post("/chatbot/messages", formData, {
       headers: {
         "Idempotency-Key": idempotencyKey,
+        "Content-Type": "multipart/form-data",
+      },
+      transformRequest: (data, headers) => {
+        // React Native specific: Avoid axios serializing FormData
+        return data;
       },
     });
+  },
+
+  async getUserQuotaUsage(): Promise<any> {
+    const res = await axiosInstance.get("/chatbot/usage");
+    return res;
   },
 };
 

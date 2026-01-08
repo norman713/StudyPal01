@@ -129,7 +129,6 @@ export default function HeaderSection({
             // Using similar colors as in Plan
             let bg = "transparent";
             let color = "#000";
-            let radius = 10;
 
             if (isToday) {
               bg = "#B8C6B6"; // Green
@@ -151,7 +150,7 @@ export default function HeaderSection({
                 style={{
                   width: 40,
                   height: 40,
-                  borderRadius: radius,
+
                   backgroundColor: bg,
                   alignItems: "center",
                   justifyContent: "center",

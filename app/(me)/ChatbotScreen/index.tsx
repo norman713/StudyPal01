@@ -29,6 +29,10 @@ export default function ChatbotScreen() {
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [input, setInput] = useState("");
   const flatListRef = useRef<FlatList<UIMessage>>(null);
+  const [quotaUsage, setQuotaUsage] = useState<{
+    usedQuota: number;
+    dailyQuota: number;
+  } | null>(null); // Store quota data
 
   const mapToUIMessage = (m: ChatbotMessage): UIMessage => ({
     id: m.id,
@@ -38,6 +42,7 @@ export default function ChatbotScreen() {
 
   useEffect(() => {
     fetchMessages();
+    fetchQuotaUsage();
   }, []);
 
   const fetchMessages = async () => {
@@ -47,6 +52,16 @@ export default function ChatbotScreen() {
       setMessages(uiMessages);
     } catch (e) {
       console.error("Failed to load messages mobile", e);
+    }
+  };
+
+  // Fetch the quota usage and calculate the percentage
+  const fetchQuotaUsage = async () => {
+    try {
+      const res = await chatbotApi.getUserQuotaUsage();
+      setQuotaUsage(res);
+    } catch (e) {
+      console.error("Failed to fetch quota usage", e);
     }
   };
 
@@ -75,9 +90,9 @@ export default function ChatbotScreen() {
     const userId = `${idempotencyKey}-user`;
     const botId = `${idempotencyKey}-bot`;
     setMessages((prev) => [
-      ...prev,
-      { id: userId, role: "user", content: prompt },
       { id: botId, role: "bot", content: "" },
+      { id: userId, role: "user", content: prompt },
+      ...prev,
     ]);
 
     setInput("");
@@ -103,6 +118,12 @@ export default function ChatbotScreen() {
         );
       },
     });
+  };
+  // Calculate the usage percentage
+  const calculateQuotaPercentage = () => {
+    if (!quotaUsage || quotaUsage.dailyQuota === 0) return 0;
+    const percentage = (quotaUsage.usedQuota / quotaUsage.dailyQuota) * 100;
+    return Math.round(percentage);
   };
 
   return (
@@ -132,8 +153,9 @@ export default function ChatbotScreen() {
 
       {/* CHAT */}
       <FlatList
-        ref={flatListRef}
+        inverted
         data={messages}
+        ref={flatListRef}
         keyExtractor={(item) => item.id}
         style={{ flex: 1 }}
         keyboardDismissMode="on-drag"
@@ -174,8 +196,13 @@ export default function ChatbotScreen() {
       />
 
       {/* USAGE */}
-      <Text className="text-center text-lg text-neutral-500 mb-2">
-        You have used 30% of bot data today.
+
+      <Text className="text-center font-medium text-lg text-neutral-500 mb-2">
+        You have used{" "}
+        <Text className="text-[#90717E]">
+          {quotaUsage ? Math.round(calculateQuotaPercentage()) : 0}%
+        </Text>{" "}
+        of bot today
       </Text>
 
       {/* CONTEXT */}

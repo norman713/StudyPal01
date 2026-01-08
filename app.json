@@ -4,30 +4,26 @@
     "slug": "StudyPal",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/AppIcon.png", 
-
+    "icon": "./assets/images/AppIcon.png",
     "scheme": "studypal",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-
     "ios": {
       "supportsTablet": true
     },
-
     "android": {
-      "package": "com.nitb.StudyPal"  
+      "package": "com.nitb.StudyPal"
     },
     "splash": {
-      "image": "./assets/images/background.png",  
-      "resizeMode": "contain",  
-      "backgroundColor": "#90717E"  
+      "image": "./assets/images/background.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#90717E"
     },
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png",
       "bundler": "metro"
     },
-
     "plugins": [
       "expo-router",
       "expo-secure-store",
@@ -40,19 +36,22 @@
         }
       ]
     ],
-
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
-
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "63a9367c-bd68-4b52-9791-541447bf191e"
+        "projectId": "f2e9d807-9163-43b7-b492-dff588b69d17"
       }
     },
-
-    "owner": "norman7132"
+    "owner": "norman7132",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f2e9d807-9163-43b7-b492-dff588b69d17"
+    }
   }
 }

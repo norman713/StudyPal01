@@ -123,48 +123,46 @@ async function connectSSE(
   // ===============================
   // 📦 FORM DATA SETUP
   // ===============================
-  let body: FormData | string;
+  const formData = new FormData();
   const jsonString = JSON.stringify(payload);
 
   if (Platform.OS === "web") {
-    const formData = new FormData();
     formData.append(
       "request",
       new Blob([jsonString], { type: "application/json" })
     );
-    body = formData;
   } else {
-    body = jsonString;
+    // React Native: Use specific object format just like in chatApi.ts and chatbotApi.tsx
+    formData.append("request", {
+      string: jsonString,
+      type: "application/json",
+    } as any);
   }
 
   // ===============================
   // 🌐 EXECUTION
   // ===============================
-  if (Platform.OS === "web") {
-    const sseUrl =
-      `${BASE_URL}/sse/chatbot/messages` +
-      `?access_token=${encodeURIComponent(accessToken)}`;
+  const sseUrl = `${BASE_URL}/sse/chatbot/messages`;
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    Accept: "text/event-stream",
+    "Idempotency-Key": idempotencyKey,
+  };
 
+  if (Platform.OS === "web") {
     await streamWeb({
       url: sseUrl,
-      headers: {
-        Accept: "text/event-stream",
-        "Idempotency-Key": idempotencyKey,
-      },
-      body: body as FormData,
+      headers,
+      body: formData,
       onChunk,
       onDone,
       onError,
     });
   } else {
     await streamNative({
-      url: `${BASE_URL}/sse/chatbot/messages`,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: "text/event-stream",
-        "Idempotency-Key": idempotencyKey,
-      },
-      body: body as string,
+      url: sseUrl,
+      headers,
+      body: formData,
       onChunk,
       onDone,
       onError,
@@ -262,7 +260,7 @@ function streamNative({
 }: {
   url: string;
   headers: any;
-  body: string;
+  body: any;
   onChunk: OnChunk;
   onDone?: OnDone;
   onError?: OnError;
@@ -283,7 +281,6 @@ function streamNative({
     // Safety wrappers
     const safeOnDone = () => {
       if (!isFinished) {
-        console.log("[ChatbotSSE] Native stream completing (SAFE DONE).");
         isFinished = true;
         onDone?.();
         resolve(); // <--- Resolve the main Promise here
@@ -458,17 +455,13 @@ function processEvents(
     if (event === "message" || (!event && data)) {
       try {
         const json = JSON.parse(data);
-
-        // 🛠 Fix: Per user spec, reply === "" means stream finished
         if (json?.reply === "") {
-          console.log("[ChatbotSSE] Empty reply detected -> Stream DONE.");
-          onDone?.(); // Trigger success
-          continue; // Skip processing this empty chunk
+          onDone?.();
+          continue;
         }
 
         const chunk = json?.reply ?? "";
         if (chunk) {
-          // Guard user callback
           try {
             onChunk(chunk);
           } catch (cbErr) {
