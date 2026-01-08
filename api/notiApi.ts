@@ -11,6 +11,7 @@ export interface NotificationItem {
   subject: string; // ví dụ: "PLAN"
   subjectId: string;
   read: boolean;
+  imageUrl:string |null
 }
 
 export interface NotificationListResponse {

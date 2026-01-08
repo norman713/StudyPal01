@@ -56,11 +56,19 @@ const memberApi = {
     return res;
   },
 
-  async removeMember(teamId: string, memberId: string): Promise<{ success: boolean; message: string }> {
-    const url = `/members`;
-    const params = { teamId, memberId };
-    return await axiosInstance.delete(url, { params });
-  },
+async removeMember(
+  teamId: string,
+  memberId: string
+): Promise<{ success: boolean; message: string }> {
+  const url = "/members";
+
+  const res = (await axiosInstance.delete(url, {
+    data: { teamId, memberId }, 
+  })) as { success: boolean; message: string };
+
+  return res;
+},
+
 
 };
 

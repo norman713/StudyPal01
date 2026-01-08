@@ -187,6 +187,10 @@ export default function TeamMembersScreen() {
 
   const currentRole = role as Role;
 
+  const [errorModalOpen, setErrorModalOpen] = useState(false);
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+
   useEffect(() => {
     const fetchMembers = async () => {
       if (!teamId) return;

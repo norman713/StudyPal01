@@ -193,7 +193,23 @@ export default function NotificationPage() {
                 />
 
                 {/* Icon + content */}
-                <Image source={config.icon} className="w-10 h-10 ml-2" />
+                {n.subject === "TEAM" ? (
+                  n.imageUrl ? (
+                    <Image
+                      source={{ uri: n.imageUrl }}
+                      className="w-12 h-12 ml-2 rounded-full"
+                    />
+                  ) : (
+                    <View className="w-12 h-12 ml-2 rounded-full bg-[#6B4EFF] items-center justify-center">
+                      <Text className="text-white font-bold">
+                        {n.title?.charAt(0) || "T"}
+                      </Text>
+                    </View>
+                  )
+                ) : (
+                  <Image source={config.icon} className="w-10 h-10 ml-2" />
+                )}
+
                 <View className="ml-3 flex-1">
                   <Text className="font-semibold text-black text-[16px]">
                     {n.title}

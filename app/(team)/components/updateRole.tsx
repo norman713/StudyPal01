@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Avatar } from "react-native-paper";
 
 interface UpdateRoleModalProps {
   visible: boolean;
@@ -58,11 +59,24 @@ export default function UpdateRoleModal({
             {userAvatar ? (
               <Image
                 source={{ uri: userAvatar }}
-                className="w-14 h-14 rounded-full mr-1"
+                className="w-14 h-14 rounded-full mr-2"
               />
             ) : (
-              <View className="w-5 h-5 bg-gray-300 rounded-full mr-1" />
+              <Avatar.Text
+                size={35}
+                label={userName ? userName.charAt(0).toUpperCase() : "U"}
+                labelStyle={{
+                  fontSize: 20,
+                  fontWeight: "800",
+                  color: "#fff",
+                }}
+                style={{
+                  backgroundColor: "#6B4EFF",
+                  marginRight: 8,
+                }}
+              />
             )}
+
             <Text className="text-[15px] text-[#7E9181]">
               Change{" "}
               <Text className="text-black font-PoppinsMedium">{userName}</Text>

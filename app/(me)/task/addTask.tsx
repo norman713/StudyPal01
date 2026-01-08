@@ -13,8 +13,6 @@ import taskApi, { TaskPriority } from "../../../api/taskApi";
 
 export default function TaskDetail() {
   const params = useLocalSearchParams();
-  const taskId = params.taskId as string;
-
   // Default values: Current date and time
   const now = dayjs();
   const [taskName, setTaskName] = useState(""); // Empty initially
@@ -135,8 +133,11 @@ export default function TaskDetail() {
             value={taskNote}
             onChangeText={setTaskNote}
             multiline
-            numberOfLines={4}
+            numberOfLines={7}
             textAlignVertical="top"
+            style={{
+              height: 140,
+            }}
           />
 
           {/* From Time and Date */}
@@ -390,15 +391,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 10,
   },
-  taskHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 9,
-    paddingVertical: 10,
-    backgroundColor: "#F8F6F7",
-    marginBottom: 10,
-  },
   taskId: {
     fontSize: 16,
     fontFamily: "Poppins_600SemiBold",
@@ -412,19 +404,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    position: "absolute",
-    top: -10,
-    left: 12,
-    backgroundColor: "#fff",
-    paddingHorizontal: 4,
-    fontSize: 12,
-    color: "#49454F",
-    zIndex: 1,
-  },
 
   row: {
     flexDirection: "row",
@@ -434,15 +413,6 @@ const styles = StyleSheet.create({
   halfWidth: {
     flex: 1,
   },
-  inputWithIcon: {
-    position: "relative",
-  },
-  icon: {
-    position: "absolute",
-    right: 16,
-    top: 8,
-  },
-
   priorityOption: {
     flexDirection: "row",
     alignItems: "center",
@@ -456,28 +426,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  radioSelected: {
-    backgroundColor: "#E6E6E6",
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  priorityText: {
-    fontSize: 16,
-    fontFamily: "Poppins_400Regular",
-    color: "#1E1E1E",
-  },
-  menuItem: {
-    backgroundColor: "#F8F6F7",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 9,
-    paddingVertical: 10,
-    marginBottom: 10,
-  },
+
   saveButton: {
     backgroundColor: "#90717E",
     borderRadius: 100,

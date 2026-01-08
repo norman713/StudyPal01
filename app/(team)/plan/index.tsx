@@ -1,15 +1,22 @@
 import planApi, { Plan } from "@/api/planApi";
 import ChatBotSection from "@/app/(me)/task/components/Chatbot";
-import BottomBar from "@/components/ui/buttom";
-import Header from "@/components/ui/header";
 import dayjs from "dayjs";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { Alert, FlatList, StyleSheet, View } from "react-native";
+import {
+  Alert,
+  FlatList,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Appbar } from "react-native-paper";
 import PlanHeader from "./components/PlanScreen/Header";
 import PlanList from "./components/PlanScreen/PlanList";
 
 const ACCENT = "#90717E";
+const addButtonImg = require("../../../assets/images/Addbutton.png");
 
 type Role = "OWNER" | "ADMIN" | "MEMBER";
 
@@ -160,8 +167,19 @@ export default function PlanScreen() {
 
   return (
     <View style={styles.container}>
-      <Header scope="team" />
-      <View className="flex-1 pb-16">
+      <Appbar.Header mode="small" style={{ backgroundColor: "#90717E" }}>
+        <Appbar.BackAction color="#F8F6F7" onPress={() => router.back()} />
+
+        <Appbar.Content
+          title={teamName || "Team"}
+          titleStyle={{
+            color: "#F8F6F7",
+            fontWeight: "700",
+            fontSize: 16,
+          }}
+        />
+      </Appbar.Header>
+      <View className="flex-1 pb-4">
         <FlatList
           data={[1]}
           renderItem={null}
@@ -192,7 +210,7 @@ export default function PlanScreen() {
       </View>
 
       {/* Sử dụng FAB sẵn có của BottomBar */}
-      <BottomBar
+      {/* <BottomBar
         activeTab={bottomTab}
         onTabPress={(tab) => {
           setBottomTab(tab);
@@ -212,7 +230,16 @@ export default function PlanScreen() {
           }
         }}
         onCenterPress={handleCreatePlan}
-      />
+      /> */}
+      <View className="items-center mb-6">
+        <TouchableOpacity onPress={handleCreatePlan} activeOpacity={0.7}>
+          <Image
+            source={addButtonImg}
+            style={{ width: 60, height: 60 }}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }

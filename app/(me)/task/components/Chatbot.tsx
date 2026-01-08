@@ -9,15 +9,13 @@ export default function ChatBotSection() {
       onPress={() => router.push("/(me)/ChatbotScreen")}
       className="mb-5"
     >
-      {({ pressed }) => (
-        <View className="bg-white  py-2">
-          <Image
-            source={chatbotImage}
-            className="w-full h-12"
-            resizeMode="contain"
-          />
-        </View>
-      )}
+      <View className="bg-white  py-2">
+        <Image
+          source={chatbotImage}
+          className="w-full h-12"
+          resizeMode="contain"
+        />
+      </View>
     </Pressable>
   );
 }

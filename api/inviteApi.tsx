@@ -51,10 +51,12 @@ const inviteApi = {
     cursor?: string,
     size: number = 10
   ): Promise<InvitationListResponse> {
-    const url = `/invitations/all`;
+    const url = "/invitations/all";
     const params = { cursor, size };
-    const res = await axiosInstance.get(url, { params });
-    return res as unknown as InvitationListResponse;
+    const res = (await axiosInstance.get(url, {
+      params,
+    })) as InvitationListResponse;
+    return res;
   },
 
   /**

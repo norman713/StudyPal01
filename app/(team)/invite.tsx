@@ -38,10 +38,6 @@ export default function InviteUserScreen() {
     ? teamIdRaw[0]
     : (teamIdRaw as string);
 
-  console.log("InviteScreen LOCAL params:", JSON.stringify(localParams));
-  console.log("InviteScreen GLOBAL params:", JSON.stringify(globalParams));
-  console.log("InviteScreen Resolved teamId:", teamId);
-
   /* =======================
      Search state
   ======================= */
@@ -132,8 +128,8 @@ export default function InviteUserScreen() {
         inviteeId: selectedUser.id,
       });
 
-      setConfirmOpen(false); // Close confirm modal only on success
-      setTimeout(() => setSuccessOpen(true), 300); // Open success modal
+      setConfirmOpen(false);
+      setTimeout(() => setSuccessOpen(true), 300);
     } catch (err: any) {
       const apiMessage =
         err?.response?.data?.message ||

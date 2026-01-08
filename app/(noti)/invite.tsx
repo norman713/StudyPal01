@@ -23,6 +23,7 @@ export default function InvitationPage() {
     try {
       setLoading(true);
       const res = await inviteApi.getAll();
+      console.log("[InviteApi.getAll] invitations:", res);
       setInvitations(res.invitations);
     } catch (err) {
       console.error("Failed to fetch invitations:", err);
@@ -90,8 +91,8 @@ export default function InvitationPage() {
                   className="w-12 h-12 rounded-full"
                 />
               ) : (
-                <View className="w-12 h-12 rounded-full bg-[#E0E7FF] items-center justify-center">
-                  <Text className="font-bold text-[#334155] text-lg">
+                <View className="w-12 h-12 rounded-full bg-[#6B4EFF] items-center justify-center">
+                  <Text className="font-bold text-[#fff] text-lg">
                     {inv.inviterName?.charAt(0).toUpperCase() || "U"}
                   </Text>
                 </View>
