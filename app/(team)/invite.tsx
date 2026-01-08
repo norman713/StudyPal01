@@ -2,9 +2,13 @@ import inviteApi from "@/api/inviteApi";
 import userApi from "@/api/userApi";
 import QuestionModal from "@/components/modal/question";
 import SuccessModal from "@/components/modal/success";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  useGlobalSearchParams,
+  useLocalSearchParams,
+  useRouter,
+} from "expo-router";
 import React, { useEffect, useState } from "react";
-import { FlatList, Text, View } from "react-native";
+import { Alert, FlatList, Text, View } from "react-native";
 import {
   Appbar,
   Avatar,
@@ -24,7 +28,18 @@ const ACCENT = "#90717E";
 
 export default function InviteUserScreen() {
   const router = useRouter();
-  const { teamId } = useLocalSearchParams<{ teamId: string }>();
+  const localParams = useLocalSearchParams();
+  const globalParams = useGlobalSearchParams();
+
+  // Try both
+  const teamIdRaw = localParams.teamId || globalParams.teamId;
+  const teamId = Array.isArray(teamIdRaw)
+    ? teamIdRaw[0]
+    : (teamIdRaw as string);
+
+  console.log("InviteScreen LOCAL params:", JSON.stringify(localParams));
+  console.log("InviteScreen GLOBAL params:", JSON.stringify(globalParams));
+  console.log("InviteScreen Resolved teamId:", teamId);
 
   /* =======================
      Search state
@@ -83,19 +98,47 @@ export default function InviteUserScreen() {
   };
 
   const handleConfirmInvite = async () => {
-    if (!selectedUser || !teamId) return;
+    // console.log("Confirm pressed");
+    // Alert.alert("Debug", "Button Pressed"); // Uncomment if needed for extreme debugging
+
+    console.log("[handleConfirmInvite] Selected user:", selectedUser);
+    if (!selectedUser) return;
+
+    console.log("[handleConfirmInvite] Team ID:", teamId);
+    if (!teamId) {
+      // DEBUG: Alert if teamId is missing
+      Alert.alert("Error", "Team ID is missing. Cannot invite.");
+      return;
+    }
 
     try {
-      setConfirmOpen(false);
+      // Don't close immediately, wait for API to ensure user knows something happened
+      // setConfirmOpen(false);
+
+      // Show loading indicator if possible, or just await
+      const teamIdStr = Array.isArray(teamId) ? teamId[0] : teamId;
+      console.log("[inviteUser] Inviting using teamId:", teamIdStr);
+
+      if (!teamIdStr) {
+        Alert.alert("Error", "Team ID invalid.");
+        return;
+      }
 
       await inviteApi.inviteUser({
-        teamId,
+        teamId: teamIdStr,
         inviteeId: selectedUser.id,
       });
 
-      setSuccessOpen(true);
-    } catch (err) {
+      setConfirmOpen(false); // Close confirm modal only on success
+      setTimeout(() => setSuccessOpen(true), 300); // Open success modal
+    } catch (err: any) {
       console.error("[inviteUser] Error:", err);
+      // Alert error to user
+      Alert.alert(
+        "Invitation Failed",
+        err?.response?.data?.message || "Something went wrong."
+      );
+      setConfirmOpen(false); // Close anyway or keep open? keep open is better for retry, but maybe close for now.
     }
   };
 

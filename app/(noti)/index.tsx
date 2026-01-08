@@ -66,23 +66,45 @@ export default function NotificationPage() {
       const idsToDelete = notifications
         .filter((n) => n.checked)
         .map((n) => n.id);
-      await Promise.all(idsToDelete.map((id) => notificationApi.delete(id)));
-      setNotifications((prev) => prev.filter((n) => !n.checked));
+
+      if (idsToDelete.length === 0) return;
+
+      setLoading(true);
+      await notificationApi.deleteMany(idsToDelete);
+      setNotifications((prev) =>
+        prev.filter((n) => !idsToDelete.includes(n.id))
+      );
     } catch (err) {
       console.error("[handleDelete] Error:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleMarkRead = () => {
-    setNotifications((prev) =>
-      prev.map((n) => {
-        if (!n.checked) return n;
-        const toggleTo = prev.filter((x) => x.checked).every((x) => !x.read)
-          ? true
-          : !n.read;
-        return { ...n, read: toggleTo, checked: false };
-      })
-    );
+  const handleMarkRead = async () => {
+    try {
+      const idsToMark = notifications
+        .filter((n) => n.checked) // Only process checked items
+        .map((n) => n.id);
+
+      if (idsToMark.length === 0) return;
+
+      setLoading(true);
+      await notificationApi.markManyAsRead(idsToMark);
+
+      setNotifications((prev) =>
+        prev.map((n) => {
+          if (idsToMark.includes(n.id)) {
+            return { ...n, read: true, checked: false };
+          }
+          return n;
+        })
+      );
+    } catch (err) {
+      console.error("[handleMarkRead] Error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ==============================

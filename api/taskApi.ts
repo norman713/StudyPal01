@@ -213,10 +213,11 @@ export interface Reminder {
 }
 
 export interface SearchTaskRequest {
-    keyword?: string;
-    fromDate: string; // "yyyy-MM-dd HH:mm:ss"
-    toDate: string;   // "yyyy-MM-dd HH:mm:ss"
+    keyword: string;
+    fromDate?: string |null; 
+    toDate?: string |null;   
     size: number;
+    cursor?: string | null; 
 }
 
 export interface SearchTaskResponse {
@@ -227,8 +228,8 @@ export interface SearchTaskResponse {
 
 export interface UpdateTaskRequest {
     content?: string;
-    startDate?: string;
-    dueDate?: string;
+    startDate?: string |null;
+    dueDate?: string |null;
     priority?: TaskPriority;
     note?: string;
 }

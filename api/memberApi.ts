@@ -31,7 +31,7 @@ const memberApi = {
     return await axiosInstance.delete(url, { params: { teamId } });
   },
 
-    async updateRole(
+  async updateRole(
     teamId: string,
     memberId: string,
     role: "OWNER" | "ADMIN" | "MEMBER"
@@ -44,7 +44,7 @@ const memberApi = {
     };
     return res;
   },
-    async join(teamCode: string): Promise<{ success: boolean; message: string }> {
+  async join(teamCode: string): Promise<{ success: boolean; message: string }> {
     const url = "/members";
     const params = { teamCode };
 
@@ -54,6 +54,12 @@ const memberApi = {
     };
 
     return res;
+  },
+
+  async removeMember(teamId: string, memberId: string): Promise<{ success: boolean; message: string }> {
+    const url = `/members`;
+    const params = { teamId, memberId };
+    return await axiosInstance.delete(url, { params });
   },
 
 };

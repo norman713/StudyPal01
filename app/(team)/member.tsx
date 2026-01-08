@@ -33,9 +33,9 @@ const RoleBadge = React.memo(({ role }: { role: Role }) => (
 ));
 
 const canShowKebab = (row: User, currentRole: Role): boolean => {
-  if (currentRole === "OWNER") return true;
-  if (currentRole === "ADMIN") return row.role === "MEMBER";
-  return false;
+  if (currentRole === "OWNER") return true; // Owner can manage everyone
+  if (currentRole === "ADMIN") return row.role === "MEMBER"; // Admin manages Members only
+  return false; // Member manages no one
 };
 
 const getMenuItems = (
@@ -43,7 +43,8 @@ const getMenuItems = (
   closeMenu: () => void,
   onOpenUpdateRole: (user: User) => void,
   router: ReturnType<typeof useRouter>,
-  currentRole: Role
+  currentRole: Role,
+  onRemove: (userId: string) => void
 ) => {
   const handleViewProfile = () => {
     closeMenu();
@@ -52,7 +53,8 @@ const getMenuItems = (
 
   const handleRemove = () => {
     closeMenu();
-    console.log("Remove", row.id);
+    // Call the passed onRemove handler
+    onRemove(row.id);
   };
 
   const handleUpdateRole = () => {
@@ -65,15 +67,24 @@ const getMenuItems = (
       <>
         <Menu.Item title="View profile" onPress={handleViewProfile} />
         <Menu.Item title="Update role" onPress={handleUpdateRole} />
-        <Menu.Item title="Remove" onPress={handleRemove} />
+        <Menu.Item
+          title="Remove from team"
+          onPress={handleRemove}
+          titleStyle={{ color: "#FF5F57" }}
+        />
       </>
     );
   }
 
+  // Admin view (implied by usage logic: only sees menu for Members)
   return (
     <>
       <Menu.Item title="View profile" onPress={handleViewProfile} />
-      <Menu.Item title="Remove" onPress={handleRemove} />
+      <Menu.Item
+        title="Remove from team"
+        onPress={handleRemove}
+        titleStyle={{ color: "#FF5F57" }}
+      />
     </>
   );
 };
@@ -86,6 +97,7 @@ const MemberRow = React.memo(
     router,
     onOpenUpdateRole,
     currentRole,
+    onRemove,
   }: {
     item: User;
     openMenuForId: string | null;
@@ -93,6 +105,7 @@ const MemberRow = React.memo(
     router: ReturnType<typeof useRouter>;
     onOpenUpdateRole: (user: User) => void;
     currentRole: Role;
+    onRemove: (userId: string) => void;
   }) => {
     const showDots = canShowKebab(item, currentRole);
     const isMenuOpen = openMenuForId === item.id;
@@ -115,8 +128,8 @@ const MemberRow = React.memo(
             <Avatar.Text
               size={40}
               label={item.name[0]?.toUpperCase() ?? "U"}
-              style={{ backgroundColor: "#D3E7E1" }}
-              color="#0F0C0D"
+              style={{ backgroundColor: "#6B4EFF" }}
+              color="#fff"
             />
           )
         }
@@ -142,7 +155,8 @@ const MemberRow = React.memo(
                 handleDismiss,
                 onOpenUpdateRole,
                 router,
-                currentRole
+                currentRole,
+                onRemove
               )}
             </Menu>
           ) : null
@@ -209,7 +223,7 @@ export default function TeamMembersScreen() {
   }, [members, query]);
 
   const handleInvite = () => {
-    router.push("/(team)/invite");
+    router.push(`/(team)/invite?teamId=${teamId}`);
   };
 
   const onOpenUpdateRole = (user: User) => {
@@ -266,6 +280,36 @@ export default function TeamMembersScreen() {
     setShowRoleModal(false);
   };
 
+  const handleDeleteMember = async (userId: string) => {
+    if (!teamId) return;
+
+    // Optional: Add confirmation dialog here
+    Alert.alert(
+      "Remove Member",
+      "Are you sure you want to remove this member?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await memberApi.removeMember(teamId, userId);
+              setMembers((prev) => prev.filter((m) => m.id !== userId));
+              Alert.alert("Success", "Member removed successfully");
+            } catch (err: any) {
+              console.error("Remove member error:", err);
+              Alert.alert("Error", "Failed to remove member");
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderItem = useCallback(
     ({ item }: { item: User }) => (
       <MemberRow
@@ -275,6 +319,7 @@ export default function TeamMembersScreen() {
         router={router}
         onOpenUpdateRole={onOpenUpdateRole}
         currentRole={currentRole}
+        onRemove={handleDeleteMember}
       />
     ),
     [openMenuForId, router, currentRole]
@@ -341,7 +386,8 @@ export default function TeamMembersScreen() {
             title={`Team members (${number})`}
             titleStyle={{ color: "#fff", fontSize: 18, fontWeight: "600" }}
           />
-          {currentRole !== "MEMBER" && (
+          {/* Add Member Icon: Show ONLY if role is ADMIN or OWNER */}
+          {(currentRole === "ADMIN" || currentRole === "OWNER") && (
             <Appbar.Action
               icon="account-plus"
               color="#fff"

@@ -4,13 +4,12 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
 
+import PrioritySelector from "@/app/(team)/plan/components/PrioritySelector";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Appbar, TextInput } from "react-native-paper";
 import taskApi, { TaskPriority } from "../../../api/taskApi";
-
-type TPriority = "high" | "medium" | "low";
 
 export default function TaskDetail() {
   const params = useLocalSearchParams();
@@ -28,7 +27,7 @@ export default function TaskDetail() {
   const nextHour = now.add(1, "hour");
   const [toTime, setToTime] = useState(nextHour.format("HH:mm"));
 
-  const [priority, setPriority] = useState<TPriority>("medium"); // Default medium
+  const [priority, setPriority] = useState<TaskPriority>("MEDIUM"); // Default medium
   const [isLoading, setIsLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -91,9 +90,9 @@ export default function TaskDetail() {
       console.error("[DEBUG] Failed to create task:", apiMessage);
 
       setErrorMessage(apiMessage);
-      setShowErrorModal(true); // Hiển thị modal lỗi
+      setShowErrorModal(true);
     } finally {
-      setIsLoading(false); // Tắt trạng thái loading
+      setIsLoading(false);
     }
   };
 
@@ -109,41 +108,62 @@ export default function TaskDetail() {
         {/* Add task detail  */}
         <View className="bg-white p-4 gap-2">
           {/* Task Name */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Task name</Text>
-            <TextInput
-              style={styles.input}
-              value={taskName}
-              onChangeText={setTaskName}
-              placeholder="Enter task name"
-            />
-          </View>
+          <TextInput
+            mode="outlined"
+            label="Task name"
+            theme={{
+              roundness: 10,
+              colors: {
+                background: "#FFFFFF",
+              },
+            }}
+            value={taskName}
+            onChangeText={setTaskName}
+            placeholder="Enter task name"
+          />
+
           {/* Task Note */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Task note (optional)</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={taskNote}
-              onChangeText={setTaskNote}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          </View>
+          <TextInput
+            mode="outlined"
+            label="Task note (optional)"
+            theme={{
+              roundness: 10,
+              colors: {
+                background: "#FFFFFF",
+              },
+            }}
+            value={taskNote}
+            onChangeText={setTaskNote}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+
           {/* From Time and Date */}
           <View style={styles.row}>
             {/* From Time */}
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.inputLabel}>From time</Text>
-              <Pressable onPress={() => setShowFromTimePicker(true)}>
-                <Text style={styles.input}>{fromTime}</Text>
-                <Ionicons
-                  name="time-outline"
-                  size={24}
-                  color="#49454F"
-                  style={styles.icon}
-                />
-              </Pressable>
+            <View>
+              <TextInput
+                mode="outlined"
+                label="From time"
+                value={fromTime}
+                editable={false}
+                theme={{
+                  roundness: 99,
+                  colors: {
+                    background: "#FFFFFF",
+                  },
+                }}
+                style={{ width: 130 }}
+                right={
+                  <TextInput.Icon
+                    icon={() => (
+                      <Ionicons name="time-outline" size={24} color="#49454F" />
+                    )}
+                    onPress={() => setShowFromTimePicker(true)}
+                  />
+                }
+              />
 
               {showFromTimePicker && (
                 <DateTimePicker
@@ -157,26 +177,40 @@ export default function TaskDetail() {
                   onChange={(event, selectedTime) => {
                     setShowFromTimePicker(false);
                     if (selectedTime) {
-                      // Thêm giây mặc định là 00
                       const fullTime = `${selectedTime.getHours().toString().padStart(2, "0")}:${selectedTime
                         .getMinutes()
                         .toString()
-                        .padStart(2, "0")}:00`;
+                        .padStart(2, "0")}`;
                       setFromTime(fullTime);
                     }
                   }}
+                  // onChange={(event, selectedTime) => {
+                  //   setShowFromTimePicker(false);
+                  //   if (selectedTime) {
+                  //     const fullTime = `${selectedTime.getHours().toString().padStart(2, "0")}:${selectedTime
+                  //       .getMinutes()
+                  //       .toString()
+                  //       .padStart(2, "0")}:00`;
+                  //     setFromTime(fullTime);
+                  //   }
+                  // }}
                 />
               )}
             </View>
 
             {/* From Date */}
-            <View style={[styles.inputContainer, styles.halfWidth]}>
+            <View style={[styles.halfWidth]}>
               <TextInput
                 mode="outlined"
                 label="From date"
                 value={formatDateDisplay(fromDate)}
                 editable={false}
-                outlineStyle={{ borderRadius: 999 }}
+                theme={{
+                  roundness: 99,
+                  colors: {
+                    background: "#FFFFFF",
+                  },
+                }}
                 right={
                   <TextInput.Icon
                     icon={() => (
@@ -209,17 +243,28 @@ export default function TaskDetail() {
           {/* To Time and Date */}
           <View style={styles.row}>
             {/* To Time */}
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.inputLabel}>To time</Text>
-              <Pressable onPress={() => setShowToTimePicker(true)}>
-                <Text style={styles.input}>{toTime}</Text>
-                <Ionicons
-                  name="time-outline"
-                  size={24}
-                  color="#49454F"
-                  style={styles.icon}
-                />
-              </Pressable>
+            <View>
+              <TextInput
+                mode="outlined"
+                label="To time"
+                value={toTime}
+                editable={false}
+                theme={{
+                  roundness: 99,
+                  colors: {
+                    background: "#FFFFFF",
+                  },
+                }}
+                style={{ width: 130 }}
+                right={
+                  <TextInput.Icon
+                    icon={() => (
+                      <Ionicons name="time-outline" size={24} color="#49454F" />
+                    )}
+                    onPress={() => setShowToTimePicker(true)}
+                  />
+                }
+              />
 
               {showToTimePicker && (
                 <DateTimePicker
@@ -236,22 +281,37 @@ export default function TaskDetail() {
                       const fullTime = `${selectedTime.getHours().toString().padStart(2, "0")}:${selectedTime
                         .getMinutes()
                         .toString()
-                        .padStart(2, "0")}:00`;
+                        .padStart(2, "0")}`;
                       setToTime(fullTime);
                     }
                   }}
+                  // onChange={(event, selectedTime) => {
+                  //   setShowToTimePicker(false);
+                  //   if (selectedTime) {
+                  //     const fullTime = `${selectedTime.getHours().toString().padStart(2, "0")}:${selectedTime
+                  //       .getMinutes()
+                  //       .toString()
+                  //       .padStart(2, "0")}:00`;
+                  //     setToTime(fullTime);
+                  //   }
+                  // }}
                 />
               )}
             </View>
 
             {/* To Date */}
-            <View style={[styles.inputContainer, styles.halfWidth]}>
+            <View style={[styles.halfWidth]}>
               <TextInput
                 mode="outlined"
                 label="To date"
                 value={formatDateDisplay(toDate)}
                 editable={false}
-                outlineStyle={{ borderRadius: 999 }}
+                theme={{
+                  roundness: 99,
+                  colors: {
+                    background: "#FFFFFF",
+                  },
+                }}
                 right={
                   <TextInput.Icon
                     icon={() => (
@@ -280,6 +340,13 @@ export default function TaskDetail() {
               )}
             </View>
           </View>
+        </View>
+        {/* Priority */}
+        <View className="pt-3">
+          <PrioritySelector
+            priority={priority}
+            onPriorityChange={setPriority}
+          />
         </View>
 
         {/* Save Button */}
@@ -358,30 +425,14 @@ const styles = StyleSheet.create({
     color: "#49454F",
     zIndex: 1,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: "#79747E",
-    borderRadius: 30,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    fontSize: 16,
-    fontFamily: "Poppins_400Regular",
-    color: "#0F0C0D",
-    backgroundColor: "#fff",
-  },
-  textArea: {
-    minHeight: 110,
-    paddingTop: 12,
-    textAlignVertical: "top",
-  },
+
   row: {
     flexDirection: "row",
+    marginVertical: 10,
     gap: 10,
-    marginBottom: 20,
   },
   halfWidth: {
     flex: 1,
-    marginBottom: 0,
   },
   inputWithIcon: {
     position: "relative",

@@ -15,11 +15,13 @@ export default function SearchTasksScreen() {
   // Default dates: today and 7 days from now, or just empty?
   // User example: "2025-12-10 00:00:00"
   // Let's settle on current date for UI, but formatted for API
-  const [fromDate, setFromDate] = useState(new Date());
-  const [toDate, setToDate] = useState(dayjs().add(7, "day").toDate());
+  const [fromDate, setFromDate] = useState<Date | null>(null);
+
+  const [toDate, setToDate] = useState<Date | null>(null);
 
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
 
   // Search results
   const [tasks, setTasks] = useState<PersonalTask[]>([]);
@@ -32,9 +34,7 @@ export default function SearchTasksScreen() {
   const handleSearch = async () => {
     try {
       if (!taskName.trim()) {
-        // If no keyword, clear list and return or alert?
-        // User asked why it calls API. So we should stop it.
-        // Let's clear the list to be distinct.
+        // If no keyword, clear list and return or alert
         setTasks([]);
         return;
       }
@@ -44,11 +44,17 @@ export default function SearchTasksScreen() {
       }
       setLoading(true);
 
+      // Prepare the request payload
       const request: SearchTaskRequest = {
-        keyword: taskName.trim() || undefined,
-        fromDate: dayjs(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss"),
-        toDate: dayjs(toDate).endOf("day").format("YYYY-MM-DD HH:mm:ss"),
-        size: 20,
+        keyword: taskName.trim(),
+        fromDate: fromDate
+          ? dayjs(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss")
+          : null,
+        toDate: toDate
+          ? dayjs(toDate).startOf("day").format("YYYY-MM-DD HH:mm:ss")
+          : null,
+        size: 20, // You can change this based on the number of tasks you want per request
+        cursor: nextCursor, // Pass the cursor for pagination
       };
 
       console.log("SEARCH REQUEST", request);
@@ -57,7 +63,9 @@ export default function SearchTasksScreen() {
 
       console.log("SEARCH RESPONSE", response);
 
+      // Set the tasks and nextCursor (if available)
       setTasks(response?.tasks ?? []);
+      setNextCursor(response?.nextCursor ?? null); // Update the nextCursor for pagination
     } catch (error: any) {
       console.error("Failed to search tasks");
       console.error(error?.response?.data || error);
@@ -82,9 +90,14 @@ export default function SearchTasksScreen() {
         <TextInput
           label="Search by task name"
           mode="outlined"
+          theme={{
+            roundness: 99,
+            colors: {
+              background: "#FFFFFF",
+            },
+          }}
           value={taskName}
           onChangeText={setTaskName}
-          outlineStyle={{ borderRadius: 30 }}
         />
 
         {/* Date Row */}
@@ -94,9 +107,15 @@ export default function SearchTasksScreen() {
             <TextInput
               mode="outlined"
               label="From date"
-              value={formatDateDisplay(fromDate)}
+              value={fromDate ? formatDateDisplay(fromDate) : ""}
               editable={false}
-              outlineStyle={{ borderRadius: 999 }}
+              theme={{
+                roundness: 99,
+                colors: {
+                  background: "#FFFFFF",
+                },
+              }}
+              style={{ width: 160 }}
               right={
                 <TextInput.Icon
                   icon={() => (
@@ -109,7 +128,7 @@ export default function SearchTasksScreen() {
 
             {showFromPicker && (
               <DateTimePicker
-                value={fromDate}
+                value={fromDate || new Date()}
                 mode="date"
                 display="default"
                 onChange={(event, selectedDate) => {
@@ -127,9 +146,15 @@ export default function SearchTasksScreen() {
             <TextInput
               mode="outlined"
               label="To date"
-              value={formatDateDisplay(toDate)}
+              value={toDate ? formatDateDisplay(toDate) : ""}
               editable={false}
-              outlineStyle={{ borderRadius: 999 }}
+              theme={{
+                roundness: 99,
+                colors: {
+                  background: "#FFFFFF",
+                },
+              }}
+              style={{ width: 160 }}
               right={
                 <TextInput.Icon
                   icon={() => (
@@ -142,7 +167,7 @@ export default function SearchTasksScreen() {
 
             {showToPicker && (
               <DateTimePicker
-                value={toDate}
+                value={toDate || new Date()}
                 mode="date"
                 display="default"
                 onChange={(event, selectedDate) => {

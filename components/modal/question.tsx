@@ -47,11 +47,15 @@ export default function QuestionModal({
 
           <View className="w-full mt-4 flex-row justify-end gap-5">
             <TouchableOpacity onPress={onConfirm} style={{ minWidth: 50 }}>
-              <Text className="text-[#90717E] text-[15px]">{confirmText}</Text>
+              <Text className="text-[#90717E] font-semibold text-[15px]">
+                {confirmText}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={onCancel} style={{ minWidth: 50 }}>
-              <Text className="text-[#B8C6B6] text-[15px]">{cancelText}</Text>
+              <Text className="text-[#B8C6B6] font-semibold text-[15px]">
+                {cancelText}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

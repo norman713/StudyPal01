@@ -1,5 +1,6 @@
 // app/(auth)/(flow)/reset.tsx
 import authApi from "@/api/authApi";
+import { clearTokens } from "@/api/tokenStore";
 import Loading from "@/components/loading";
 import ErrorModal from "@/components/modal/error";
 import SuccessModal from "@/components/modal/success";
@@ -97,9 +98,12 @@ export default function ResetPage() {
     }
   };
 
-  const handleConfirmSuccess = () => {
+  const handleConfirmSuccess = async () => {
     setSuccessVisible(false);
-    router.push("/(auth)/login");
+
+    await clearTokens();
+
+    router.replace("/(auth)/login");
   };
 
   return (

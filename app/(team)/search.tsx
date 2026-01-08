@@ -51,29 +51,32 @@ export default function Search() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchTeams = async () => {
-      try {
-        setLoading(true);
-        const res = await teamApi.searchTeams(
-          tab === "joined" ? "JOINED" : "OWNED",
-          undefined,
-          undefined,
-          50
-        );
-        setTeams(res.teams ?? []);
-      } catch (err) {
-        console.error("[fetchTeams] Error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTeams();
-  }, [tab, params.refresh]); // Thêm params.refresh để reload khi có thay đổi
+  const fetchTeams = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await teamApi.searchTeams(
+        tab === "joined" ? "JOINED" : "OWNED",
+        query.trim() || undefined,
+        undefined,
+        50
+      );
+      setTeams(res.teams ?? []);
+    } catch (err) {
+      console.error("[fetchTeams] Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [tab, query]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchTeams();
+    }, [fetchTeams])
+  );
 
   /* =======================
        🔒 BLOCK BACK BUTTON
     ======================= */
+
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
@@ -290,7 +293,11 @@ export default function Search() {
                             source={{ uri: item.avatarUrl }}
                           />
                         ) : (
-                          <Avatar.Text size={40} label={item.name.charAt(0)} />
+                          <Avatar.Text
+                            size={40}
+                            label={item.name.charAt(0)}
+                            style={{ backgroundColor: "#6B4EFF" }}
+                          />
                         )}
 
                         <Text className="ml-3 text-xl font-semibold text-black ">

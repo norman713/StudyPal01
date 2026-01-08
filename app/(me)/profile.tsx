@@ -1,11 +1,12 @@
 import authApi from "@/api/authApi";
 import { clearTokens, getUserIdFromToken, readTokens } from "@/api/tokenStore";
 import userApi, { UserProfile } from "@/api/userApi";
+import Loading from "@/components/loading";
 import QuestionModal from "@/components/modal/question";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { View } from "react-native";
+import { Modal, View } from "react-native";
 import { Avatar, Card, IconButton, List, Text } from "react-native-paper";
 
 // Helper mapping gender
@@ -23,6 +24,7 @@ type ProfileScreenProps = {
 export default function ProfileScreen({}: ProfileScreenProps) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -59,6 +61,40 @@ export default function ProfileScreen({}: ProfileScreenProps) {
       await clearTokens();
       setShowLogoutModal(false);
       router.replace("/(auth)/login");
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!user?.email) {
+      console.log("Missing user email");
+      return;
+    }
+
+    if (loading) return;
+
+    setLoading(true);
+    try {
+      const res = await authApi.code("RESET_PASSWORD", user.email);
+
+      if (!res.success) {
+        console.log("Send reset code failed:", res.message);
+        return;
+      }
+
+      router.push({
+        pathname: "/(auth)/(flow)/verify",
+        params: {
+          purpose: "reset",
+          email: user.email,
+        },
+      });
+    } catch (err: any) {
+      console.log(
+        "Reset password error:",
+        err?.response?.data || err?.message || err
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -192,16 +228,10 @@ export default function ProfileScreen({}: ProfileScreenProps) {
 
           <List.Item
             title="Reset password"
+            disabled={loading}
             left={(p) => <List.Icon {...p} icon="lock-reset" />}
             right={(p) => <List.Icon {...p} icon="chevron-right" />}
-            onPress={() => {
-              router.push({
-                pathname: "/(auth)/(flow)/reset",
-                params: {
-                  email: user.email ?? "",
-                },
-              });
-            }}
+            onPress={handleResetPassword}
           />
           <List.Item
             title="Log out"
@@ -237,6 +267,21 @@ export default function ProfileScreen({}: ProfileScreenProps) {
         onConfirm={handleLogout}
         onCancel={() => setShowLogoutModal(false)}
       />
+
+      {loading && (
+        <Modal transparent visible statusBarTranslucent animationType="fade">
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0,0,0,0.3)",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Loading />
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }

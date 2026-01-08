@@ -16,9 +16,9 @@ import {
 } from "react-native";
 import {
   ActivityIndicator,
+  Appbar,
   Avatar,
   Button,
-  IconButton,
   RadioButton,
   Text,
   TextInput,
@@ -161,24 +161,13 @@ export default function EditProfileScreen() {
   return (
     <View className="flex-1 bg-white">
       {/* Custom Header */}
-      <View
-        className="flex-row items-center px-4 pt-4 pb-4"
-        style={{ backgroundColor: THEME_COLOR, height: 80, paddingTop: 20 }}
-      >
-        {/* Adjust padding top for Status Bar or use SafeAreaView */}
-        <IconButton
-          icon="arrow-left"
-          iconColor="white"
-          size={24}
-          onPress={() => router.back()}
+      <Appbar.Header mode="small" style={{ backgroundColor: "#90717E" }}>
+        <Appbar.BackAction color="#F8F6F7" onPress={() => router.back()} />
+        <Appbar.Content
+          title="Edit profile"
+          titleStyle={{ color: "#F8F6F7", fontWeight: "700", fontSize: 16 }}
         />
-        <Text
-          variant="titleLarge"
-          style={{ color: "white", fontWeight: "600", marginLeft: 8 }}
-        >
-          Edit profile
-        </Text>
-      </View>
+      </Appbar.Header>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -195,8 +184,8 @@ export default function EditProfileScreen() {
                   <Avatar.Text
                     size={110}
                     label={name ? name.charAt(0).toUpperCase() : "U"}
-                    style={{ backgroundColor: "#EAD8E1" }}
-                    color={THEME_COLOR}
+                    style={{ backgroundColor: "#6B4EFF" }}
+                    color={"#fff"}
                   />
                 )}
                 <View

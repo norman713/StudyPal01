@@ -36,8 +36,6 @@ type TeamInfoProps = {
 export default function TeamInfoScreen() {
   //Router params
   const { id } = useLocalSearchParams();
-  // Role and other info should be fetched or passed via params, but for now we rely on fetch.
-  // We can default safe values if needed, but user asked to remove mock data.
 
   //States
   const [qrVisible, setQrVisible] = useState(false);
@@ -177,12 +175,9 @@ export default function TeamInfoScreen() {
   const handleInvite = () => {
     if (!id) return;
 
-    router.push({
-      pathname: "/(team)/invite",
-      params: {
-        teamId: id,
-      },
-    });
+    console.log("Navigating to Invite with teamId:", id);
+    // Use URL query param to be explicit
+    router.push(`/(team)/invite?teamId=${id}`);
   };
 
   const handleShowMember = () => {
@@ -356,7 +351,7 @@ export default function TeamInfoScreen() {
                       letterSpacing: 1,
                       color: "#fff",
                     }}
-                    style={{ backgroundColor: "#90717E" }}
+                    style={{ backgroundColor: "#6B4EFF" }}
                   />
                 )}
               </View>
@@ -406,6 +401,7 @@ export default function TeamInfoScreen() {
                 flexDirection: "row",
                 alignItems: "center",
                 marginBottom: 10,
+                marginTop: 10,
               }}
             >
               <Text
