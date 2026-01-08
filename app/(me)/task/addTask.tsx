@@ -1,5 +1,6 @@
 import ErrorModal from "@/components/modal/error";
 import SuccessModal from "@/components/modal/success";
+import { convertUserToSystemTime } from "@/utils/timezone";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
@@ -162,12 +163,14 @@ export default function TaskDetail() {
       setIsLoading(true);
       const payload = {
         content: taskName,
-        startDate: startDateTime.format("YYYY-MM-DD HH:mm:ss"),
-        dueDate: endDateTime.format("YYYY-MM-DD HH:mm:ss"),
+        startDate: convertUserToSystemTime(startDateTime),
+        dueDate: convertUserToSystemTime(endDateTime),
         priority: priority.toUpperCase() as TaskPriority,
         note: taskNote,
       };
       console.log("Saving task payload:", payload);
+      console.log("START:", convertUserToSystemTime(startDateTime));
+      console.log("DUE:", convertUserToSystemTime(endDateTime));
 
       // API Call to create the task
       const response = await taskApi.createTask(payload);
@@ -178,9 +181,12 @@ export default function TaskDetail() {
       setIsModalVisible(true);
     } catch (error: any) {
       console.error("Failed to create task:", error);
-      const msg =
-        error?.response?.data?.message ||
-        "Failed to create task. Please try again.";
+
+      // Kết hợp thông báo lỗi từ API và giá trị dueDate vào thông báo lỗi
+      const msg = error?.response?.data?.message
+        ? `${error.response.data.message} (Due date received: ${endDateTime.format("YYYY-MM-DD HH:mm:ss")})`
+        : `Failed to create task. Due date received: ${endDateTime.format("YYYY-MM-DD HH:mm:ss")}. Please try again.`;
+
       setErrorMessage(msg);
       setShowErrorModal(true);
     } finally {
@@ -233,7 +239,7 @@ export default function TaskDetail() {
                 <TextInput
                   style={styles.input}
                   value={fromTime}
-                  onChangeText={(text) => setFromTime(formatTime(text))} // Format time as HH:mm
+                  onChangeText={(text) => setFromTime(formatTime(text))}
                   placeholder="HH:mm"
                   keyboardType="numeric"
                 />

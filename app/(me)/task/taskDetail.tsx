@@ -2,6 +2,7 @@ import taskApi, { PersonalTask, TaskPriority } from "@/api/taskApi";
 import ErrorModal from "@/components/modal/error";
 import QuestionModal from "@/components/modal/question";
 import SuccessModal from "@/components/modal/success";
+import { convertSystemToUserTime } from "@/utils/timezone";
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
@@ -148,13 +149,13 @@ export default function TaskDetail() {
       setTaskName(data.content);
       setTaskNote(data.note || "");
 
-      const startDate = new Date(data.startDate);
-      const dueDate = new Date(data.dueDate);
+      const startDate = convertSystemToUserTime(data.startDate);
+      const dueDate = convertSystemToUserTime(data.dueDate);
 
-      setFromTime(dayjs(startDate).format("HH:mm"));
-      setFromDate(dayjs(startDate).format("DD-MM-YYYY"));
-      setToTime(dayjs(dueDate).format("HH:mm"));
-      setToDate(dayjs(dueDate).format("DD-MM-YYYY"));
+      setFromTime(startDate.format("HH:mm"));
+      setFromDate(startDate.format("DD-MM-YYYY"));
+      setToTime(dueDate.format("HH:mm"));
+      setToDate(dueDate.format("DD-MM-YYYY"));
       setPriority(data.priority);
     } catch (error: any) {
       showApiError(error);

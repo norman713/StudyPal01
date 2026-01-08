@@ -1,4 +1,6 @@
+import { Platform } from "react-native";
 import axiosInstance from "./axiosConfig";
+import { readTokens } from "./tokenStore";
 
 export interface Team {
   id: string;
@@ -87,10 +89,10 @@ const teamApi = {
 
 
 
-  async getInfo(teamId: string) {
+  async getInfo(teamId: string): Promise<TeamInfoResponse> {
     const url = `/teams/${teamId}`;
     const res = await axiosInstance.get(url);
-    return res;
+    return res as unknown as TeamInfoResponse;
   },
 
   async delete(teamId: string) {
@@ -98,9 +100,74 @@ const teamApi = {
     return await axiosInstance.delete(url);
   },
 
-  async update(teamId: string, data: { name?: string; description?: string }) {
-    const url = `/teams/${teamId}`;
-    return await axiosInstance.patch(url, data);
+  async update(teamId: string, data: { name?: string; description?: string; file?: any }) {
+    // Always use FormData for compatibility with backend handling of this endpoint
+    const formData = new FormData();
+
+    // Construct the request part (JSON)
+    const requestBody: any = {};
+    if (data.name) requestBody.name = data.name;
+    if (data.description) requestBody.description = data.description;
+
+    if (Platform.OS === "web") {
+      formData.append(
+        "request",
+        new Blob([JSON.stringify(requestBody)], {
+          type: "application/json",
+        })
+      );
+    } else {
+      formData.append("request", {
+        string: JSON.stringify(requestBody),
+        type: "application/json",
+      } as any);
+    }
+
+    // Append the file if it exists
+    if (data.file) {
+      const file = data.file;
+      const fileName = file.fileName || "team_avatar.jpg";
+      const fileType = file.mimeType || "image/jpeg";
+
+      if (Platform.OS === "web") {
+        const response = await fetch(file.uri);
+        const blob = await response.blob();
+        formData.append("file", blob, fileName);
+      } else {
+        formData.append("file", {
+          uri: file.uri,
+          name: fileName,
+          type: fileType,
+        } as any);
+      }
+    }
+
+    // Execute request using fetch
+    const { accessToken } = await readTokens();
+    const url = `${process.env.EXPO_PUBLIC_API_URL}/teams/${teamId}`;
+
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.log("Update team failed:", response.status, text);
+      throw new Error(`Update failed: ${response.status} ${text}`);
+    }
+
+    // Return empty or parsed JSON if API returns content
+    // Check if content-type is json
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.indexOf("application/json") !== -1) {
+      return await response.json();
+    }
+    return true;
   },
   async getQR(teamId: string, width: number, height: number): Promise<string> {
     const url = `/teams/${teamId}/qr`;
@@ -108,7 +175,6 @@ const teamApi = {
     const res = await axiosInstance.get(url, { params }) as { qrCode: string };
     return res.qrCode;
   },
-
   async resetQR(teamId: string): Promise<{ success: boolean; message: string }> {
     const url = `/teams/${teamId}/code`;
     const res = await axiosInstance.patch(url) as { success: boolean; message: string };

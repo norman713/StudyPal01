@@ -7,6 +7,7 @@ import {
   MaterialIcons,
 } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
+import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -32,15 +33,11 @@ type TeamInfoProps = {
   totalMembers: number;
 };
 
-export default function TeamInfoScreen({
-  role = "OWNER",
-  name = "THIS IS TEAM NAME DEMO",
-  description = "This is team description. You can write what ever here. Team Pikachu forever...",
-  avatarUri,
-  totalMembers = 10,
-}: TeamInfoProps) {
+export default function TeamInfoScreen() {
   //Router params
   const { id } = useLocalSearchParams();
+  // Role and other info should be fetched or passed via params, but for now we rely on fetch.
+  // We can default safe values if needed, but user asked to remove mock data.
 
   //States
   const [qrVisible, setQrVisible] = useState(false);
@@ -60,7 +57,7 @@ export default function TeamInfoScreen({
   const [leaveModalVisible, setLeaveModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [teamNameModalVisible, setTeamNameModalVisible] = useState(false);
-  const [teamNameValue, setTeamNameValue] = useState(name);
+  const [teamNameValue, setTeamNameValue] = useState("");
 
   const [qrBase64, setQrBase64] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
@@ -273,6 +270,32 @@ export default function TeamInfoScreen({
     }
   };
 
+  const handlePickImage = async () => {
+    if (!isOwner) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      // Upload immediately
+      setLoading(true);
+      try {
+        await teamApi.update(id as string, { file: asset });
+        // Refresh team info
+        await fetchTeamInfo();
+      } catch (err: any) {
+        console.error("Failed to update avatar:", err);
+        setError("Failed to update team avatar. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.5);
   return (
     <>
@@ -326,7 +349,7 @@ export default function TeamInfoScreen({
                 ) : (
                   <Avatar.Text
                     size={120}
-                    label={(team?.name ?? name).charAt(0)}
+                    label={(team?.name ?? "T").charAt(0)}
                     labelStyle={{
                       fontSize: 58,
                       fontWeight: "800",
@@ -359,7 +382,7 @@ export default function TeamInfoScreen({
                     icon="camera"
                     size={18}
                     iconColor="#fff"
-                    onPress={() => console.log("Change avatar")}
+                    onPress={handlePickImage}
                     accessibilityLabel="Change team avatar"
                     style={{ margin: 0 }}
                   />
@@ -648,7 +671,7 @@ export default function TeamInfoScreen({
                       router.push({
                         pathname: "/(team)/trash",
                         params: {
-                          role,
+                          role: team?.role || "MEMBER",
                         },
                       })
                     }
@@ -764,7 +787,7 @@ export default function TeamInfoScreen({
         initialName={team.name}
         onCancel={() => setTeamNameModalVisible(false)}
         onSave={async (newName) => {
-          if (!id) return;
+          if (!id || !isOwner) return;
           setTeamNameModalVisible(false);
           setLoading(true);
           try {

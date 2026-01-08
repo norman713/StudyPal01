@@ -1,4 +1,3 @@
-// src/api/chatbotSSE.ts
 import {
   clearTokens,
   expFromJwt,
@@ -135,7 +134,6 @@ async function connectSSE(
     );
     body = formData;
   } else {
-    // ✅ MOBILE: gửi JSON thuần
     body = jsonString;
   }
 
@@ -143,10 +141,13 @@ async function connectSSE(
   // 🌐 EXECUTION
   // ===============================
   if (Platform.OS === "web") {
+    const sseUrl =
+      `${BASE_URL}/sse/chatbot/messages` +
+      `?access_token=${encodeURIComponent(accessToken)}`;
+
     await streamWeb({
-      url: `${BASE_URL}/chatbot/messages`,
+      url: sseUrl,
       headers: {
-        Authorization: `Bearer ${accessToken}`,
         Accept: "text/event-stream",
         "Idempotency-Key": idempotencyKey,
       },
@@ -157,7 +158,7 @@ async function connectSSE(
     });
   } else {
     await streamNative({
-      url: `${BASE_URL}/chatbot/messages`,
+      url: `${BASE_URL}/sse/chatbot/messages`,
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "text/event-stream",
@@ -190,7 +191,7 @@ async function streamWeb({
   onDone?: OnDone;
   onError?: OnError;
 }) {
-  let finished = false; // 🔑 đánh dấu stream đã DONE nghiệp vụ hay chưa
+  let finished = false; //
 
   try {
     const res = await fetch(url, {

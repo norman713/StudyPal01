@@ -9,23 +9,10 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_API_URL": "http://103.211.201.112:8080/api"
-      }
+      "distribution": "internal"
     },
     "production": {
-      "distribution": "internal",
-      "autoIncrement": true,
-      "android": {
-        "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_API_URL": "http://103.211.201.112:8080/api"
-      }
+      "autoIncrement": true
     }
   },
   "submit": {

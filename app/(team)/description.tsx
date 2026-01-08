@@ -8,8 +8,7 @@ import { Appbar, Button, TextInput } from "react-native-paper";
 const ACCENT = "#90717E";
 const STORAGE_KEY = "team:description";
 const MAX_LEN = 2000;
-const DEFAULT_TEXT =
-  "This is where you write your team description and using textarehhh";
+const DEFAULT_TEXT = "";
 
 export default function DescriptionScreen() {
   const router = useRouter();

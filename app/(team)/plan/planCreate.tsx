@@ -55,9 +55,15 @@ export default function PlanCreateScreen() {
 
   useEffect(() => {
     if (teamId) {
-      memberApi.getAll(teamId).then((res) => {
-        setMembers(res.members || []);
-      });
+      memberApi
+        .getAll(teamId)
+        .then((res) => {
+          setMembers(res.members || []);
+        })
+        .catch((err) => {
+          console.log("Failed to load members", err);
+          // Optional: handle error state specifically if needed
+        });
     }
   }, [teamId]);
 
@@ -131,9 +137,14 @@ export default function PlanCreateScreen() {
   }, [fetchPlanData, isEditMode, draftToTask]);
 
   // Clear store on mount if creating new
+  // Clear store on mount and unmount if creating new
   useEffect(() => {
     if (!isEditMode) {
-      // Optional: planCreationStore.clearTasks() or similar
+      planCreationStore.clearTasks();
+
+      return () => {
+        planCreationStore.clearTasks();
+      };
     }
   }, [isEditMode]);
 

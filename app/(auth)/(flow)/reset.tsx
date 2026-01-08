@@ -122,7 +122,12 @@ export default function ResetPage() {
               onPress={() => setShowPassword(!showPassword)}
             />
           }
-          theme={{ roundness: 30 }}
+          theme={{
+            roundness: 30,
+            colors: {
+              background: "#FFFFFF",
+            },
+          }}
         />
         <TextInput
           mode="outlined"
@@ -136,7 +141,12 @@ export default function ResetPage() {
               onPress={() => setShowRetypePassword(!showRetypePassword)}
             />
           }
-          theme={{ roundness: 30 }}
+          theme={{
+            roundness: 30,
+            colors: {
+              background: "#FFFFFF",
+            },
+          }}
         />
       </View>
 

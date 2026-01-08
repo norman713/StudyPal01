@@ -54,7 +54,7 @@ export default function ChatbotScreen() {
     if (!input.trim()) return;
     try {
       const { accessToken } = await readTokens();
-
+      console.log("Access Token:", accessToken);
       const res = await fetch(
         `${process.env.EXPO_PUBLIC_API_URL}/chatbot/messages`,
         {
@@ -164,7 +164,7 @@ export default function ChatbotScreen() {
               <Text
                 className={`${
                   item.role === "user" ? "text-white" : "text-black"
-                } text-lg`}
+                } text-lg font-normal`}
               >
                 {item.content}
               </Text>

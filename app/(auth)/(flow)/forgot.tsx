@@ -101,7 +101,7 @@ export default function ForgotPage() {
         />
       </View>
 
-      <Text className="text-[#90717E] font-PoppinsRegular text-[14px]">
+      <Text className="text-[#92AAA5] font-PoppinsRegular text-[14px]">
         We will send you a password reset email. Please check your inbox and
         spam folder.
       </Text>
