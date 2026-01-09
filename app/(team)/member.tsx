@@ -1,4 +1,7 @@
 import memberApi from "@/api/memberApi";
+import ErrorModal from "@/components/modal/error";
+import QuestionModal from "@/components/modal/question";
+import SuccessModal from "@/components/modal/success";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, View } from "react-native";
@@ -187,9 +190,12 @@ export default function TeamMembersScreen() {
 
   const currentRole = role as Role;
 
-  const [errorModalOpen, setErrorModalOpen] = useState(false);
-  const [successModalOpen, setSuccessModalOpen] = useState(false);
-  const [modalMessage, setModalMessage] = useState("");
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [successVisible, setSuccessVisible] = useState(false);
+  const [errorVisible, setErrorVisible] = useState(false);
+
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -284,34 +290,62 @@ export default function TeamMembersScreen() {
     setShowRoleModal(false);
   };
 
-  const handleDeleteMember = async (userId: string) => {
-    if (!teamId) return;
+  // const handleDeleteMember = async (userId: string) => {
+  //   if (!teamId) return;
 
-    // Optional: Add confirmation dialog here
-    Alert.alert(
-      "Remove Member",
-      "Are you sure you want to remove this member?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await memberApi.removeMember(teamId, userId);
-              setMembers((prev) => prev.filter((m) => m.id !== userId));
-              Alert.alert("Success", "Member removed successfully");
-            } catch (err: any) {
-              console.error("Remove member error:", err);
-              Alert.alert("Error", "Failed to remove member");
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
+  //   // Optional: Add confirmation dialog here
+  //   Alert.alert(
+  //     "Remove Member",
+  //     "Are you sure you want to remove this member?",
+  //     [
+  //       { text: "Cancel", style: "cancel" },
+  //       {
+  //         text: "Remove",
+  //         style: "destructive",
+  //         onPress: async () => {
+  //           try {
+  //             setLoading(true);
+  //             await memberApi.removeMember(teamId, userId);
+  //             setMembers((prev) => prev.filter((m) => m.id !== userId));
+  //             Alert.alert("Success", "Member removed successfully");
+  //           } catch (err: any) {
+  //             console.error("Remove member error:", err);
+  //             Alert.alert("Error", "Failed to remove member");
+  //           } finally {
+  //             setLoading(false);
+  //           }
+  //         },
+  //       },
+  //     ]
+  //   );
+  // };
+
+  const handleDeleteMember = (userId: string) => {
+    setSelectedUserId(userId);
+    setConfirmVisible(true);
+  };
+
+  const confirmRemoveMember = async () => {
+    if (!teamId || !selectedUserId) return;
+
+    try {
+      setLoading(true);
+      setConfirmVisible(false);
+
+      await memberApi.removeMember(teamId, selectedUserId);
+
+      setMembers((prev) => prev.filter((m) => m.id !== selectedUserId));
+      setSuccessVisible(true);
+    } catch (err: any) {
+      console.error("Remove member error:", err);
+      setErrorMessage(
+        err?.response?.data?.message || "Failed to remove member"
+      );
+      setErrorVisible(true);
+    } finally {
+      setLoading(false);
+      setSelectedUserId(null);
+    }
   };
 
   const renderItem = useCallback(
@@ -387,9 +421,10 @@ export default function TeamMembersScreen() {
         <Appbar.Header mode="small" style={{ backgroundColor: ACCENT }}>
           <Appbar.BackAction color="#fff" onPress={() => router.back()} />
           <Appbar.Content
-            title={`Team members (${number})`}
+            title={`Team members (${members.length})`}
             titleStyle={{ color: "#fff", fontSize: 18, fontWeight: "600" }}
           />
+
           {/* Add Member Icon: Show ONLY if role is ADMIN or OWNER */}
           {(currentRole === "ADMIN" || currentRole === "OWNER") && (
             <Appbar.Action
@@ -437,6 +472,33 @@ export default function TeamMembersScreen() {
           onCancel={handleCancel}
         />
       )}
+
+      <QuestionModal
+        visible={confirmVisible}
+        title="Remove member?"
+        message="Are you sure you want to remove this member from the team?"
+        confirmText="Remove"
+        cancelText="Cancel"
+        onConfirm={confirmRemoveMember}
+        onCancel={() => {
+          setConfirmVisible(false);
+          setSelectedUserId(null);
+        }}
+      />
+      <SuccessModal
+        visible={successVisible}
+        title="Success!"
+        message="Member removed successfully."
+        confirmText="OK"
+        onConfirm={() => setSuccessVisible(false)}
+      />
+      <ErrorModal
+        visible={errorVisible}
+        title="Error"
+        message={errorMessage}
+        confirmText="OK"
+        onConfirm={() => setErrorVisible(false)}
+      />
     </View>
   );
 }

@@ -181,9 +181,15 @@ const teamApi = {
     return res;
   },
   async getSetting(teamId: string): Promise<TeamNotificationSetting> {
-    const url = `/team-notification-settings/${teamId}`;
+    const url = `/teams/${teamId}/notification-settings`;
     const res = await axiosInstance.get(url);
-    return res.data as TeamNotificationSetting;
+    return res as unknown as TeamNotificationSetting;
+  },
+
+  async updateNotificationSetting(settingId: string, data: Partial<TeamNotificationSetting>): Promise<TeamNotificationSetting> {
+    const url = `/notification-settings/${settingId}`;
+    const res = await axiosInstance.patch(url, data);
+    return res as unknown as TeamNotificationSetting;
   },
 
 };

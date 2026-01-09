@@ -1,13 +1,11 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+import teamApi, { TeamNotificationSetting } from "@/api/teamApi";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { Appbar, Divider, RadioButton, Text } from "react-native-paper";
-import teamApi, { TeamNotificationSetting } from "@/api/teamApi";
 
 type NotifyChannel = "plan" | "team" | "chat";
 
-const STORAGE_KEY = "notification:selectedChannels";
 const ACCENT = "#90717E";
 
 const OPTIONS: Array<{
@@ -34,33 +32,89 @@ const OPTIONS: Array<{
 
 export default function NotiScreen() {
   const router = useRouter();
-  const [selected, setSelected] = useState<NotifyChannel[]>([]);
+  const { teamId } = useLocalSearchParams<{ teamId: string }>();
+  // Store the fetched settings (source of truth)
+  const [originalSetting, setOriginalSetting] =
+    useState<TeamNotificationSetting | null>(null);
+  // Store local changes
+  const [setting, setSetting] = useState<TeamNotificationSetting | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // Load saved selection
   useEffect(() => {
-    (async () => {
-      try {
-        const saved = await AsyncStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          setSelected(JSON.parse(saved));
-        }
-      } catch {}
+    if (!teamId) return;
+    fetchSettings();
+  }, [teamId]);
+
+  const fetchSettings = async () => {
+    try {
+      setLoading(true);
+      const data = await teamApi.getSetting(teamId);
+      setOriginalSetting(data);
+      setSetting(data);
+    } catch (error) {
+      console.error("Failed to fetch settings", error);
+    } finally {
       setLoading(false);
-    })();
-  }, []);
+    }
+  };
 
-  // Save when changed
-  useEffect(() => {
-    if (loading) return;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(selected)).catch(() => {});
-  }, [selected, loading]);
+  const handleSave = async () => {
+    if (!setting || !originalSetting) return;
+
+    try {
+      setSaving(true);
+      // Construct partial update with only changed fields or send all
+      // Here sending all modified fields for simplicity as the API takes Partial
+      const updateData: Partial<TeamNotificationSetting> = {
+        teamNotification: setting.teamNotification,
+        teamPlanReminder: setting.teamPlanReminder,
+        chatNotification: setting.chatNotification,
+      };
+
+      await teamApi.updateNotificationSetting(setting.id, updateData);
+      setOriginalSetting(setting); // Sync
+    } catch (error) {
+      console.error("Failed to save settings", error);
+      // Revert to old settings if update fails
+      fetchSettings();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const toggle = (key: NotifyChannel) => {
-    setSelected((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
+    if (!setting) return;
+
+    setSetting((prev) => {
+      if (!prev) return null;
+      let newValue = false;
+      const next = { ...prev };
+
+      if (key === "plan") {
+        newValue = !prev.teamPlanReminder;
+        next.teamPlanReminder = newValue;
+      } else if (key === "team") {
+        newValue = !prev.teamNotification;
+        next.teamNotification = newValue;
+      } else if (key === "chat") {
+        newValue = !prev.chatNotification;
+        next.chatNotification = newValue;
+      }
+      return next;
+    });
   };
+
+  const isChecked = (key: NotifyChannel) => {
+    if (!setting) return false;
+    if (key === "plan") return setting.teamPlanReminder;
+    if (key === "team") return setting.teamNotification;
+    if (key === "chat") return setting.chatNotification;
+    return false;
+  };
+
+  const hasChanges =
+    JSON.stringify(originalSetting) !== JSON.stringify(setting);
 
   return (
     <View className="flex-1 bg-[#EFE7EA]">
@@ -76,12 +130,18 @@ export default function NotiScreen() {
             letterSpacing: 0.2,
           }}
         />
+        <Appbar.Action
+          icon="content-save"
+          color="#fff"
+          onPress={handleSave}
+          disabled={!hasChanges || saving}
+        />
       </Appbar.Header>
 
       <ScrollView contentContainerStyle={{ paddingVertical: 12 }}>
         <View className="mx-3 bg-white rounded-lg">
           {OPTIONS.map((opt, idx) => {
-            const isChecked = selected.includes(opt.key);
+            const checked = isChecked(opt.key);
             return (
               <View key={opt.key}>
                 <Pressable
@@ -114,7 +174,7 @@ export default function NotiScreen() {
 
                   <RadioButton
                     value={opt.key}
-                    status={isChecked ? "checked" : "unchecked"}
+                    status={checked ? "checked" : "unchecked"}
                     onPress={() => toggle(opt.key)}
                     color={ACCENT}
                     uncheckedColor="#C9C2C5"

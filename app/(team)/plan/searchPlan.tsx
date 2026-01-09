@@ -151,6 +151,7 @@ export default function PlanScreen() {
                   background: "#FFFFFF",
                 },
               }}
+              style={{ width: 160 }}
               right={
                 <TextInput.Icon
                   icon={() => (
@@ -190,6 +191,7 @@ export default function PlanScreen() {
                   background: "#FFFFFF",
                 },
               }}
+              style={{ width: 160 }}
               outlineStyle={{ borderRadius: 999 }}
               right={
                 <TextInput.Icon

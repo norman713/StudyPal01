@@ -12,9 +12,11 @@ import TaskListSection from "./task/components/TaskList";
 
 export default function TaskScreen() {
   const [markedDates, setMarkedDates] = useState<string[]>([]);
-  const [tasks, setTasks] = useState<PersonalTask[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [userData, setUserData] = useState<any>(null);
+
+  const [tasks, setTasks] = useState<PersonalTask[]>([]); // tasks của selectedDate
+  const [todayTasksCount, setTodayTasksCount] = useState(0);
 
   // Helpers
   const loadTaskDates = async (month: number, year: number) => {
@@ -35,6 +37,13 @@ export default function TaskScreen() {
       console.error("Failed to load tasks", error);
     }
   };
+
+  const loadTodayTaskCount = async () => {
+    const todayStr = dayjs().format("YYYY-MM-DD");
+    const res = await taskApi.getTasksByDate(todayStr);
+    setTodayTasksCount((res || []).length);
+  };
+
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
@@ -71,6 +80,7 @@ export default function TaskScreen() {
           await Promise.all([
             loadTaskDates(now.getMonth() + 1, now.getFullYear()),
             loadTasksForDate(now),
+            loadTodayTaskCount(),
           ]);
         } catch (error) {
           console.error("Failed to initialize task screen", error);
@@ -110,7 +120,7 @@ export default function TaskScreen() {
             <View style={styles.container}>
               <HeaderSection
                 userName={userData?.name || "User"}
-                taskCount={tasks.length}
+                taskCount={todayTasksCount}
                 markedDates={markedDates}
                 selectedDate={selectedDate}
                 onDateSelect={handleDateSelect}

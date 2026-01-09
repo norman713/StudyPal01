@@ -1,5 +1,8 @@
+import { decodeQRFromImage } from "@/api/decodeApi";
 import memberApi from "@/api/memberApi";
 import teamApi, { TeamPreviewResponse } from "@/api/teamApi";
+import ErrorModal from "@/components/modal/error";
+import SuccessModal from "@/components/modal/success";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
@@ -18,6 +21,9 @@ export default function ScanQRScreen() {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [teamCode, setTeamCode] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   /* =======================
      REQUEST CAMERA PERMISSION
@@ -62,10 +68,28 @@ export default function ScanQRScreen() {
 
     if (result.canceled) return;
 
-    const imageUri = result.assets[0].uri;
-    console.log("IMAGE URI:", imageUri);
+    try {
+      setLoading(true);
 
-    Alert.alert("Gallery selected", "Send this image to backend to decode QR.");
+      const asset = result.assets[0];
+
+      const { teamCode } = await decodeQRFromImage({
+        uri: asset.uri,
+        fileName: asset.fileName ?? undefined,
+        mimeType: asset.mimeType ?? undefined,
+      });
+
+      setTeamCode(teamCode);
+
+      const preview = await teamApi.getPreviewByCode(teamCode);
+      setPreview(preview);
+      setShowModal(true);
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Invalid QR", "Cannot decode QR from image");
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* =======================
@@ -80,18 +104,24 @@ export default function ScanQRScreen() {
 
       const res = await memberApi.join(teamCode);
 
-      Alert.alert("Success", res.message);
+      // 👇 nếu API trả success = false
+      if (res?.success === false) {
+        setErrorMessage(res?.message ?? "Cannot join team");
+        setShowErrorModal(true);
+        return;
+      }
 
-      setShowModal(false);
-      setScanned(false);
-      router.push("/(team)/search");
+      // ✅ Join OK
+      setShowModal(false); // đóng JoinTeamModal
+      setShowSuccessModal(true); // mở SuccessModal
     } catch (err: any) {
       const message =
         err?.response?.data?.message ||
         err?.response?.data?.error ||
         "Cannot join team";
 
-      Alert.alert("Error", message);
+      setErrorMessage(message);
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
@@ -157,14 +187,17 @@ export default function ScanQRScreen() {
           onPress={pickFromGallery}
           style={{ alignItems: "center" }}
         >
-          <MaterialCommunityIcons
-            name="image-outline"
-            size={30}
-            color="white"
-          />
-          <View style={{ width: 200 }}>
+          <View className="w-11 h-11 rounded-full bg-[#fff] items-center justify-center">
+            <MaterialCommunityIcons
+              name="image-outline"
+              size={30}
+              color="black"
+            />
+          </View>
+
+          <View style={{ width: 150 }}>
             <Text
-              numberOfLines={1}
+              numberOfLines={2}
               ellipsizeMode="tail"
               style={{
                 marginTop: 6,
@@ -173,7 +206,7 @@ export default function ScanQRScreen() {
                 textAlign: "center",
               }}
             >
-              Choose from Gallery
+              Choose image from gallery
             </Text>
           </View>
         </TouchableOpacity>
@@ -181,13 +214,11 @@ export default function ScanQRScreen() {
       {preview && (
         <JoinTeamModal
           visible={showModal}
-          avatar={preview.avatarUrl ?? "https://via.placeholder.com/80"}
+          avatar={preview.avatarUrl}
           teamName={preview.name}
           description={preview.description ?? ""}
           ownerName={preview.creatorName}
-          ownerAvatar={
-            preview.creatorAvatarUrl ?? "https://via.placeholder.com/40"
-          }
+          ownerAvatar={preview.creatorAvatarUrl}
           membersCount={preview.totalMembers}
           onJoin={handleJoinTeam}
           onClose={() => {
@@ -196,6 +227,27 @@ export default function ScanQRScreen() {
           }}
         />
       )}
+
+      <SuccessModal
+        visible={showSuccessModal}
+        title="Joined successfully!"
+        message={`You have joined ${preview?.name ?? "the team"} successfully.`}
+        confirmText="Go to teams"
+        onConfirm={() => {
+          setShowSuccessModal(false);
+          setScanned(false);
+          router.push("/(team)/search");
+        }}
+      />
+      <ErrorModal
+        visible={showErrorModal}
+        title="Join failed"
+        message={errorMessage}
+        confirmText="Try again"
+        cancelText="Close"
+        onConfirm={() => setShowErrorModal(false)}
+        onCancel={() => setShowErrorModal(false)}
+      />
     </View>
   );
 }

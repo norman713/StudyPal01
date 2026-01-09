@@ -201,12 +201,15 @@ export default function NotificationPage() {
                     />
                   ) : (
                     <View className="w-12 h-12 ml-2 rounded-full bg-[#6B4EFF] items-center justify-center">
-                      <Text className="text-white font-bold">
-                        {n.title?.charAt(0) || "T"}
-                      </Text>
+                      <MaterialCommunityIcons
+                        name="account-group"
+                        size={26}
+                        color="white"
+                      />
                     </View>
                   )
                 ) : (
+                  // Non-TEAM → icon theo type
                   <Image source={config.icon} className="w-10 h-10 ml-2" />
                 )}
 

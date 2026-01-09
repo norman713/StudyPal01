@@ -39,6 +39,17 @@ export default function TeamChatScreen() {
 
   const flatListRef = useRef<FlatList>(null);
   const ws = useRef<WebSocket | null>(null);
+  const latestMessageId = messages[0]?.id;
+  const shouldShowReadBy = (item: Message): boolean => {
+    if (!currentUserId) return false;
+    if (item.id !== messages[0]?.id) return false;
+    if (!item.readBy || item.readBy.length === 0) return false;
+
+    // 🔥 chỉ cần có ÍT NHẤT 1 user khác
+    const others = item.readBy.filter((u) => u.id !== currentUserId);
+
+    return others.length > 0;
+  };
 
   // Initial Data Fetch
   useEffect(() => {
@@ -88,16 +99,27 @@ export default function TeamChatScreen() {
         // Ensure messages are valid array
         setMessages(msgs.messages || []);
 
+        console.log("[INIT] latest message readBy:", {
+          messageId: msgs.messages?.[0]?.id,
+          readBy: msgs.messages?.[0]?.readBy?.map((u) => u.id),
+          currentUserId: myId,
+        });
+
         // 6. Mark latest message as read if it's not from me
         if (msgs.messages && msgs.messages.length > 0) {
           const latestMsg = msgs.messages[0];
           // "Sender thì không mark, receiver đang active trong chat thì phải mark"
-          // "tin nhắn với index đầu tiên" (index 0 is newest in our list)
           if (latestMsg.user?.id !== myId) {
             console.log("Marking latest message as read:", latestMsg.id);
             chatApi
               .markMessageRead(latestMsg.id)
               .catch((err) => console.log("Mark read failed", err));
+          }
+          if (latestMsg.user?.id !== myId) {
+            console.log("[MARK READ] calling API for:", latestMsg.id);
+            chatApi.markMessageRead(latestMsg.id).then(() => {
+              console.log("[MARK READ] done for:", latestMsg.id);
+            });
           }
         }
 
@@ -177,11 +199,7 @@ export default function TeamChatScreen() {
 
   const handleSend = async () => {
     console.log("Handle Send Triggered. Text:", newMessage);
-    if (!newMessage.trim()) return;
-    if (!teamId) {
-      console.log("No teamId for send");
-      return;
-    }
+    if (!newMessage.trim() || !teamId) return;
 
     const content = newMessage.trim();
     setNewMessage("");
@@ -190,7 +208,12 @@ export default function TeamChatScreen() {
       console.log("Sending message via API...");
       await chatApi.sendMessage(teamId, content);
       console.log("Message sent successfully via API");
-      // Wait for WS to update UI
+
+      // 🔥 REFRESH MESSAGE LIST
+      const refreshed = await chatApi.getMessages(teamId, 50);
+      console.log("[REFETCH AFTER SEND] messages:", refreshed.messages?.length);
+
+      setMessages(refreshed.messages || []);
     } catch (error) {
       console.error("Send error details:", error);
       Alert.alert("Error", "Failed to send message.");
@@ -298,7 +321,7 @@ export default function TeamChatScreen() {
 
             {/* Timestamp */}
             <Text
-              className={`text-[10px] mt-1 self-end ${
+              className={`text-[10px] mt-1 self-end font-normal ${
                 isMe ? "text-white/80" : "text-gray-400"
               }`}
             >
@@ -308,19 +331,18 @@ export default function TeamChatScreen() {
         </View>
 
         {/* Read Receipts */}
-        {isMe && item.readBy && item.readBy.length > 0 && (
+        {shouldShowReadBy(item) && (
           <View className="flex-row mt-1 mr-1 justify-end">
-            {item.readBy
-              .filter((u) => u.id !== currentUserId) // Don't show myself
+            {item
+              .readBy!.filter((u) => u.id !== currentUserId)
               .map((u, index) => (
                 <Image
                   key={u.id}
                   source={{ uri: u.avatarUrl || DEFAULT_AVATAR }}
-                  className="w-4 h-4 rounded-full border border-white -ml-1"
+                  className="w-6 h-6 rounded-full border border-white -ml-1"
                   style={{ zIndex: index }}
                 />
               ))}
-            {/* Optional: Add a "+N" counter if too many readers */}
           </View>
         )}
       </View>

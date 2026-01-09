@@ -6,7 +6,7 @@ import {
   MaterialCommunityIcons,
   MaterialIcons,
 } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
+import { useIsFocused } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -104,17 +104,13 @@ export default function TeamInfoScreen() {
     }
   }, [id]);
 
-  // first load
-  useEffect(() => {
-    fetchTeamInfo();
-  }, [fetchTeamInfo]);
+  const isFocused = useIsFocused();
 
-  // when come back to screen (after editing description)
-  useFocusEffect(
-    useCallback(() => {
+  useEffect(() => {
+    if (isFocused) {
       fetchTeamInfo();
-    }, [fetchTeamInfo])
-  );
+    }
+  }, [isFocused, fetchTeamInfo]);
 
   if (loading) {
     return (
@@ -125,7 +121,6 @@ export default function TeamInfoScreen() {
     );
   }
 
-  // Hiển thị error nếu không load được team
   if (error || !team) {
     return (
       <View className="flex-1 items-center justify-center bg-[#F2EFF0] px-6">

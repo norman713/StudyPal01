@@ -67,7 +67,7 @@ export default function UpdateRoleModal({
                 label={userName ? userName.charAt(0).toUpperCase() : "U"}
                 labelStyle={{
                   fontSize: 20,
-                  fontWeight: "800",
+                  fontWeight: "400",
                   color: "#fff",
                 }}
                 style={{
