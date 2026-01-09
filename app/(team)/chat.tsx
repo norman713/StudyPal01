@@ -8,13 +8,13 @@ import {
   FlatList,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { chatApi, Message } from "../../api/chatApi";
 import memberApi, { Member } from "../../api/memberApi";
@@ -36,6 +36,8 @@ export default function TeamChatScreen() {
   const [teamInfo, setTeamInfo] = useState<TeamInfoResponse | null>(null);
   const [members, setMembers] = useState<Record<string, Member>>({});
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showAttachModal, setShowAttachModal] = useState(false);
 
   const flatListRef = useRef<FlatList>(null);
   const ws = useRef<WebSocket | null>(null);
@@ -224,31 +226,125 @@ export default function TeamChatScreen() {
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true, // ✅ QUAN TRỌNG
       quality: 0.8,
+      selectionLimit: 10, // optional (iOS)
     });
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      console.log("Image picked:", asset);
-      if (!teamId) return;
+    if (result.canceled || !result.assets || result.assets.length === 0) {
+      return;
+    }
 
-      try {
-        const fileName = asset.fileName || "photo.jpg";
+    if (!teamId) return;
+
+    try {
+      for (const asset of result.assets) {
+        const fileName = asset.fileName || `photo_${Date.now()}.jpg`;
         const fileType = asset.mimeType || "image/jpeg";
+
         const file = {
           uri: asset.uri,
           name: fileName,
           type: fileType,
         };
 
-        console.log("Uploading file:", file);
         await chatApi.sendMessage(teamId, "", file);
-        console.log("File uploaded successfully");
-      } catch (error) {
-        console.error("Upload error details:", error);
-        Alert.alert("Error", "Failed to upload image.");
       }
+
+      // 🔥 Sau khi gửi xong → reload messages
+      const refreshed = await chatApi.getMessages(teamId, 50);
+      setMessages(refreshed.messages || []);
+    } catch (error) {
+      console.error("Upload error:", error);
+      Alert.alert("Error", "Failed to upload images.");
     }
+  };
+  const handleTakePhoto = async () => {
+    setShowAttachModal(false);
+
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Permission denied", "Camera access is required");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets?.length || !teamId) return;
+
+    const asset = result.assets[0];
+
+    await chatApi.sendMessage(teamId, "", {
+      uri: asset.uri,
+      name: asset.fileName || `camera_${Date.now()}.jpg`,
+      type: asset.mimeType || "image/jpeg",
+    });
+
+    const refreshed = await chatApi.getMessages(teamId, 50);
+    setMessages(refreshed.messages || []);
+  };
+  const handlePickFromLibrary = async () => {
+    setShowAttachModal(false);
+    await handlePickImage();
+  };
+
+  const renderImageGrid = (attachments: any[]) => {
+    const images = attachments.filter((a) => a.type === "IMAGE");
+    const count = images.length;
+
+    if (count === 0) return null;
+
+    // 👉 1 ảnh
+    if (count === 1) {
+      return (
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => setPreviewImage(images[0].url)}
+        >
+          <Image
+            source={{ uri: images[0].url }}
+            className="w-[220px] h-[160px] rounded-xl bg-gray-200"
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
+      );
+    }
+
+    // 👉 nhiều ảnh (grid)
+    return (
+      <View className="flex-row flex-wrap gap-1 max-w-[220px]">
+        {images.slice(0, 4).map((img, index) => {
+          const isLast = index === 3 && count > 4;
+
+          return (
+            <TouchableOpacity
+              key={img.id}
+              activeOpacity={0.9}
+              onPress={() => setPreviewImage(img.url)}
+            >
+              <View className="relative">
+                <Image
+                  source={{ uri: img.url }}
+                  className="w-[108px] h-[108px] rounded-lg bg-gray-200"
+                  resizeMode="cover"
+                />
+
+                {/* +N overlay */}
+                {isLast && (
+                  <View className="absolute inset-0 bg-black/40 rounded-lg items-center justify-center">
+                    <Text className="text-white text-xl font-bold">
+                      +{count - 4}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
   };
 
   const renderItem = ({ item }: { item: Message }) => {
@@ -291,21 +387,7 @@ export default function TeamChatScreen() {
 
             {/* Attachments */}
             {item.attachments && item.attachments.length > 0 && (
-              <View className="mb-1">
-                {item.attachments.map((att) => {
-                  if (att.type === "IMAGE") {
-                    return (
-                      <Image
-                        key={att.id}
-                        source={{ uri: att.url }}
-                        className="w-[200px] h-[140px] rounded-lg mb-1 bg-gray-200"
-                        resizeMode="cover"
-                      />
-                    );
-                  }
-                  return null;
-                })}
-              </View>
+              <View className="mb-1">{renderImageGrid(item.attachments)}</View>
             )}
 
             {/* Text Content */}
@@ -350,9 +432,9 @@ export default function TeamChatScreen() {
   };
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-[#F5F5F5]">
+    <View className="flex-1 bg-[#F5F5F5]">
       {/* ===== HEADER ===== */}
-      <View className="flex-row items-center gap-3 bg-[#90717E] px-4 py-3 pb-3">
+      <View className="  flex-row items-center gap-3 bg-[#90717E] px-4 p-6 ">
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
@@ -409,7 +491,7 @@ export default function TeamChatScreen() {
 
         {/* ===== INPUT ===== */}
         <View className="flex-row items-center gap-3 bg-white px-3 py-2 pb-4">
-          <TouchableOpacity onPress={handlePickImage}>
+          <TouchableOpacity onPress={() => setShowAttachModal(true)}>
             <Ionicons name="attach" size={22} color="#B8B8B8" />
           </TouchableOpacity>
 
@@ -427,6 +509,89 @@ export default function TeamChatScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+      {previewImage && (
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          onRequestClose={() => setPreviewImage(null)}
+        >
+          <View className="flex-1 bg-black justify-center items-center">
+            {/* Close button */}
+            <TouchableOpacity
+              onPress={() => setPreviewImage(null)}
+              style={{ position: "absolute", top: 50, right: 20, zIndex: 10 }}
+            >
+              <Ionicons name="close" size={32} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Full image */}
+            <Image
+              source={{ uri: previewImage }}
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="contain"
+            />
+          </View>
+        </Modal>
+      )}
+
+      {showAttachModal && (
+        <Modal
+          transparent
+          animationType="fade"
+          visible
+          onRequestClose={() => setShowAttachModal(false)}
+        >
+          <TouchableOpacity
+            className="flex-1 bg-black/40 justify-end"
+            activeOpacity={1}
+            onPress={() => setShowAttachModal(false)}
+          >
+            <View className="bg-white rounded-t-xl pb-4">
+              <AttachItem
+                icon="camera-outline"
+                label="Capture new image"
+                onPress={handleTakePhoto}
+              />
+
+              <AttachItem
+                icon="images-outline"
+                label="Take from library"
+                onPress={handlePickFromLibrary}
+              />
+
+              <AttachItem
+                icon="attach-outline"
+                label="Attach file"
+                onPress={() => {
+                  setShowAttachModal(false);
+                  Alert.alert("Coming soon");
+                }}
+              />
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
+    </View>
+  );
+}
+
+function AttachItem({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: any;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      className="flex-row items-center gap-4 px-5 py-4"
+    >
+      <Ionicons name={icon} size={22} color="#1D1B20" />
+      <Text className="text-[16px] text-[#1D1B20]">{label}</Text>
+    </TouchableOpacity>
   );
 }
