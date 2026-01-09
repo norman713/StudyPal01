@@ -1,6 +1,7 @@
 import taskApi, { RecurrenceRule } from "@/api/taskApi";
 import ErrorModal from "@/components/modal/error";
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { router, useLocalSearchParams } from "expo-router";
@@ -10,10 +11,9 @@ import {
   Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from "react-native";
-import { Appbar } from "react-native-paper";
+import { Appbar, TextInput } from "react-native-paper";
 
 dayjs.extend(customParseFormat);
 
@@ -43,10 +43,11 @@ export default function RecurrenceScreen() {
   // Store full backend day strings in selectedDays? Or map?
   // Let's store Backend strings to make it easier for submitting, map for display.
 
-  const [fromDate, setFromDate] = useState(dayjs().format("DD-MM-YYYY"));
-  const [toDate, setToDate] = useState(
-    dayjs().add(1, "week").format("DD-MM-YYYY")
-  );
+  const [fromDate, setFromDate] = useState<Date>(new Date());
+  const [toDate, setToDate] = useState<Date>(dayjs().add(1, "week").toDate());
+
+  const [showFromDatePicker, setShowFromDatePicker] = useState(false);
+  const [showToDatePicker, setShowToDatePicker] = useState(false);
 
   useEffect(() => {
     console.log("RecurrenceScreen mounted, taskId:", taskId);
@@ -67,10 +68,10 @@ export default function RecurrenceScreen() {
           setSelectedDays(data.weekDays);
         }
         if (data.recurrenceStartDate) {
-          setFromDate(dayjs(data.recurrenceStartDate).format("DD-MM-YYYY"));
+          setFromDate(dayjs(data.recurrenceStartDate).toDate());
         }
         if (data.recurrenceEndDate) {
-          setToDate(dayjs(data.recurrenceEndDate).format("DD-MM-YYYY"));
+          setToDate(dayjs(data.recurrenceEndDate).toDate());
         }
       }
     } catch (error: any) {
@@ -96,13 +97,9 @@ export default function RecurrenceScreen() {
       const isNone = type === "NONE";
 
       // Only format dates if type !== NONE
-      const start = isNone
-        ? null
-        : dayjs(fromDate, "DD-MM-YYYY").format("YYYY-MM-DD");
+      const start = isNone ? null : `${dayjs(fromDate).format("YYYY-MM-DD")}`;
 
-      const end = isNone
-        ? null
-        : dayjs(toDate, "DD-MM-YYYY").format("YYYY-MM-DD");
+      const end = isNone ? null : `${dayjs(toDate).format("YYYY-MM-DD")} `;
 
       const payload: RecurrenceRule = {
         type: type,
@@ -159,7 +156,7 @@ export default function RecurrenceScreen() {
             Type
           </Text>
 
-          <View className="flex-row gap-6 mb-4">
+          <View className="flex-row gap-6 mb-4 ">
             {[
               { key: "NONE", label: "None" },
               { key: "DAILY", label: "Daily" },
@@ -177,7 +174,7 @@ export default function RecurrenceScreen() {
                       <View className="w-2 h-2 rounded-full bg-[#90717E]" />
                     )}
                   </View>
-                  <Text className="text-[15px] text-[#0F0C0D]">
+                  <Text className="text-[15px] font-medium text-[#0F0C0D]">
                     {item.label}
                   </Text>
                 </Pressable>
@@ -220,16 +217,74 @@ export default function RecurrenceScreen() {
             </Text>
 
             <View className="flex-row gap-3">
-              <DateInput
+              <TextInput
+                mode="outlined"
                 label="From date"
-                value={fromDate}
-                onChangeText={setFromDate}
+                value={dayjs(fromDate).format("DD/MM/YYYY")}
+                editable={false}
+                style={{ width: 150 }}
+                contentStyle={{
+                  fontSize: 14,
+                }}
+                theme={{
+                  roundness: 99,
+                  colors: {
+                    background: "#FFFFFF",
+                  },
+                }}
+                right={
+                  <TextInput.Icon
+                    icon={() => <Ionicons name="calendar-outline" size={22} />}
+                    onPress={() => setShowFromDatePicker(true)}
+                  />
+                }
               />
-              <DateInput
+
+              {showFromDatePicker && (
+                <DateTimePicker
+                  value={fromDate}
+                  mode="date"
+                  display="default"
+                  onChange={(e, selected) => {
+                    setShowFromDatePicker(false);
+                    if (selected) setFromDate(selected);
+                  }}
+                />
+              )}
+              <TextInput
+                mode="outlined"
                 label="To date"
-                value={toDate}
-                onChangeText={setToDate}
+                value={dayjs(toDate).format("DD/MM/YYYY")}
+                editable={false}
+                style={{ width: 150 }}
+                contentStyle={{
+                  fontSize: 14,
+                }}
+                theme={{
+                  roundness: 99,
+                  colors: {
+                    background: "#FFFFFF",
+                  },
+                }}
+                right={
+                  <TextInput.Icon
+                    icon={() => <Ionicons name="calendar-outline" size={22} />}
+                    onPress={() => setShowToDatePicker(true)}
+                  />
+                }
               />
+
+              {showToDatePicker && (
+                <DateTimePicker
+                  value={toDate}
+                  mode="date"
+                  display="default"
+                  onChange={(e, selected) => {
+                    setShowToDatePicker(false);
+                    if (selected) setToDate(selected);
+                  }}
+                />
+              )}
             </View>
           </View>
         )}
@@ -253,83 +308,6 @@ export default function RecurrenceScreen() {
         message={errorMessage}
         onConfirm={() => setShowErrorModal(false)}
       />
-    </View>
-  );
-}
-
-/* =======================
-   DATE INPUT + FORMAT
-======================= */
-
-function formatDateInput(text: string) {
-  const digits = text.replace(/\D/g, "").slice(0, 8);
-
-  let day = digits.slice(0, 2);
-  let month = digits.slice(2, 4);
-  let year = digits.slice(4, 8);
-
-  if (day.length === 2) {
-    const d = Number(day);
-    if (d < 1) day = "01";
-    if (d > 31) day = "31";
-  }
-
-  if (month.length === 2) {
-    const m = Number(month);
-    if (m < 1) month = "01";
-    if (m > 12) month = "12";
-  }
-
-  if (year.length === 4) {
-    const y = Number(year);
-    if (y < 1900) year = "1900";
-    if (y > 2099) year = "2099";
-  }
-
-  let result = day;
-  if (month) result += `-${month}`;
-  if (year) result += `-${year}`;
-
-  return result;
-}
-
-function DateInput({
-  label,
-  value,
-  onChangeText,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (v: string) => void;
-}) {
-  return (
-    <View className="flex-1 relative">
-      {/* Floating label */}
-      <Text
-        className="absolute -top-2 left-4 z-10 px-1 text-[13px] text-[#49454F]"
-        style={{ backgroundColor: "#FEF7FF" }}
-      >
-        {label}
-      </Text>
-
-      <View
-        className="flex-row items-center justify-between px-4 py-3 border rounded-full"
-        style={{
-          borderColor: "#79747E",
-          backgroundColor: "#FEF7FF",
-        }}
-      >
-        <TextInput
-          value={value}
-          onChangeText={(text) => onChangeText(formatDateInput(text))}
-          placeholder="dd-mm-yyyy"
-          keyboardType="number-pad"
-          maxLength={10}
-          className="flex-1 text-[15px] text-[#0F0C0D]"
-        />
-
-        <Ionicons name="calendar-outline" size={20} color="#49454F" />
-      </View>
     </View>
   );
 }

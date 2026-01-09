@@ -2,8 +2,8 @@ import taskApi, { PersonalTask, TaskPriority } from "@/api/taskApi";
 import ErrorModal from "@/components/modal/error";
 import QuestionModal from "@/components/modal/question";
 import SuccessModal from "@/components/modal/success";
-import { convertSystemToUserTime } from "@/utils/timezone";
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -13,10 +13,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
-import { Appbar } from "react-native-paper";
+import { Appbar, TextInput } from "react-native-paper";
 
 type SuccessType = "UPDATE" | null;
 export default function TaskDetail() {
@@ -29,17 +28,27 @@ export default function TaskDetail() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showScopeModal, setShowScopeModal] = useState(false);
 
+  const now = dayjs();
+
+  const [fromDate, setFromDate] = useState<Date>(new Date());
+  const [fromTime, setFromTime] = useState(now.format("HH:mm"));
+
+  const [toDate, setToDate] = useState<Date>(now.add(1, "hour").toDate());
+  const [toTime, setToTime] = useState(now.add(1, "hour").format("HH:mm"));
+
   const [taskName, setTaskName] = useState("");
   const [taskNote, setTaskNote] = useState("");
-  const [fromTime, setFromTime] = useState(dayjs().format("HH:mm"));
-  const [fromDate, setFromDate] = useState(dayjs().format("DD-MM-YYYY"));
-  const [toTime, setToTime] = useState(dayjs().add(1, "hour").format("HH:mm"));
-  const [toDate, setToDate] = useState(dayjs().format("DD-MM-YYYY"));
+
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   const [successType, setSuccessType] = useState<SuccessType>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  // Handle DateTimePicker visibility
+  const [showFromTimePicker, setShowFromTimePicker] = useState(false);
+  const [showFromDatePicker, setShowFromDatePicker] = useState(false);
+  const [showToTimePicker, setShowToTimePicker] = useState(false);
+  const [showToDatePicker, setShowToDatePicker] = useState(false);
 
   const getPriorityColor = (p: TaskPriority) => {
     switch (p) {
@@ -149,13 +158,19 @@ export default function TaskDetail() {
       setTaskName(data.content);
       setTaskNote(data.note || "");
 
-      const startDate = convertSystemToUserTime(data.startDate);
-      const dueDate = convertSystemToUserTime(data.dueDate);
+      const start = dayjs(data.startDate);
+      const due = dayjs(data.dueDate);
 
-      setFromTime(startDate.format("HH:mm"));
-      setFromDate(startDate.format("DD-MM-YYYY"));
-      setToTime(dueDate.format("HH:mm"));
-      setToDate(dueDate.format("DD-MM-YYYY"));
+      setFromDate(start.toDate());
+      setFromTime(start.format("HH:mm"));
+
+      setToDate(due.toDate());
+      setToTime(due.format("HH:mm"));
+
+      setTaskName(data.content);
+      setTaskNote(data.note || "");
+      setPriority(data.priority);
+
       setPriority(data.priority);
     } catch (error: any) {
       showApiError(error);
@@ -228,16 +243,16 @@ export default function TaskDetail() {
 
   //handle save
 
+  const formatDateDisplay = (date: Date) => {
+    return dayjs(date).format("DD/MM/YYYY");
+  };
+
   const handleSave = async () => {
     if (!taskId) return;
     try {
       setLoading(true);
-      const start = dayjs(`${fromDate} ${fromTime}`, "DD-MM-YYYY HH:mm").format(
-        "YYYY-MM-DD HH:mm:ss"
-      );
-      const due = dayjs(`${toDate} ${toTime}`, "DD-MM-YYYY HH:mm").format(
-        "YYYY-MM-DD HH:mm:ss"
-      );
+      const start = `${dayjs(fromDate).format("YYYY-MM-DD")} ${fromTime}:00`;
+      const due = `${dayjs(toDate).format("YYYY-MM-DD")} ${toTime}:00`;
 
       const payload = {
         content: taskName,
@@ -247,7 +262,7 @@ export default function TaskDetail() {
         dueDate: due,
       };
 
-      console.log("Update Task Payload:", JSON.stringify(payload, null, 2));
+      console.log("[DEBUG] Update task payload:", payload);
 
       await taskApi.updateTask(taskId, payload);
       setSuccessType("UPDATE");
@@ -334,110 +349,187 @@ export default function TaskDetail() {
           />
 
           {/* Task Name */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Task name</Text>
-            <TextInput
-              style={styles.input}
-              value={taskName}
-              onChangeText={setTaskName}
-            />
-          </View>
+          <TextInput
+            mode="outlined"
+            label="Task name"
+            theme={{
+              roundness: 10,
+              colors: {
+                background: "#FFFFFF",
+              },
+            }}
+            value={taskName}
+            onChangeText={setTaskName}
+            placeholder="Enter task name"
+          />
 
           {/* Task Note */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Task note (optional)</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={taskNote}
-              onChangeText={setTaskNote}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          </View>
+          <TextInput
+            mode="outlined"
+            label="Task note (optional)"
+            theme={{
+              roundness: 10,
+              colors: {
+                background: "#FFFFFF",
+              },
+            }}
+            value={taskNote}
+            onChangeText={setTaskNote}
+            multiline
+            numberOfLines={7}
+            textAlignVertical="top"
+            style={{
+              height: 140,
+            }}
+          />
 
           {/* From Time and Date */}
           <View style={styles.row}>
             {/* From Time */}
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.inputLabel}>From time</Text>
-              <View style={styles.inputWithIcon}>
-                <TextInput
-                  style={styles.input}
-                  value={fromTime}
-                  onChangeText={(text) => setFromTime(formatTime(text))} // Format time as HH:mm
-                  placeholder="HH:mm"
-                  keyboardType="numeric"
+            <TextInput
+              mode="outlined"
+              label="From time"
+              value={fromTime}
+              editable={false}
+              theme={{
+                roundness: 99,
+                colors: {
+                  background: "#FFFFFF",
+                },
+              }}
+              style={{ width: 130 }}
+              right={
+                <TextInput.Icon
+                  icon={() => <Ionicons name="time-outline" size={22} />}
+                  onPress={() => setShowFromTimePicker(true)}
                 />
-                <Ionicons
-                  name="time-outline"
-                  size={24}
-                  color="#49454F"
-                  style={styles.icon}
-                />
-              </View>
-            </View>
+              }
+            />
+
+            {showFromTimePicker && (
+              <DateTimePicker
+                value={dayjs(fromDate)
+                  .hour(Number(fromTime.split(":")[0]))
+                  .minute(Number(fromTime.split(":")[1]))
+                  .toDate()}
+                mode="time"
+                display="spinner"
+                is24Hour
+                onChange={(e, selected) => {
+                  setShowFromTimePicker(false);
+                  if (selected) {
+                    setFromTime(dayjs(selected).format("HH:mm"));
+                  }
+                }}
+              />
+            )}
 
             {/* From Date */}
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.inputLabel}>From date</Text>
-              <View style={styles.inputWithIcon}>
-                <TextInput
-                  style={styles.input}
-                  value={fromDate}
-                  onChangeText={(text) => setFromDate(formatDate(text))} // Format date as DD-MM-YYYY
-                  placeholder="DD-MM-YYYY"
-                  keyboardType="numeric"
+            <TextInput
+              mode="outlined"
+              label="From date"
+              value={dayjs(fromDate).format("DD/MM/YYYY")}
+              editable={false}
+              theme={{
+                roundness: 99,
+                colors: {
+                  background: "#FFFFFF",
+                },
+              }}
+              right={
+                <TextInput.Icon
+                  icon={() => <Ionicons name="calendar-outline" size={22} />}
+                  onPress={() => setShowFromDatePicker(true)}
                 />
-                <Ionicons
-                  name="calendar-outline"
-                  size={24}
-                  color="#49454F"
-                  style={styles.icon}
-                />
-              </View>
-            </View>
+              }
+            />
+
+            {showFromDatePicker && (
+              <DateTimePicker
+                value={fromDate}
+                mode="date"
+                display="default"
+                onChange={(e, selected) => {
+                  setShowFromDatePicker(false);
+                  if (selected) setFromDate(selected);
+                }}
+              />
+            )}
           </View>
 
           <View style={styles.row}>
             {/* To Time */}
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.inputLabel}>To time</Text>
-              <View style={styles.inputWithIcon}>
-                <TextInput
-                  style={styles.input}
-                  value={toTime}
-                  onChangeText={(text) => setToTime(formatTime(text))} // Format time as HH:mm
-                  placeholder="HH:mm"
-                  keyboardType="numeric"
+            <TextInput
+              mode="outlined"
+              label="To time"
+              value={toTime}
+              editable={false}
+              theme={{
+                roundness: 99,
+                colors: {
+                  background: "#FFFFFF",
+                },
+              }}
+              style={{ width: 130 }}
+              right={
+                <TextInput.Icon
+                  icon={() => <Ionicons name="time-outline" size={22} />}
+                  onPress={() => setShowToTimePicker(true)}
                 />
-                <Ionicons
-                  name="time-outline"
-                  size={24}
-                  color="#49454F"
-                  style={styles.icon}
-                />
-              </View>
-            </View>
+              }
+            />
+
+            {showToTimePicker && (
+              <DateTimePicker
+                value={dayjs(toDate)
+                  .hour(Number(toTime.split(":")[0]))
+                  .minute(Number(toTime.split(":")[1]))
+                  .toDate()}
+                mode="time"
+                display="spinner"
+                is24Hour
+                onChange={(e, selected) => {
+                  setShowToTimePicker(false);
+                  if (selected) {
+                    setToTime(dayjs(selected).format("HH:mm"));
+                  }
+                }}
+              />
+            )}
 
             {/* To Date */}
             <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.inputLabel}>To date</Text>
-              <View style={styles.inputWithIcon}>
-                <TextInput
-                  style={styles.input}
+              <TextInput
+                mode="outlined"
+                label="To date"
+                value={dayjs(toDate).format("DD/MM/YYYY")}
+                editable={false}
+                style={{ width: 160 }}
+                theme={{
+                  roundness: 99,
+                  colors: {
+                    background: "#FFFFFF",
+                  },
+                }}
+                right={
+                  <TextInput.Icon
+                    icon={() => <Ionicons name="calendar-outline" size={22} />}
+                    onPress={() => setShowToDatePicker(true)}
+                  />
+                }
+              />
+
+              {showToDatePicker && (
+                <DateTimePicker
                   value={toDate}
-                  onChangeText={(text) => setToDate(formatDate(text))} // Format date as DD-MM-YYYY
-                  placeholder="DD-MM-YYYY"
-                  keyboardType="numeric"
+                  mode="date"
+                  display="default"
+                  onChange={(e, selected) => {
+                    setShowToDatePicker(false);
+                    if (selected) setToDate(selected);
+                  }}
                 />
-                <Ionicons
-                  name="calendar-outline"
-                  size={24}
-                  color="#49454F"
-                  style={styles.icon}
-                />
-              </View>
+              )}
             </View>
           </View>
         </View>
