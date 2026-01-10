@@ -209,7 +209,7 @@ export default function EditProfileScreen() {
           </View>
 
           {/* Form Fields */}
-          <View className="space-y-5">
+          <View className="gap-5">
             <TextInput
               label="Name"
               mode="outlined"
@@ -312,14 +312,19 @@ export default function EditProfileScreen() {
       </KeyboardAvoidingView>
 
       {/* Bottom Save Button */}
-      <View className="p-4 bg-white border-t border-gray-100">
+      <View className="p-4 bg-white">
         <Button
           mode="contained"
           onPress={handleSave}
           loading={saving}
           disabled={saving}
           buttonColor={THEME_COLOR}
-          style={{ borderRadius: 25, height: 50, justifyContent: "center" }}
+          style={{
+            borderRadius: 25,
+            height: 50,
+            justifyContent: "center",
+            marginBottom: 20,
+          }}
           contentStyle={{ height: 50 }}
         >
           Save

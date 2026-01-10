@@ -3,14 +3,7 @@ import ChatBotSection from "@/app/(me)/task/components/Chatbot";
 import dayjs from "dayjs";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useState } from "react";
-import {
-  Alert,
-  FlatList,
-  Image,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, FlatList, StyleSheet, View } from "react-native";
 import { Appbar } from "react-native-paper";
 import PlanHeader from "./components/PlanScreen/Header";
 import PlanList from "./components/PlanScreen/PlanList";
@@ -169,7 +162,6 @@ export default function PlanScreen() {
     <View style={styles.container}>
       <Appbar.Header mode="small" style={{ backgroundColor: "#90717E" }}>
         <Appbar.BackAction color="#F8F6F7" onPress={() => router.back()} />
-
         <Appbar.Content
           title={teamName || "Team"}
           titleStyle={{
@@ -208,29 +200,7 @@ export default function PlanScreen() {
           showsVerticalScrollIndicator={false}
         />
       </View>
-
-      {/* Sử dụng FAB sẵn có của BottomBar */}
-      {/* <BottomBar
-        activeTab={bottomTab}
-        onTabPress={(tab) => {
-          setBottomTab(tab);
-          switch (tab) {
-            case "me":
-              router.push("/(me)");
-              break;
-            case "team":
-              router.push("/(team)/search");
-              break;
-            case "notification":
-              router.push("/(noti)");
-              break;
-            case "trash":
-              router.push("/(team)/trash/index");
-              break;
-          }
-        }}
-        onCenterPress={handleCreatePlan}
-      /> */}
+      {/* 
       <View className="items-center mb-6">
         <TouchableOpacity onPress={handleCreatePlan} activeOpacity={0.7}>
           <Image
@@ -239,7 +209,7 @@ export default function PlanScreen() {
             resizeMode="contain"
           />
         </TouchableOpacity>
-      </View>
+      </View> */}
     </View>
   );
 }

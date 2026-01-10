@@ -127,22 +127,17 @@ const userApi = {
     // Use fetch for manual control
     const { accessToken } = await readTokens();
     const url = `${process.env.EXPO_PUBLIC_API_URL}/users`;
-
-    console.log("Sending PATCH to:", url);
-
     const response = await fetch(url, {
       method: "PATCH",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
-        // fetch automatically sets Content-Type: multipart/form-data; boundary=...
       },
       body: formData,
     });
 
     if (!response.ok) {
       const text = await response.text();
-      console.log("Update profile failed:", response.status, text);
       throw new Error(`Update failed: ${response.status} ${text}`);
     }
 

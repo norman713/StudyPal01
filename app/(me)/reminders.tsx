@@ -1,12 +1,12 @@
 import taskApi, { Reminder } from "@/api/taskApi";
 import ErrorModal from "@/components/modal/error";
+import SuccessModal from "@/components/modal/success";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
   Modal,
   Platform,
   Pressable,
@@ -32,6 +32,8 @@ export default function Reminders() {
   const [selectedTime, setSelectedTime] = useState(new Date());
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | undefined>();
 
   const [editingReminderId, setEditingReminderId] = useState<string | null>(
     null
@@ -157,11 +159,14 @@ export default function Reminders() {
       setLoading(true);
       if (editingReminderId) {
         await taskApi.updateReminder(editingReminderId, remindAt);
-        Alert.alert("Success", "Reminder updated");
+        setSuccessMessage("Reminder updated successfully.");
       } else {
         await taskApi.createReminder(taskId, remindAt);
-        Alert.alert("Success", "Reminder created");
+        setSuccessMessage("Reminder created successfully.");
       }
+
+      setShowSuccessModal(true);
+
       fetchReminders(); // Refresh list to get ID
       setEditingReminderId(null); // Reset
     } catch (error) {
@@ -325,6 +330,17 @@ export default function Reminders() {
         message={errorMessage}
         confirmText="OK"
         onConfirm={() => setShowErrorModal(false)}
+      />
+      <SuccessModal
+        visible={showSuccessModal}
+        title="Success!"
+        message={successMessage}
+        confirmText="OK"
+        onConfirm={() => {
+          setShowSuccessModal(false);
+          fetchReminders(); // refresh list
+          setEditingReminderId(null);
+        }}
       />
     </View>
   );

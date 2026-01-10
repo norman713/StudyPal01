@@ -60,29 +60,6 @@ export default function AssigneeSelector({
         }
       } catch (error) {
         if (!isMounted) return;
-
-        // Fallback mock
-        const mock: Member[] = [
-          {
-            id: "1",
-            name: "Nguyetlun115",
-            avatarUrl: "https://i.pravatar.cc/40?img=1",
-          },
-          {
-            id: "2",
-            name: "Minh Huy",
-            avatarUrl: "https://i.pravatar.cc/40?img=2",
-          },
-          {
-            id: "3",
-            name: "Minh Hoàng",
-            avatarUrl: "https://i.pravatar.cc/40?img=3",
-          },
-        ];
-
-        setMembers(mock);
-        setSelectedAssignee(mock[0]);
-        onAssigneeChange(mock[0].id);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -123,7 +100,7 @@ export default function AssigneeSelector({
                 </Text>
               </View>
             )}
-            <Text className="text-[15px] text-[#0F0C0D]">
+            <Text className="text-[15px] text-[#0F0C0D] font-semibold">
               {selectedAssignee.name}
             </Text>
           </View>

@@ -45,11 +45,11 @@ const notificationApi = {
     return res.data;
   },
 
-  async markManyAsRead(ids: string[]): Promise<{ success: boolean }> {
-    const url = `/notifications`;
-    const res = await axiosInstance.patch(url, { ids });
-    return res.data;
-  },
+async markManyAsRead(ids: string[]) {
+  const url = "/notifications";
+  const res = await axiosInstance.patch(url, { ids });
+  return res;
+},
 
   async deleteAll(): Promise<{ success: boolean }> {
     const url = `/notifications/all`;

@@ -1,3 +1,4 @@
+import ErrorModal from "@/components/modal/error";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import React, { useEffect, useState } from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
@@ -16,6 +17,9 @@ export default function NotificationPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>();
+
   //fetch api
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -31,6 +35,7 @@ export default function NotificationPage() {
             ? ("overdue" as const)
             : ("expired" as const),
           checked: false,
+          read: n.read ?? false,
         }));
 
         setNotifications(mapped);
@@ -83,25 +88,25 @@ export default function NotificationPage() {
 
   const handleMarkRead = async () => {
     try {
-      const idsToMark = notifications
-        .filter((n) => n.checked) // Only process checked items
-        .map((n) => n.id);
+      const idsToMark = notifications.filter((n) => n.checked).map((n) => n.id);
 
       if (idsToMark.length === 0) return;
 
       setLoading(true);
+
       await notificationApi.markManyAsRead(idsToMark);
 
       setNotifications((prev) =>
-        prev.map((n) => {
-          if (idsToMark.includes(n.id)) {
-            return { ...n, read: true, checked: false };
-          }
-          return n;
-        })
+        prev.map((n) =>
+          idsToMark.includes(n.id) ? { ...n, read: true, checked: false } : n
+        )
       );
-    } catch (err) {
-      console.error("[handleMarkRead] Error:", err);
+    } catch (err: any) {
+      const apiMessage =
+        err?.response?.data?.message ?? "Something went wrong.";
+
+      setErrorMessage(apiMessage);
+      setErrorVisible(true);
     } finally {
       setLoading(false);
     }
@@ -240,6 +245,12 @@ export default function NotificationPage() {
           })
         )}
       </ScrollView>
+
+      <ErrorModal
+        visible={errorVisible}
+        message={errorMessage}
+        onConfirm={() => setErrorVisible(false)}
+      />
     </View>
   );
 }

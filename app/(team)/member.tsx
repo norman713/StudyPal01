@@ -56,7 +56,6 @@ const getMenuItems = (
 
   const handleRemove = () => {
     closeMenu();
-    // Call the passed onRemove handler
     onRemove(row.id);
   };
 

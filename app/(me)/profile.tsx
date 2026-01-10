@@ -25,6 +25,7 @@ export default function ProfileScreen({}: ProfileScreenProps) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -231,7 +232,7 @@ export default function ProfileScreen({}: ProfileScreenProps) {
             disabled={loading}
             left={(p) => <List.Icon {...p} icon="lock-reset" />}
             right={(p) => <List.Icon {...p} icon="chevron-right" />}
-            onPress={handleResetPassword}
+            onPress={() => setShowResetModal(true)}
           />
           <List.Item
             title="Log out"
@@ -266,6 +267,19 @@ export default function ProfileScreen({}: ProfileScreenProps) {
         cancelText="Cancel"
         onConfirm={handleLogout}
         onCancel={() => setShowLogoutModal(false)}
+      />
+
+      <QuestionModal
+        visible={showResetModal}
+        title="Reset password?"
+        message="We’ll send a reset code to your email. Are you sure?"
+        confirmText="Reset"
+        cancelText="Cancel"
+        onConfirm={() => {
+          setShowResetModal(false);
+          handleResetPassword();
+        }}
+        onCancel={() => setShowResetModal(false)}
       />
 
       {loading && (

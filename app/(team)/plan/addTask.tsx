@@ -1,6 +1,8 @@
 import planApi, { TaskPriority } from "@/api/planApi";
 import ErrorModal from "@/components/modal/error";
 import { planCreationStore } from "@/utils/planCreationStore";
+import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
 import { nanoid } from "nanoid/non-secure";
@@ -15,14 +17,10 @@ import {
 } from "react-native";
 import { Appbar, TextInput } from "react-native-paper";
 import AssigneeSelector from "./components/AssigneeSelector";
-import DateTimeInput from "./components/DateTimeInput";
 import PrioritySelector from "./components/PrioritySelector";
 
 type Role = "OWNER" | "ADMIN" | "MEMBER";
 
-/**
- * Add New Task Screen - giống design taskDetail
- */
 export default function AddTaskScreen() {
   const {
     teamId,
@@ -37,17 +35,31 @@ export default function AddTaskScreen() {
   // Form states
   const [taskName, setTaskName] = useState("");
   const [taskNote, setTaskNote] = useState("");
-  const [fromTime, setFromTime] = useState("08:00");
-  const [fromDate, setFromDate] = useState(dayjs().format("DD-MM-YYYY"));
-  const [toTime, setToTime] = useState("09:00");
-  const [toDate, setToDate] = useState(dayjs().format("DD-MM-YYYY"));
+
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   const [assigneeId, setAssigneeId] = useState<string>("");
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Handle DateTimePicker visibility
+  const [showFromTimePicker, setShowFromTimePicker] = useState(false);
+  const [showFromDatePicker, setShowFromDatePicker] = useState(false);
+  const [showToTimePicker, setShowToTimePicker] = useState(false);
+  const [showToDatePicker, setShowToDatePicker] = useState(false);
+  const now = dayjs();
+  const [fromTime, setFromTime] = useState(now.format("HH:mm"));
+  const [fromDate, setFromDate] = useState(new Date());
+  const [toDate, setToDate] = useState(dayjs().add(7, "day").toDate());
+
+  const nextHour = now.add(1, "hour");
+  const [toTime, setToTime] = useState(nextHour.format("HH:mm"));
+
   // Submit state
   const [loading, setLoading] = useState(false);
+
+  const formatDateDisplay = (date: Date) => {
+    return dayjs(date).format("DD/MM/YYYY");
+  };
 
   const validate = () => {
     if (!taskName.trim()) {
@@ -64,21 +76,6 @@ export default function AddTaskScreen() {
     const tempId = nanoid();
     setLoading(true);
     try {
-      // Parse dates
-      const [fromDay, fromMonth, fromYear] = fromDate.split("-").map(Number);
-      const [fromHour, fromMin] = fromTime.split(":").map(Number);
-      const startDate = new Date(
-        fromYear,
-        fromMonth - 1,
-        fromDay,
-        fromHour,
-        fromMin
-      );
-
-      const [toDay, toMonth, toYear] = toDate.split("-").map(Number);
-      const [toHour, toMin] = toTime.split(":").map(Number);
-      const dueDate = new Date(toYear, toMonth - 1, toDay, toHour, toMin);
-
       // Check if we are creating a new plan (planId is "new" or missing)
       const isNewPlan = !planId || planId === "new";
 
@@ -88,20 +85,19 @@ export default function AddTaskScreen() {
           tempId,
           content: taskName.trim(),
           note: taskNote.trim(),
-          startDate: dayjs(startDate).format("YYYY-MM-DD HH:mm:ss"),
-          dueDate: dayjs(dueDate).format("YYYY-MM-DD HH:mm:ss"),
+          startDate: `${dayjs(fromDate).format("YYYY-MM-DD")} ${fromTime}:00`,
+          dueDate: `${dayjs(toDate).format("YYYY-MM-DD")} ${toTime}:00`,
           assigneeId: assigneeId || undefined,
           priority,
         });
 
         router.back();
       } else {
-        // Direct API call for existing plan
         await planApi.createTask(teamId, planId, {
-          content: taskName.trim(), // Changed from name
-          note: taskNote.trim(), // Changed from description
-          startDate: dayjs(startDate).format("YYYY-MM-DD HH:mm:ss"),
-          dueDate: dayjs(dueDate).format("YYYY-MM-DD HH:mm:ss"),
+          content: taskName.trim(),
+          note: taskNote.trim(),
+          startDate: `${dayjs(fromDate).format("YYYY-MM-DD")} ${fromTime}:00`,
+          dueDate: `${dayjs(toDate).format("YYYY-MM-DD")} ${toTime}:00`,
           assigneeId: assigneeId || undefined,
           priority,
         });
@@ -147,10 +143,8 @@ export default function AddTaskScreen() {
               label=""
               value={taskName}
               onChangeText={setTaskName}
-              outlineStyle={styles.inputOutline}
-              contentStyle={styles.inputContent}
               theme={{
-                roundness: 30,
+                roundness: 99,
                 colors: {
                   background: "#fff",
                   outline: "#79747E",
@@ -183,34 +177,176 @@ export default function AddTaskScreen() {
 
           {/* From Time and Date */}
           <View style={styles.row}>
-            <DateTimeInput
-              label="From time"
-              value={fromTime}
-              onChangeText={setFromTime}
-              icon="time-outline"
-            />
-            <DateTimeInput
-              label="From date"
-              value={fromDate}
-              onChangeText={setFromDate}
-              icon="calendar-outline"
-            />
+            {/* From Time */}
+            <View>
+              <TextInput
+                mode="outlined"
+                label="From time"
+                value={fromTime}
+                editable={false}
+                theme={{
+                  roundness: 99,
+                  colors: {
+                    background: "#FFFFFF",
+                  },
+                }}
+                style={{ width: 130 }}
+                right={
+                  <TextInput.Icon
+                    icon={() => (
+                      <Ionicons name="time-outline" size={24} color="#49454F" />
+                    )}
+                    onPress={() => setShowFromTimePicker(true)}
+                  />
+                }
+              />
+
+              {showFromTimePicker && (
+                <DateTimePicker
+                  value={dayjs(fromDate)
+                    .hour(Number(fromTime.split(":")[0]))
+                    .minute(Number(fromTime.split(":")[1]))
+                    .toDate()}
+                  mode="time"
+                  display="spinner"
+                  is24Hour
+                  onChange={(e, selected) => {
+                    setShowFromTimePicker(false);
+                    if (selected) {
+                      setFromTime(dayjs(selected).format("HH:mm"));
+                    }
+                  }}
+                />
+              )}
+            </View>
+
+            {/* From Date */}
+            <View>
+              <TextInput
+                mode="outlined"
+                label="From date"
+                value={formatDateDisplay(fromDate)}
+                editable={false}
+                theme={{
+                  roundness: 99,
+                  colors: {
+                    background: "#FFFFFF",
+                  },
+                }}
+                right={
+                  <TextInput.Icon
+                    icon={() => (
+                      <Ionicons
+                        name="calendar-outline"
+                        size={24}
+                        color="#49454F"
+                      />
+                    )}
+                    onPress={() => setShowFromDatePicker(true)}
+                  />
+                }
+              />
+              {showFromDatePicker && (
+                <DateTimePicker
+                  value={fromDate}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowFromDatePicker(false);
+                    if (event.type === "set" && selectedDate) {
+                      setFromDate(selectedDate);
+                    }
+                  }}
+                />
+              )}
+            </View>
           </View>
 
           {/* To Time and Date */}
           <View style={styles.row}>
-            <DateTimeInput
-              label="To time"
-              value={toTime}
-              onChangeText={setToTime}
-              icon="time-outline"
-            />
-            <DateTimeInput
-              label="To date"
-              value={toDate}
-              onChangeText={setToDate}
-              icon="calendar-outline"
-            />
+            {/* To Time */}
+            <View>
+              <TextInput
+                mode="outlined"
+                label="To time"
+                value={toTime}
+                editable={false}
+                theme={{
+                  roundness: 99,
+                  colors: {
+                    background: "#FFFFFF",
+                  },
+                }}
+                style={{ width: 130 }}
+                right={
+                  <TextInput.Icon
+                    icon={() => (
+                      <Ionicons name="time-outline" size={24} color="#49454F" />
+                    )}
+                    onPress={() => setShowToTimePicker(true)}
+                  />
+                }
+              />
+
+              {showToTimePicker && (
+                <DateTimePicker
+                  value={dayjs(toDate)
+                    .hour(Number(toTime.split(":")[0]))
+                    .minute(Number(toTime.split(":")[1]))
+                    .toDate()}
+                  mode="time"
+                  display="spinner"
+                  is24Hour
+                  onChange={(e, selected) => {
+                    setShowToTimePicker(false);
+                    if (selected) {
+                      setToTime(dayjs(selected).format("HH:mm"));
+                    }
+                  }}
+                />
+              )}
+            </View>
+
+            {/* To Date */}
+            <View>
+              <TextInput
+                mode="outlined"
+                label="To date"
+                value={formatDateDisplay(toDate)}
+                editable={false}
+                theme={{
+                  roundness: 99,
+                  colors: {
+                    background: "#FFFFFF",
+                  },
+                }}
+                right={
+                  <TextInput.Icon
+                    icon={() => (
+                      <Ionicons
+                        name="calendar-outline"
+                        size={24}
+                        color="#49454F"
+                      />
+                    )}
+                    onPress={() => setShowToDatePicker(true)}
+                  />
+                }
+              />
+              {showToDatePicker && (
+                <DateTimePicker
+                  value={toDate}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowToDatePicker(false);
+                    if (event.type === "set" && selectedDate) {
+                      setToDate(selectedDate);
+                    }
+                  }}
+                />
+              )}
+            </View>
           </View>
         </View>
 

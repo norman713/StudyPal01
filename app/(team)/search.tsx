@@ -12,10 +12,10 @@ import {
 } from "react-native-paper";
 
 import teamApi, { Team } from "@/api/teamApi";
+import ErrorModal from "@/components/modal/error";
 import BottomBar from "@/components/ui/buttom";
 import Header from "@/components/ui/header";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CreateModal from "./components/createTeam";
 import EmptyState from "./components/EmtyState";
 import JoinTeamModal from "./components/joinTeam";
@@ -25,11 +25,6 @@ import SearchEmptyState from "./components/SearchEmtyState";
 export default function Search() {
   const router = useRouter();
   const params = useLocalSearchParams();
-
-  //CONST
-  const insets = useSafeAreaInsets();
-  const BAR_H = 80;
-  const EXTRA = 16;
 
   const ACTIVE = "#90717E";
   const INACTIVE = "#E3DBDF";
@@ -50,6 +45,11 @@ export default function Search() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>(
+    undefined
+  );
 
   const fetchTeams = useCallback(async () => {
     try {
@@ -97,21 +97,28 @@ export default function Search() {
   const handleSave = async (name: string, description: string) => {
     try {
       setLoading(true);
+
       const newTeam = await teamApi.create(name, description);
-      console.log("Created:", newTeam);
+      console.log("Raw response:", newTeam);
+
       setCreateModalVisible(false);
 
-      // Reload team list bằng searchTeams mới
+      // Reload team list
       const res = await teamApi.searchTeams(
         tab === "joined" ? "JOINED" : "OWNED",
-        undefined, //no search query
-        undefined, // no cursor
-        50 // limit
+        undefined,
+        undefined,
+        50
       );
 
       setTeams(res.teams ?? []);
-    } catch (err) {
-      console.error("[handleSave] Failed to create team:", err);
+    } catch (err: any) {
+      const apiMessage =
+        err?.response?.data?.message ||
+        "Failed to create team. Please try again.";
+
+      setErrorMessage(apiMessage);
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
@@ -370,6 +377,14 @@ export default function Search() {
           setJoinVisible(false);
         }}
         onClose={() => setJoinVisible(false)}
+      />
+
+      <ErrorModal
+        visible={showErrorModal}
+        title="Error"
+        message={errorMessage}
+        confirmText="OK"
+        onConfirm={() => setShowErrorModal(false)}
       />
     </View>
   );

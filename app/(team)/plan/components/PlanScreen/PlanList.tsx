@@ -41,7 +41,9 @@ export default function PlanList({
       ) : plans.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="document-text-outline" size={48} color="#E3DBDF" />
-          <Text style={styles.emptyText}>No plans for this date</Text>
+          <Text className="mt-3 text-[14px] text-[#79747E] font-medium">
+            No plans for this date
+          </Text>
         </View>
       ) : (
         plans.map((plan) => (
@@ -79,10 +81,5 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: "center",
     paddingVertical: 40,
-  },
-  emptyText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: "#79747E",
   },
 });

@@ -73,10 +73,9 @@ export default function NotiScreen() {
       };
 
       await teamApi.updateNotificationSetting(setting.id, updateData);
-      setOriginalSetting(setting); // Sync
+      setOriginalSetting(setting);
     } catch (error) {
       console.error("Failed to save settings", error);
-      // Revert to old settings if update fails
       fetchSettings();
     } finally {
       setSaving(false);

@@ -60,10 +60,6 @@ export default function TaskDetail() {
         priority: priority.toUpperCase() as TaskPriority,
         note: taskNote,
       };
-
-      console.log("[DEBUG] Saving task payload:", payload);
-      console.log("[DEBUG] From Time:", fromTime);
-      console.log("[DEBUG] To Time:", toTime);
       // Gửi request đến API để tạo task
       const response = await taskApi.createTask(payload);
 
@@ -168,33 +164,19 @@ export default function TaskDetail() {
 
               {showFromTimePicker && (
                 <DateTimePicker
-                  value={dayjs(
-                    `${fromDate} ${fromTime}`,
-                    "DD-MM-YYYY HH:mm"
-                  ).toDate()}
+                  value={dayjs(fromDate)
+                    .hour(Number(fromTime.split(":")[0]))
+                    .minute(Number(fromTime.split(":")[1]))
+                    .toDate()}
                   mode="time"
                   display="spinner"
-                  is24Hour={true}
-                  onChange={(event, selectedTime) => {
+                  is24Hour
+                  onChange={(e, selected) => {
                     setShowFromTimePicker(false);
-                    if (selectedTime) {
-                      const fullTime = `${selectedTime.getHours().toString().padStart(2, "0")}:${selectedTime
-                        .getMinutes()
-                        .toString()
-                        .padStart(2, "0")}`;
-                      setFromTime(fullTime);
+                    if (selected) {
+                      setFromTime(dayjs(selected).format("HH:mm"));
                     }
                   }}
-                  // onChange={(event, selectedTime) => {
-                  //   setShowFromTimePicker(false);
-                  //   if (selectedTime) {
-                  //     const fullTime = `${selectedTime.getHours().toString().padStart(2, "0")}:${selectedTime
-                  //       .getMinutes()
-                  //       .toString()
-                  //       .padStart(2, "0")}:00`;
-                  //     setFromTime(fullTime);
-                  //   }
-                  // }}
                 />
               )}
             </View>
@@ -269,33 +251,19 @@ export default function TaskDetail() {
 
               {showToTimePicker && (
                 <DateTimePicker
-                  value={dayjs(
-                    `${toDate} ${toTime}`,
-                    "DD-MM-YYYY HH:mm"
-                  ).toDate()}
+                  value={dayjs(toDate)
+                    .hour(Number(toTime.split(":")[0]))
+                    .minute(Number(toTime.split(":")[1]))
+                    .toDate()}
                   mode="time"
                   display="spinner"
-                  is24Hour={true}
-                  onChange={(event, selectedTime) => {
+                  is24Hour
+                  onChange={(e, selected) => {
                     setShowToTimePicker(false);
-                    if (selectedTime) {
-                      const fullTime = `${selectedTime.getHours().toString().padStart(2, "0")}:${selectedTime
-                        .getMinutes()
-                        .toString()
-                        .padStart(2, "0")}`;
-                      setToTime(fullTime);
+                    if (selected) {
+                      setToTime(dayjs(selected).format("HH:mm"));
                     }
                   }}
-                  // onChange={(event, selectedTime) => {
-                  //   setShowToTimePicker(false);
-                  //   if (selectedTime) {
-                  //     const fullTime = `${selectedTime.getHours().toString().padStart(2, "0")}:${selectedTime
-                  //       .getMinutes()
-                  //       .toString()
-                  //       .padStart(2, "0")}:00`;
-                  //     setToTime(fullTime);
-                  //   }
-                  // }}
                 />
               )}
             </View>

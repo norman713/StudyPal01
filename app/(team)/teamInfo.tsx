@@ -59,17 +59,26 @@ export default function TeamInfoScreen() {
 
   const [qrBase64, setQrBase64] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
+  const [totalMembers, setTotalMembers] = useState<number>(0);
+
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>();
+
+  const fetchMemberCount = useCallback(async () => {
+    if (!id) return;
+    try {
+      const res = await memberApi.getAll(id as string);
+      setTotalMembers(res?.members?.length ?? 0);
+    } catch (err) {
+      console.error("Failed to fetch member count:", err);
+    }
+  }, [id]);
 
   const fetchTeamInfo = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
       const data = await teamApi.getInfo(id as string);
-      console.log("=== Team Info Response ===");
-      console.log("Full data:", JSON.stringify(data, null, 2));
-      console.log("Role from API:", data?.role);
-      console.log("Description field:", data?.description);
-      console.log("All keys:", Object.keys(data || {}));
 
       // Debug: Check if description exists in different field names
       const possibleDescFields = [
@@ -91,11 +100,8 @@ export default function TeamInfoScreen() {
     } catch (err: any) {
       console.error("Failed to fetch team info:", err);
 
-      // Xử lý lỗi 401 - Token hết hạn
       if (err?.response?.status === 401) {
         setError("Your session has expired. Please login again.");
-        // Có thể redirect về login page
-        // router.replace("/(auth)/login");
       } else {
         setError("Failed to load team information. Please try again later.");
       }
@@ -109,8 +115,9 @@ export default function TeamInfoScreen() {
   useEffect(() => {
     if (isFocused) {
       fetchTeamInfo();
+      fetchMemberCount();
     }
-  }, [isFocused, fetchTeamInfo]);
+  }, [isFocused, fetchTeamInfo, fetchMemberCount]);
 
   if (loading) {
     return (
@@ -188,15 +195,25 @@ export default function TeamInfoScreen() {
   const handleLeave = () => {
     setLeaveModalVisible(true);
   };
+
   const handleConfirmLeave = async () => {
     if (!id) return;
+
     setLeaveModalVisible(false);
     setLoading(true);
+
     try {
-      await memberApi.leave(id as string);
-      router.push("/(team)/search");
+      const res = await memberApi.leave(id as string);
+
+      router.replace("/(team)/search");
     } catch (err: any) {
-      setError("Failed to leave team. Please try again later.");
+      // ✅ Map message từ API
+      const apiMessage =
+        err?.response?.data?.message ||
+        "Failed to leave team. Please try again later.";
+
+      setErrorMessage(apiMessage);
+      setErrorModalVisible(true);
     } finally {
       setLoading(false);
     }
@@ -210,8 +227,7 @@ export default function TeamInfoScreen() {
     setDeleteModalVisible(false);
     setLoading(true);
     try {
-      await teamApi.delete(id as string);
-      // Dùng replace + timestamp để force reload search page
+      const res = await teamApi.delete(id as string);
       router.replace({
         pathname: "/(team)/search",
         params: { refresh: Date.now().toString() },
@@ -518,7 +534,7 @@ export default function TeamInfoScreen() {
                   )}
 
                   <List.Item
-                    title={`Show members (${team?.totalMembers ?? 0})`}
+                    title={`Show members (${totalMembers})`}
                     titleStyle={{ color: "#1D1B20", fontWeight: "400" }}
                     left={(p) => (
                       <Ionicons name="people" size={24} color="#49454F" />
@@ -773,6 +789,14 @@ export default function TeamInfoScreen() {
         onConfirm={handleConfirmLDelete}
         onCancel={() => setDeleteModalVisible(false)}
       />
+      <ErrorModal
+        visible={errorModalVisible}
+        title="Cannot leave team"
+        message={errorMessage}
+        confirmText="OK"
+        onConfirm={() => setErrorModalVisible(false)}
+      />
+
       <TeamNameModal
         visible={teamNameModalVisible}
         initialName={team.name}

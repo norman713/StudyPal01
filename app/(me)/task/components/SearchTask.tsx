@@ -106,6 +106,10 @@ export default function SearchTasksScreen() {
           <View className="flex-1 mr-2">
             <TextInput
               mode="outlined"
+              dense
+              contentStyle={{
+                paddingHorizontal: 10,
+              }}
               label="From date"
               value={fromDate ? formatDateDisplay(fromDate) : ""}
               editable={false}
@@ -115,7 +119,6 @@ export default function SearchTasksScreen() {
                   background: "#FFFFFF",
                 },
               }}
-              style={{ width: 160 }}
               right={
                 <TextInput.Icon
                   icon={() => (
@@ -145,6 +148,10 @@ export default function SearchTasksScreen() {
           <View className="flex-1 ml-2">
             <TextInput
               mode="outlined"
+              dense
+              contentStyle={{
+                paddingHorizontal: 10,
+              }}
               label="To date"
               value={toDate ? formatDateDisplay(toDate) : ""}
               editable={false}
@@ -154,7 +161,6 @@ export default function SearchTasksScreen() {
                   background: "#FFFFFF",
                 },
               }}
-              style={{ width: 160 }}
               right={
                 <TextInput.Icon
                   icon={() => (

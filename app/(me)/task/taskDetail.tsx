@@ -383,153 +383,236 @@ export default function TaskDetail() {
             }}
           />
 
-          {/* From Time and Date */}
-          <View style={styles.row}>
-            {/* From Time */}
-            <TextInput
-              mode="outlined"
-              label="From time"
-              value={fromTime}
-              editable={false}
-              theme={{
-                roundness: 99,
-                colors: {
-                  background: "#FFFFFF",
-                },
-              }}
-              style={{ width: 130 }}
-              right={
-                <TextInput.Icon
-                  icon={() => <Ionicons name="time-outline" size={22} />}
-                  onPress={() => setShowFromTimePicker(true)}
-                />
-              }
-            />
+          <View className=" flex-1 gap-4 pt-3">
+            {/* From Time and Date */}
+            <View className="flex flex-row justify-between ">
+              {/* From Time */}
+              <View style={{ position: "relative" }}>
+                {/* Floating label */}
+                <Text
+                  style={{
+                    position: "absolute",
+                    top: -6, // 👈 chỉnh vị trí đè lên outline
+                    left: 20,
+                    backgroundColor: "#fff",
+                    paddingHorizontal: 6,
+                    fontSize: 12,
+                    color: "#49454F",
+                    zIndex: 10,
+                  }}
+                >
+                  From time
+                </Text>
 
-            {showFromTimePicker && (
-              <DateTimePicker
-                value={dayjs(fromDate)
-                  .hour(Number(fromTime.split(":")[0]))
-                  .minute(Number(fromTime.split(":")[1]))
-                  .toDate()}
-                mode="time"
-                display="spinner"
-                is24Hour
-                onChange={(e, selected) => {
-                  setShowFromTimePicker(false);
-                  if (selected) {
-                    setFromTime(dayjs(selected).format("HH:mm"));
+                <TextInput
+                  mode="outlined"
+                  value={fromTime}
+                  editable={false}
+                  dense
+                  theme={{
+                    roundness: 99,
+                    colors: { background: "#fff" },
+                  }}
+                  contentStyle={{
+                    paddingHorizontal: 15,
+                  }}
+                  right={
+                    <TextInput.Icon
+                      icon={() => <Ionicons name="time-outline" size={22} />}
+                      onPress={() => setShowFromTimePicker(true)}
+                    />
                   }
-                }}
-              />
-            )}
-
-            {/* From Date */}
-            <TextInput
-              mode="outlined"
-              label="From date"
-              value={dayjs(fromDate).format("DD/MM/YYYY")}
-              editable={false}
-              theme={{
-                roundness: 99,
-                colors: {
-                  background: "#FFFFFF",
-                },
-              }}
-              right={
-                <TextInput.Icon
-                  icon={() => <Ionicons name="calendar-outline" size={22} />}
-                  onPress={() => setShowFromDatePicker(true)}
                 />
-              }
-            />
+              </View>
 
-            {showFromDatePicker && (
-              <DateTimePicker
-                value={fromDate}
-                mode="date"
-                display="default"
-                onChange={(e, selected) => {
-                  setShowFromDatePicker(false);
-                  if (selected) setFromDate(selected);
-                }}
-              />
-            )}
-          </View>
-
-          <View style={styles.row}>
-            {/* To Time */}
-            <TextInput
-              mode="outlined"
-              label="To time"
-              value={toTime}
-              editable={false}
-              theme={{
-                roundness: 99,
-                colors: {
-                  background: "#FFFFFF",
-                },
-              }}
-              style={{ width: 130 }}
-              right={
-                <TextInput.Icon
-                  icon={() => <Ionicons name="time-outline" size={22} />}
-                  onPress={() => setShowToTimePicker(true)}
-                />
-              }
-            />
-
-            {showToTimePicker && (
-              <DateTimePicker
-                value={dayjs(toDate)
-                  .hour(Number(toTime.split(":")[0]))
-                  .minute(Number(toTime.split(":")[1]))
-                  .toDate()}
-                mode="time"
-                display="spinner"
-                is24Hour
-                onChange={(e, selected) => {
-                  setShowToTimePicker(false);
-                  if (selected) {
-                    setToTime(dayjs(selected).format("HH:mm"));
-                  }
-                }}
-              />
-            )}
-
-            {/* To Date */}
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <TextInput
-                mode="outlined"
-                label="To date"
-                value={dayjs(toDate).format("DD/MM/YYYY")}
-                editable={false}
-                style={{ width: 160 }}
-                theme={{
-                  roundness: 99,
-                  colors: {
-                    background: "#FFFFFF",
-                  },
-                }}
-                right={
-                  <TextInput.Icon
-                    icon={() => <Ionicons name="calendar-outline" size={22} />}
-                    onPress={() => setShowToDatePicker(true)}
-                  />
-                }
-              />
-
-              {showToDatePicker && (
+              {showFromTimePicker && (
                 <DateTimePicker
-                  value={toDate}
-                  mode="date"
-                  display="default"
+                  value={dayjs(fromDate)
+                    .hour(Number(fromTime.split(":")[0]))
+                    .minute(Number(fromTime.split(":")[1]))
+                    .toDate()}
+                  mode="time"
+                  display="spinner"
+                  is24Hour
                   onChange={(e, selected) => {
-                    setShowToDatePicker(false);
-                    if (selected) setToDate(selected);
+                    setShowFromTimePicker(false);
+                    if (selected) {
+                      setFromTime(dayjs(selected).format("HH:mm"));
+                    }
                   }}
                 />
               )}
+
+              {/* From Date */}
+              <View style={{ position: "relative" }}>
+                {/* Floating label */}
+                <Text
+                  style={{
+                    position: "absolute",
+                    top: -6,
+                    left: 20,
+                    backgroundColor: "#fff",
+                    paddingHorizontal: 6,
+                    fontSize: 12,
+                    color: "#49454F",
+                    zIndex: 10,
+                  }}
+                >
+                  From date
+                </Text>
+
+                <TextInput
+                  mode="outlined"
+                  value={dayjs(fromDate).format("DD/MM/YYYY")}
+                  dense
+                  editable={false}
+                  contentStyle={{
+                    paddingHorizontal: 10,
+                  }}
+                  theme={{
+                    roundness: 99,
+                    colors: {
+                      background: "#FFFFFF",
+                    },
+                  }}
+                  right={
+                    <TextInput.Icon
+                      icon={() => (
+                        <Ionicons name="calendar-outline" size={22} />
+                      )}
+                      onPress={() => setShowFromDatePicker(true)}
+                    />
+                  }
+                />
+              </View>
+
+              {showFromDatePicker && (
+                <DateTimePicker
+                  value={fromDate}
+                  mode="date"
+                  display="default"
+                  onChange={(e, selected) => {
+                    setShowFromDatePicker(false);
+                    if (selected) setFromDate(selected);
+                  }}
+                />
+              )}
+            </View>
+
+            <View className="flex flex-row justify-between">
+              {/* To Time */}
+              <View style={{ position: "relative" }}>
+                {/* Floating label */}
+                <Text
+                  style={{
+                    position: "absolute",
+                    top: -6,
+                    left: 20,
+                    backgroundColor: "#fff",
+                    paddingHorizontal: 6,
+                    fontSize: 12,
+                    color: "#49454F",
+                    zIndex: 10,
+                  }}
+                >
+                  To time
+                </Text>
+
+                <TextInput
+                  mode="outlined"
+                  dense
+                  value={toTime}
+                  editable={false}
+                  theme={{
+                    roundness: 99,
+                    colors: { background: "#FFFFFF" },
+                  }}
+                  contentStyle={{
+                    paddingHorizontal: 15,
+                  }}
+                  right={
+                    <TextInput.Icon
+                      icon={() => <Ionicons name="time-outline" size={22} />}
+                      onPress={() => setShowToTimePicker(true)}
+                    />
+                  }
+                />
+              </View>
+
+              {showToTimePicker && (
+                <DateTimePicker
+                  value={dayjs(toDate)
+                    .hour(Number(toTime.split(":")[0]))
+                    .minute(Number(toTime.split(":")[1]))
+                    .toDate()}
+                  mode="time"
+                  display="spinner"
+                  is24Hour
+                  onChange={(e, selected) => {
+                    setShowToTimePicker(false);
+                    if (selected) {
+                      setToTime(dayjs(selected).format("HH:mm"));
+                    }
+                  }}
+                />
+              )}
+
+              {/* To Date */}
+              <View>
+                <View style={{ position: "relative" }}>
+                  {/* Floating label */}
+                  <Text
+                    style={{
+                      position: "absolute",
+                      top: -6,
+                      left: 20,
+                      backgroundColor: "#fff",
+                      paddingHorizontal: 6,
+                      fontSize: 12,
+                      color: "#49454F",
+                      zIndex: 10,
+                    }}
+                  >
+                    To date
+                  </Text>
+
+                  <TextInput
+                    mode="outlined"
+                    value={dayjs(toDate).format("DD/MM/YYYY")}
+                    editable={false}
+                    dense
+                    contentStyle={{
+                      paddingHorizontal: 10,
+                    }}
+                    theme={{
+                      roundness: 99,
+                      colors: {
+                        background: "#FFFFFF",
+                      },
+                    }}
+                    right={
+                      <TextInput.Icon
+                        icon={() => (
+                          <Ionicons name="calendar-outline" size={22} />
+                        )}
+                        onPress={() => setShowToDatePicker(true)}
+                      />
+                    }
+                  />
+                </View>
+
+                {showToDatePicker && (
+                  <DateTimePicker
+                    value={toDate}
+                    mode="date"
+                    display="default"
+                    onChange={(e, selected) => {
+                      setShowToDatePicker(false);
+                      if (selected) setToDate(selected);
+                    }}
+                  />
+                )}
+              </View>
             </View>
           </View>
         </View>
@@ -744,10 +827,7 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 20,
   },
-  halfWidth: {
-    flex: 1,
-    marginBottom: 0,
-  },
+
   inputWithIcon: {
     position: "relative",
   },
@@ -821,6 +901,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: "center",
     marginVertical: 10,
+    marginBottom: 40,
   },
   saveButtonText: {
     color: "#FFFFFF",

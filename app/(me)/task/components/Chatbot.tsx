@@ -2,7 +2,7 @@ import { router } from "expo-router";
 import React from "react";
 import { Image, Pressable, View } from "react-native";
 
-const chatbotImage = require("../../../../assets/images/Chatbot.png");
+const chatbotImage = require("../../../../assets/images/ChatbotLogoWithText.png");
 export default function ChatBotSection() {
   return (
     <Pressable
