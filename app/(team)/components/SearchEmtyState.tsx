@@ -29,10 +29,6 @@ export default function SearchEmptyState({
       <Text style={styles.title}>
         {searchQuery ? `No results for "${searchQuery}"` : message}
       </Text>
-
-      <Text style={styles.subtitle}>
-        Try searching with different keywords or check your spelling
-      </Text>
     </View>
   );
 }

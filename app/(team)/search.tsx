@@ -263,18 +263,7 @@ export default function Search() {
           <View className="flex-1">
             {teams.length === 0 && !loading ? (
               // Nếu đang search mà không có kết quả → SearchEmptyState
-              query.trim().length > 0 ? (
                 <SearchEmptyState searchQuery={query.trim()} />
-              ) : (
-                // Nếu không search và không có team → EmptyState với buttons
-                <EmptyState
-                  title="You haven't joined any team yet!"
-                  primaryButtonText="Create new team"
-                  secondaryButtonText="Scan to join team"
-                  onPrimaryPress={() => setCreateModalVisible(true)}
-                  onSecondaryPress={() => router.push("/")}
-                />
-              )
             ) : (
               // Có team → hiển thị list
               <View className="flex-1 px-4">

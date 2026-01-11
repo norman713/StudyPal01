@@ -211,11 +211,13 @@ export default function ProfileScreen({}: ProfileScreenProps) {
       </View>
 
       {/* Actions */}
-      <View className="mt-4 px-4">
+      <View className="px-4">
         <Card
           mode="contained"
+          contentStyle={{ borderRadius: 0 }}
           style={{
             backgroundColor: "#fff",
+            borderRadius: 0
           }}
         >
           <List.Item
@@ -234,29 +236,16 @@ export default function ProfileScreen({}: ProfileScreenProps) {
             right={(p) => <List.Icon {...p} icon="chevron-right" />}
             onPress={() => setShowResetModal(true)}
           />
+
           <List.Item
             title="Log out"
-            titleStyle={{ color: "#E53935", fontWeight: "600" }}
-            left={() => (
-              <View
-                style={{
-                  width: 48,
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
-                <MaterialCommunityIcons
-                  name="logout"
-                  size={22}
-                  color="#E53935"
-                />
-              </View>
-            )}
-            right={() => (
-              <MaterialIcons name="chevron-right" size={22} color="#E53935" />
-            )}
+            disabled={loading}
+            titleStyle={{ color: "#E53935" }}
+            left={(p) => <List.Icon {...p} icon="logout" color="#E53935"/>}
+            right={(p) => <List.Icon {...p} icon="chevron-right" color="#E53935"/>}
             onPress={() => setShowLogoutModal(true)}
           />
+
         </Card>
       </View>
       <QuestionModal

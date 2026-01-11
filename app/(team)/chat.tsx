@@ -353,7 +353,7 @@ export default function TeamChatScreen() {
     const isMe = senderId === currentUserId;
 
     // Direct user info from message
-    const avatarUrl = item.user?.avatarUrl || DEFAULT_AVATAR;
+    const avatarUrl = item.user?.avatarUrl;
     const senderName = item.user?.name || "Unknown";
 
     const date = new Date(item.createdAt);
@@ -366,10 +366,18 @@ export default function TeamChatScreen() {
       <View className={`mb-3 flex-col ${isMe ? "items-end" : "items-start"}`}>
         <View className={`flex-row ${isMe ? "justify-end" : "justify-start"}`}>
           {!isMe && (
-            <Image
-              source={{ uri: avatarUrl }}
-              className="w-10 h-10 rounded-full mr-2"
-            />
+            avatarUrl ? (
+              <Image
+                source={{ uri: avatarUrl }}
+                className="w-10 h-10 rounded-full mr-2"
+              />
+            ) : (
+              <View className="w-10 h-10 rounded-full mr-2 items-center justify-center bg-[#6750A4]">
+                <Text className="text-white font-semibold">
+                  {senderName?.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )
           )}
 
           <View
@@ -418,13 +426,20 @@ export default function TeamChatScreen() {
             {item
               .readBy!.filter((u) => u.id !== currentUserId)
               .map((u, index) => (
-                <Image
-                  key={u.id}
-                  source={{ uri: u.avatarUrl || DEFAULT_AVATAR }}
-                  className="w-6 h-6 rounded-full border border-white -ml-1"
-                  style={{ zIndex: index }}
-                />
-              ))}
+                u.avatarUrl ? (
+                  <Image
+                    key={u.id}
+                    source={{ uri: avatarUrl }}
+                    className="w-6 h-6 rounded-full border border-white -ml-1"
+                    style={{ zIndex: index }}
+                  />
+                ) : (
+                  <View className="w-6 h-6 rounded-full mr-2 items-center justify-center bg-[#6750A4]">
+                    <Text className="text-white text-xs font-semibold s">
+                      {u.name.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>)
+                ))}
           </View>
         )}
       </View>

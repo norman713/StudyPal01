@@ -13,6 +13,7 @@ export interface Plan {
   completedTaskCount: number;
   tasks?: Task[];
   status?: PlanStatus;
+  progress?: number;
   createdBy?: {
     id: string;
     name: string;
