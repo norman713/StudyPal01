@@ -24,6 +24,20 @@ export interface Message {
     readBy: MessageUser[];
     isDeleted: boolean;
 }
+export interface DeleteMessageResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface EditMessageResponse {
+  success: boolean;
+  message: string;
+}
+export interface EditMessageRequest {
+  content: string;
+}
+
+
 
 export interface GetMessagesResponse {
     messages: Message[];
@@ -119,4 +133,28 @@ export const chatApi = {
     markMessageRead: async (messageId: string): Promise<void> => {
         await axiosClient.patch(`/messages/${messageId}/mark`);
     },
+
+deleteMessage: async (
+  messageId: string
+): Promise<DeleteMessageResponse> => {
+  const url = `/messages/${messageId}`;
+  const data: DeleteMessageResponse = await axiosClient.delete(url);
+  return data;
+},
+editMessage: async (
+  messageId: string,
+  content: string
+): Promise<EditMessageResponse> => {
+  const url = `/messages/${messageId}`;
+
+  const body: EditMessageRequest = {
+    content,
+  };
+
+  const data: EditMessageResponse = await axiosClient.patch(url, body);
+  return data;
+},
+
+
+
 };

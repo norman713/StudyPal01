@@ -39,6 +39,11 @@ export default function TeamChatScreen() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showAttachModal, setShowAttachModal] = useState(false);
 
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [editText, setEditText] = useState("");
+
   const flatListRef = useRef<FlatList>(null);
   const ws = useRef<WebSocket | null>(null);
   const latestMessageId = messages[0]?.id;
@@ -365,8 +370,8 @@ export default function TeamChatScreen() {
     return (
       <View className={`mb-3 flex-col ${isMe ? "items-end" : "items-start"}`}>
         <View className={`flex-row ${isMe ? "justify-end" : "justify-start"}`}>
-          {!isMe && (
-            avatarUrl ? (
+          {!isMe &&
+            (avatarUrl ? (
               <Image
                 source={{ uri: avatarUrl }}
                 className="w-10 h-10 rounded-full mr-2"
@@ -377,47 +382,58 @@ export default function TeamChatScreen() {
                   {senderName?.charAt(0).toUpperCase()}
                 </Text>
               </View>
-            )
-          )}
+            ))}
 
-          <View
-            className={`max-w-[75%] px-3 py-2 shadow-sm ${
-              isMe
-                ? "bg-[#90717E] rounded-2xl rounded-tr-sm"
-                : "bg-white rounded-2xl rounded-tl-sm border border-gray-100"
-            }`}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            className="w-full items-end"
+            onLongPress={() => {
+              if (!isMe) return; // ❗ chỉ cho phép message của mình
+              setSelectedMessage(item);
+              setMenuVisible(true);
+            }}
           >
-            {!isMe && (
-              <Text className="text-[12px] font-bold text-[#1D1B20] mb-1">
-                {senderName}
-              </Text>
-            )}
-
-            {/* Attachments */}
-            {item.attachments && item.attachments.length > 0 && (
-              <View className="mb-1">{renderImageGrid(item.attachments)}</View>
-            )}
-
-            {/* Text Content */}
-            {item.content ? (
-              <Text
-                className={`text-[15px] leading-5 ${
-                  isMe ? "text-white" : "text-[#1D1B20]"
-                }`}
-              >
-                {item.content}
-              </Text>
-            ) : null}
-
-            {/* Timestamp */}
-            <Text
-              className={`text-[10px] mt-1 self-end font-normal ${
-                isMe ? "text-white/80" : "text-gray-400"
+            <View
+              className={`max-w-[75%] px-3 py-2 shadow-sm ${
+                isMe
+                  ? "bg-[#90717E] rounded-2xl rounded-tr-sm"
+                  : "bg-white rounded-2xl rounded-tl-sm border border-gray-100"
               }`}
             >
-              {timeStr}
-            </Text>
-          </View>
+              {!isMe && (
+                <Text className="text-[12px] font-bold text-[#1D1B20] mb-1">
+                  {senderName}
+                </Text>
+              )}
+
+              {/* Attachments */}
+              {item.attachments && item.attachments.length > 0 && (
+                <View className="mb-1">
+                  {renderImageGrid(item.attachments)}
+                </View>
+              )}
+
+              {/* Text Content */}
+              {item.content ? (
+                <Text
+                  className={`text-[15px] font-semibold leading-5 ${
+                    isMe ? "text-white" : "text-[#1D1B20]"
+                  }`}
+                >
+                  {item.content}
+                </Text>
+              ) : null}
+
+              {/* Timestamp */}
+              <Text
+                className={`text-[10px] mt-1 self-end font-normal ${
+                  isMe ? "text-white/80" : "text-gray-400"
+                }`}
+              >
+                {timeStr}
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Read Receipts */}
@@ -425,7 +441,7 @@ export default function TeamChatScreen() {
           <View className="flex-row mt-1 mr-1 justify-end">
             {item
               .readBy!.filter((u) => u.id !== currentUserId)
-              .map((u, index) => (
+              .map((u, index) =>
                 u.avatarUrl ? (
                   <Image
                     key={u.id}
@@ -438,12 +454,51 @@ export default function TeamChatScreen() {
                     <Text className="text-white text-xs font-semibold s">
                       {u.name.charAt(0).toUpperCase()}
                     </Text>
-                  </View>)
-                ))}
+                  </View>
+                )
+              )}
           </View>
         )}
       </View>
     );
+  };
+  const handleDeleteMessage = async () => {
+    if (!selectedMessage) return;
+
+    setMenuVisible(false);
+
+    try {
+      await chatApi.deleteMessage(selectedMessage.id);
+
+      // update UI ngay
+      setMessages((prev) => prev.filter((m) => m.id !== selectedMessage.id));
+    } catch (err) {
+      Alert.alert("Error", "Failed to delete message");
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMessage) return;
+
+    try {
+      await chatApi.editMessage(editingMessage.id, editText);
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === editingMessage.id
+            ? {
+                ...m,
+                content: editText,
+                updatedAt: new Date().toISOString(),
+              }
+            : m
+        )
+      );
+
+      setEditingMessage(null);
+    } catch (err) {
+      Alert.alert("Error", "Failed to edit message");
+    }
   };
 
   return (
@@ -585,6 +640,68 @@ export default function TeamChatScreen() {
               />
             </View>
           </TouchableOpacity>
+        </Modal>
+      )}
+
+      <Modal
+        transparent
+        visible={menuVisible}
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <TouchableOpacity
+          className="flex-1 bg-black/30 justify-center items-center"
+          activeOpacity={1}
+          onPress={() => setMenuVisible(false)}
+        >
+          <View className="bg-white rounded-xl w-[220px] overflow-hidden">
+            <TouchableOpacity
+              className="px-4 py-3"
+              onPress={() => {
+                setMenuVisible(false);
+                setEditingMessage(selectedMessage);
+                setEditText(selectedMessage?.content || "");
+              }}
+            >
+              <Text className="text-[16px] font-semibold">Edit message</Text>
+            </TouchableOpacity>
+
+            <View className="h-[1px] bg-gray-200" />
+
+            <TouchableOpacity
+              className="px-4 py-3"
+              onPress={handleDeleteMessage}
+            >
+              <Text className="text-[16px] font-semibold">Delete message</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {editingMessage && (
+        <Modal transparent animationType="fade">
+          <View className="flex-1 bg-black/40 justify-center items-center">
+            <View className="bg-white rounded-xl w-[85%] p-4">
+              {/* <Text className="font-semibold mb-2">Edit message</Text> */}
+
+              <TextInput
+                value={editText}
+                onChangeText={setEditText}
+                className="border border-gray-300 rounded-lg px-3 py-2"
+                multiline
+              />
+
+              <View className="flex-row justify-end mt-4 gap-10">
+                <TouchableOpacity onPress={() => setEditingMessage(null)}>
+                  <Text className="text-gray-500 font-semibold">Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={handleSaveEdit}>
+                  <Text className="text-[#90717E] font-semibold">Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
         </Modal>
       )}
     </View>

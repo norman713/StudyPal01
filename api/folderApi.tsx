@@ -34,10 +34,7 @@ export interface DeleteFolderResponse {
   success: boolean;
   message: string;
 }
-export interface FolderUsageResponse {
-  success: boolean;
-  message: string;
-}
+
 export interface FolderListItem {
   id: string;
   name: string;
@@ -136,14 +133,6 @@ const folderApi = {
     await axiosInstance.patch(url, { name });
   },
 
-  // GET folder usage for team
-  async getFolderUsage(teamId: string): Promise<FolderUsageResponse> {
-    const url = `/teams/${teamId}/folders/usage`;
-
-    const data: FolderUsageResponse = await axiosInstance.get(url);
-
-    return data;
-  },
   // GET list folders
   async getFolders(
     params?: GetFolderListParams

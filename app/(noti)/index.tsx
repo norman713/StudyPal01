@@ -22,34 +22,53 @@ export default function NotificationPage() {
 
   //fetch api
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        setLoading(true);
-        const res = await notificationApi.getAll();
-        console.log("📩 [API Response Raw]:", res);
-
-        // map data for UI
-        const mapped: NotificationItem[] = res.notifications.map((n) => ({
-          ...n,
-          type: n.content.includes("will be expired")
-            ? ("overdue" as const)
-            : ("expired" as const),
-          checked: false,
-          read: n.isRead,
-        }));
-
-        setNotifications(mapped);
-      } catch (err) {
-        console.error("❌ [fetchNotifications] Error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchNotifications();
   }, []);
 
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const res = await notificationApi.getAll();
+
+      const mapped: NotificationItem[] = res.notifications.map((n) => ({
+        ...n,
+        type: n.content.includes("will be expired") ? "overdue" : "expired",
+        checked: false,
+        read: n.isRead,
+      }));
+
+      setNotifications(mapped);
+    } catch (err) {
+      console.error("❌ [fetchNotifications] Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Checkbox logic
+
+  const handleMarkRead = async () => {
+    try {
+      const idsToMark = notifications.filter((n) => n.checked).map((n) => n.id);
+
+      if (idsToMark.length === 0) return;
+
+      setLoading(true);
+
+      await notificationApi.markManyAsRead(idsToMark);
+
+      // 🔥 fetch lại ngay để sync với backend
+      await fetchNotifications();
+    } catch (err: any) {
+      const apiMessage =
+        err?.response?.data?.message ?? "Something went wrong.";
+
+      setErrorMessage(apiMessage);
+      setErrorVisible(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const allChecked = notifications.every((n) => n.checked);
   const someChecked = notifications.some((n) => n.checked);
@@ -81,32 +100,6 @@ export default function NotificationPage() {
       );
     } catch (err) {
       console.error("[handleDelete] Error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleMarkRead = async () => {
-    try {
-      const idsToMark = notifications.filter((n) => n.checked).map((n) => n.id);
-
-      if (idsToMark.length === 0) return;
-
-      setLoading(true);
-
-      await notificationApi.markManyAsRead(idsToMark);
-
-      setNotifications((prev) =>
-        prev.map((n) =>
-          idsToMark.includes(n.id) ? { ...n, read: true, checked: false } : n
-        )
-      );
-    } catch (err: any) {
-      const apiMessage =
-        err?.response?.data?.message ?? "Something went wrong.";
-
-      setErrorMessage(apiMessage);
-      setErrorVisible(true);
     } finally {
       setLoading(false);
     }

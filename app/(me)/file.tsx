@@ -517,7 +517,7 @@ export default function FileScreen() {
               className="border border-dashed border-black-300 rounded-2xl py-10 items-center justify-center mb-4"
             >
               <Ionicons name="cloud-upload-outline" size={36} color="#B0B0B0" />
-              <Text className="text-black mt-2 text-sm">
+              <Text className="text-black mt-2 text-sm font-semibold">
                 Tap to select file to upload
               </Text>
             </Pressable>

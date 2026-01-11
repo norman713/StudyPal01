@@ -100,7 +100,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       <Text className="text-[13px] font-PoppinsBold text-[#1C1B1F]">
         {label}:
       </Text>
-      <Text className="text-[13px] text-[#1C1B1F]">{value}</Text>
+      <Text className="text-[13px] font-semibold text-[#1C1B1F]">{value}</Text>
     </View>
   );
 }
@@ -507,10 +507,10 @@ export default function DocumentScreen() {
                   label="Size"
                   value={`${(detailFolder.bytes / 1024 / 1024).toFixed(2)} MB`}
                 />
-                <DetailRow
+                {/* <DetailRow
                   label="File count"
                   value={detailFolder.fileCount.toString()}
-                />
+                /> */}
               </View>
             )}
           </View>
