@@ -37,14 +37,14 @@ export default function CreateModal({
   }, [visible]);
 
   const handleSave = () => {
-    if (!teamName.trim() || !description.trim()) {
+    if (!teamName.trim()) {
       Alert.alert("Missing information", "Please fill in all fields.");
       return;
     }
     onSave(teamName.trim(), description.trim());
   };
 
-  const disabled = !teamName.trim() || !description.trim();
+  const disabled = !teamName.trim();
 
   return (
     <Modal transparent visible={visible} animationType="fade">
@@ -78,7 +78,7 @@ export default function CreateModal({
 
           {/* Team description input */}
           <TextInput
-            placeholder="Enter team description"
+            placeholder="Enter team description (optional)"
             value={description}
             onChangeText={setDescription}
             multiline

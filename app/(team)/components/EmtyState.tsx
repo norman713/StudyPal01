@@ -1,5 +1,6 @@
 import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Button } from "react-native-paper";
 
 interface EmptyStateProps {
   title?: string;
@@ -41,34 +42,26 @@ export default function EmptyState({
       {/* Action Buttons */}
       <View style={styles.buttonContainer}>
         {/* Primary Button */}
-        {onPrimaryPress && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              styles.primaryButton,
-              pressed && styles.buttonPressed,
-            ]}
-            onPress={onPrimaryPress}
-          >
-            <Text style={styles.primaryButtonText}>{primaryButtonText}</Text>
-          </Pressable>
-        )}
+        <Button
+          mode="contained"  
+          buttonColor="#90717E"
+          textColor="#fff"
+          onPress={onPrimaryPress}
+          style={{
+            width : "50%"
+          }}
+        >{primaryButtonText}</Button>
 
         {/* Secondary Button */}
-        {onSecondaryPress && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              styles.secondaryButton,
-              pressed && styles.buttonPressed,
-            ]}
-            onPress={onSecondaryPress}
-          >
-            <Text style={styles.secondaryButtonText}>
-              {secondaryButtonText}
-            </Text>
-          </Pressable>
-        )}
+        <Button
+          mode="contained"  
+          buttonColor="#92AAA5"
+          textColor="#fff"
+          onPress={onSecondaryPress}
+          style={{
+            width : "50%"
+          }}
+        >{secondaryButtonText}</Button>
       </View>
     </View>
   );
@@ -114,7 +107,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     width: "100%",
-    paddingHorizontal: 20,
   },
   button: {
     flex: 1,

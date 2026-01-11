@@ -1,6 +1,6 @@
 import { Plan } from "@/api/planApi";
 import dayjs from "dayjs";
-import React from "react";
+import React, { useEffect } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import ProgressCircle from "./ProgressCircle";
 
@@ -14,6 +14,10 @@ export default function PlanItem({ plan, onPress }: PlanItemProps) {
     return dayjs(dateStr).format("HH:mm DD MMM, YYYY");
   };
 
+  // useEffect(() => {
+  //   console.log(plan.progress);
+  // })
+
   return (
     <TouchableOpacity
       style={styles.planItem}
@@ -21,12 +25,12 @@ export default function PlanItem({ plan, onPress }: PlanItemProps) {
       activeOpacity={0.7}
     >
       <View style={styles.planInfo}>
-        <Text style={styles.planName}>{plan.title || plan.name}</Text>
+        <Text style={styles.planName}>{plan.title}</Text>
         <Text style={styles.planDate}>
           {formatDate(plan.startDate)} - {formatDate(plan.dueDate)}
         </Text>
       </View>
-      <ProgressCircle progress={plan.progress} />
+      <ProgressCircle progress={plan.progress ?? 0} />
     </TouchableOpacity>
   );
 }

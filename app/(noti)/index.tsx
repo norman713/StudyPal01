@@ -160,7 +160,7 @@ export default function NotificationPage() {
       </View>
 
       {/* notidication list*/}
-      <ScrollView className="px-4 mb-20 mt-2">
+      <ScrollView className="px-1 mb-20 mt-2">
         {loading ? (
           <Text className="text-center mt-10 text-gray-500">Loading...</Text>
         ) : notifications.length === 0 ? (
