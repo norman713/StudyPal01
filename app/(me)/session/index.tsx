@@ -9,7 +9,6 @@ import Svg, {
   Stop,
   LinearGradient as SvgGradient,
 } from "react-native-svg";
-import YoutubePlayer from "react-native-youtube-iframe";
 
 import SessionSettingsModal, {
   MusicItemType,
