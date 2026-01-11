@@ -167,16 +167,18 @@ export default function PlanCreateScreen() {
         // Create Mode
         const drafts = planCreationStore.getTasks();
 
-        await planApi.createPlan(teamId, {
+        const res = await planApi.createPlan(teamId, {
           teamId,
           title: planName.trim(),
           description: planDescription.trim(),
           tasks: drafts,
         });
+        console.log("TEAM CREATE:", res);
 
         // Clear drafts after success
         planCreationStore.clearTasks();
       }
+<<<<<<< Updated upstream
       router.push({
         pathname: "/(team)/plan",
         params: {
@@ -185,6 +187,9 @@ export default function PlanCreateScreen() {
           role
         },
       });
+=======
+      router.push("/(team)/plan");
+>>>>>>> Stashed changes
     } catch (err: any) {
       console.error(err);
       const msg = err?.response?.data?.message || "Failed to save plan";

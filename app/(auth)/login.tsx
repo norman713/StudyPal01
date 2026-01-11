@@ -87,7 +87,7 @@ export default function LoginPage() {
         ]);
 
         if (token && isTokenValid(expStr) && !cancelled) {
-          router.replace("/(team)/search");
+          router.replace("/(me)");
         } else if (token && !isTokenValid(expStr)) {
           await AsyncStorage.multiRemove([ACCESS_KEY, REFRESH_KEY, EXP_KEY]);
         }
