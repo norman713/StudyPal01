@@ -29,6 +29,8 @@ export default function NotificationPage() {
     try {
       setLoading(true);
       const res = await notificationApi.getAll();
+      // 🔥 LOG FULL RESPONSE
+      console.log("📩 [getAll notifications] raw response:", res);
 
       const mapped: NotificationItem[] = res.notifications.map((n) => ({
         ...n,

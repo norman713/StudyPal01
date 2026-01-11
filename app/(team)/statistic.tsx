@@ -109,7 +109,6 @@ function DonutChart({ data }: { data: TeamAnalysis }) {
         </Svg>
       </View>
 
-      {/* Legend - 4 columns giống Figma */}
       <View style={styles.legendContainer}>
         {segments.map((segment, index) => (
           <View key={index} style={styles.legendItem}>
@@ -144,9 +143,23 @@ function DonutChart({ data }: { data: TeamAnalysis }) {
 /**
  * Member Item Component
  */
-function MemberItem({ member }: { member: MemberStat }) {
+function MemberItem({
+  member,
+  isSelected,
+  onPress,
+}: {
+  member: MemberStat;
+  isSelected: boolean;
+  onPress: () => void;
+}) {
   return (
-    <View style={styles.memberItem}>
+    <TouchableOpacity
+      onPress={onPress}
+      style={[
+        styles.memberItem,
+        isSelected && { borderColor: ACCENT, borderWidth: 2 },
+      ]}
+    >
       {member.avatarUrl ? (
         <Image source={{ uri: member.avatarUrl }} style={styles.memberAvatar} />
       ) : (
@@ -154,6 +167,7 @@ function MemberItem({ member }: { member: MemberStat }) {
           <Text style={styles.memberAvatarText}>{member.name.charAt(0)}</Text>
         </View>
       )}
+
       <View style={styles.memberInfo}>
         <Text style={styles.memberName}>{member.name}</Text>
         <Text style={styles.memberTasks}>
@@ -162,7 +176,7 @@ function MemberItem({ member }: { member: MemberStat }) {
           tasks
         </Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -183,6 +197,50 @@ export default function StatisticScreen() {
     unfinished: 0,
   });
   const [members, setMembers] = useState<MemberStat[]>([]);
+
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [memberAnalysis, setMemberAnalysis] = useState<TeamAnalysis | null>(
+    null
+  );
+
+  const fetchMemberStatistics = async (memberId: string) => {
+    if (!teamId) return;
+
+    try {
+      setLoading(true);
+      const FORMAT = "YYYY-MM-DD HH:mm:ss";
+
+      let fromDate: string;
+      let toDate: string;
+
+      if (duration === "custom" && customRange) {
+        fromDate = customRange.from;
+        toDate = customRange.to;
+      } else {
+        const days = getDurationDays(duration);
+        toDate = dayjs().format(FORMAT);
+        fromDate = dayjs().subtract(days, "day").format(FORMAT);
+      }
+
+      const stats = await teamApi.getTaskStatistics(
+        teamId,
+        fromDate,
+        toDate,
+        memberId
+      );
+
+      setMemberAnalysis({
+        high: stats.high,
+        medium: stats.medium,
+        low: stats.low,
+        unfinished: stats.unfinished,
+      });
+    } catch (e) {
+      console.error("Fetch member statistics failed", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Custom date range state
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -368,7 +426,14 @@ export default function StatisticScreen() {
         {/* Team Analysis Section */}
         <View style={styles.card}>
           <View style={styles.analysisHeader}>
-            <Text style={styles.sectionTitle}>Team's analysis</Text>
+            <Text style={styles.sectionTitle}>
+              {selectedMemberId
+                ? `Analysis of ${
+                    members.find((m) => m.id === selectedMemberId)?.name ?? ""
+                  }`
+                : "Team's analysis"}
+            </Text>
+
             <View style={styles.teamBadge}>
               <Text style={styles.teamBadgeText}>Team</Text>
             </View>
@@ -379,7 +444,11 @@ export default function StatisticScreen() {
               <ActivityIndicator size="large" color={ACCENT} />
             </View>
           ) : (
-            <DonutChart data={analysis} />
+            <DonutChart
+              data={
+                selectedMemberId && memberAnalysis ? memberAnalysis : analysis
+              }
+            />
           )}
         </View>
 
@@ -396,7 +465,21 @@ export default function StatisticScreen() {
             </View>
           ) : members.length > 0 ? (
             members.map((member) => (
-              <MemberItem key={member.id} member={member} />
+              <MemberItem
+                key={member.id}
+                member={member}
+                isSelected={selectedMemberId === member.id}
+                onPress={() => {
+                  if (selectedMemberId === member.id) {
+                    // Bỏ chọn → quay về Team
+                    setSelectedMemberId(null);
+                    setMemberAnalysis(null);
+                  } else {
+                    setSelectedMemberId(member.id);
+                    fetchMemberStatistics(member.id);
+                  }
+                }}
+              />
             ))
           ) : (
             <Text style={{ textAlign: "center", color: "#888", padding: 20 }}>
@@ -449,8 +532,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   durationBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    padding: 10,
     borderRadius: 20,
     backgroundColor: "#F2EFF0",
   },

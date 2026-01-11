@@ -1,49 +1,89 @@
+import { DeletedFileItem } from "@/api/folderApi";
 import React, { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { Text } from "react-native-paper";
-import FileCard from "./components/FileCard";
-import FolderCard from "./components/FolderCard";
+import DeletedDocumentItem from "./components/DeletedDocumentItem";
 
-export default function TrashDocuments({
-  folders,
-  files,
-}: {
-  folders: any[];
-  files: any[];
-}) {
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+/* =======================
+   MOCK DATA
+======================= */
 
-  if (selectedFolder) {
-    return (
-      <View>
-        <Text variant="titleMedium" style={{ marginBottom: 10 }}>
-          Files
-        </Text>
-        <ScrollView contentContainerStyle={{ flexDirection: "row", gap: 20 }}>
-          {files.map((file) => (
-            <FileCard key={file.name} file={file} />
-          ))}
-        </ScrollView>
-      </View>
-    );
-  }
+const MOCK_DELETED_DOCUMENTS: (DeletedFileItem & { folderName?: string })[] = [
+  {
+    id: "file-1",
+    name: "File_A.txt",
+    extension: "txt",
+    url: "",
+    folderName: "Folder A",
+    deletedAt: "2025-10-27T12:00:00Z",
+  },
+  {
+    id: "file-2",
+    name: "Report_2024.pdf",
+    extension: "pdf",
+    url: "",
+    folderName: "Finance",
+    deletedAt: "2025-10-26T09:30:00Z",
+  },
+  {
+    id: "file-3",
+    name: "Budget.xlsx",
+    extension: "xlsx",
+    url: "",
+    folderName: "Planning",
+    deletedAt: "2025-10-25T16:45:00Z",
+  },
+];
+
+/* =======================
+   COMPONENT
+======================= */
+
+export default function TrashDocuments() {
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+
+  const handleRecover = (id: string) => {
+    setActiveMenuId(null);
+    console.log("Recover document:", id);
+  };
+
+  const handleDeletePermanently = (id: string) => {
+    setActiveMenuId(null);
+    console.log("Delete permanently:", id);
+  };
 
   return (
-    <View>
+    <View className="flex-1">
       <Text variant="titleMedium" style={{ marginBottom: 10 }}>
-        Folders
+        Deleted documents
       </Text>
 
-      <ScrollView contentContainerStyle={{ gap: 20 }}>
-        <View style={{ flexDirection: "row", gap: 20 }}>
-          {folders.map((folder) => (
-            <FolderCard
-              key={folder.name}
-              folder={folder}
-              onPress={() => setSelectedFolder(folder.name)}
-            />
-          ))}
-        </View>
+      {/* 🔥 TAP OUTSIDE LAYER */}
+      {activeMenuId && (
+        <Pressable
+          className="absolute inset-0 z-40"
+          onPress={() => setActiveMenuId(null)}
+        />
+      )}
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled" // 🔥 QUAN TRỌNG
+        contentContainerStyle={{ paddingBottom: 24 }}
+      >
+        {MOCK_DELETED_DOCUMENTS.map((doc) => (
+          <DeletedDocumentItem
+            key={doc.id}
+            document={doc}
+            folderName={doc.folderName}
+            menuVisible={activeMenuId === doc.id}
+            onToggleMenu={() =>
+              setActiveMenuId(activeMenuId === doc.id ? null : doc.id)
+            }
+            onRecover={() => handleRecover(doc.id)}
+            onDeletePermanently={() => handleDeletePermanently(doc.id)}
+          />
+        ))}
       </ScrollView>
     </View>
   );

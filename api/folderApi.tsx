@@ -89,6 +89,26 @@ export interface GetFolderListParams {
   size?: number;
 }
 
+export interface DeletedFileItem {
+  id: string;
+  name: string;
+  extension: string;
+  url: string;
+  deletedAt: string; // ISO string
+  folderName?: string;
+}
+
+export interface GetDeletedFilesResponse {
+  files: DeletedFileItem[];
+  total: number;
+  nextCursor: string | null;
+}
+export interface GetDeletedFilesParams {
+  teamId?: string;
+  cursor?: string;
+  size?: number;
+}
+
 /* =========================
    API
 ========================= */
@@ -259,6 +279,22 @@ const folderApi = {
       params: { newFolderId },
     });
     return res;
+  },
+
+  // GET deleted files
+  async getDeletedFiles(
+    params?: GetDeletedFilesParams
+  ): Promise<GetDeletedFilesResponse> {
+    const url = `/files/deleted`;
+
+    const data: GetDeletedFilesResponse = await axiosInstance.get(url, {
+      params: {
+        size: 10,
+        ...params,
+      },
+    });
+
+    return data;
   },
 };
 

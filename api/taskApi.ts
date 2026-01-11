@@ -1,14 +1,18 @@
 import axiosInstance from "./axiosConfig";
 
 export type TaskPriority = "HIGH" | "MEDIUM" | "LOW";
+export type ApplyScope = "CURRENT_ONLY" | "ALL_ITEMS";
+
 
 export interface DeletedTask {
     id: string;
     planCode: string;
     content: string;
-    startDate: string;   // ISO string
+    startDate: string;   
     dueDate: string;
     deletedAt: string;
+    priority: TaskPriority;
+     taskType: "PERSONAL" | "TEAM" | "CLONED";
 }
 export interface GetDeletedTasksResponse {
     tasks: DeletedTask[];
@@ -95,6 +99,23 @@ const taskApi = {
 
         return data;
     },
+
+    /**
+ * Recover deleted task
+ * PATCH /api/tasks/{taskId}/recover
+ */
+async recoverTask(
+  taskId: string,
+  applyScope: ApplyScope = "CURRENT_ONLY"
+): Promise<{ success: boolean; message: string }> {
+  const url = `/tasks/${taskId}/recover`;
+  const params = { applyScope };
+
+  const data: { success: boolean; message: string } =
+    await axiosInstance.patch(url, null, { params });
+
+  return data;
+},
 
     /**
      * Search tasks
