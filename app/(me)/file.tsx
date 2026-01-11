@@ -54,6 +54,11 @@ export default function FileScreen() {
   const [detailFile, setDetailFile] = useState<FileDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
+  const getExtension = (filename: string) => {
+    const idx = filename.lastIndexOf(".");
+    return idx !== -1 ? filename.slice(idx) : "";
+  };
+
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
 
@@ -272,15 +277,39 @@ export default function FileScreen() {
     }
   };
 
+  // const handleRenameFile = async () => {
+  //   if (!editFile || !newFileName.trim()) return;
+  //   try {
+  //     setRenaming(true);
+  //     await folderApi.updateFile(editFile.id, newFileName);
+  //     setEditFile(null);
+  //     await fetchFiles();
+  //   } catch (e) {
+  //     console.error("Rename failed", e);
+  //     Alert.alert("Error", "Failed to rename file");
+  //   } finally {
+  //     setRenaming(false);
+  //   }
+  // };
+
   const handleRenameFile = async () => {
     if (!editFile || !newFileName.trim()) return;
+
+    const ext = getExtension(editFile.name);
+
+    let finalName = newFileName.trim();
+
+    // Nếu user không nhập extension → tự gắn lại
+    if (!finalName.toLowerCase().endsWith(ext.toLowerCase())) {
+      finalName += ext;
+    }
+
     try {
       setRenaming(true);
-      await folderApi.updateFile(editFile.id, newFileName);
+      await folderApi.updateFile(editFile.id, finalName);
       setEditFile(null);
       await fetchFiles();
     } catch (e) {
-      console.error("Rename failed", e);
       Alert.alert("Error", "Failed to rename file");
     } finally {
       setRenaming(false);

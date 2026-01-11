@@ -1,6 +1,6 @@
 import { DeletedFileItem } from "@/api/folderApi";
 import React, { useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView } from "react-native";
 import { Text } from "react-native-paper";
 import DeletedDocumentItem from "./components/DeletedDocumentItem";
 

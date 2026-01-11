@@ -341,7 +341,7 @@ export default function PlanCreateScreen() {
                   key={task.id}
                   task={task}
                   teamId={teamId}
-                  planId={planId}
+                  planId={planId || task.planId}
                   role={role}
                   onDelete={
                     canManage ? () => handleDeleteTask(task.id) : undefined

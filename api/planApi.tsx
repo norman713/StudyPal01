@@ -22,16 +22,13 @@ export interface Plan {
 }
 
 export interface ActivityLog {
-  id: string;
-  action: string;
-  entityName: string;
-  timestamp: string; // ISO date
-  actorName: string;
-  actorAvatarUrl?: string;
+  imageUrl: string;
+  message: string;
+  timestamp: string; // format: "YYYY-MM-DD HH:mm:ss"
 }
 
 export interface PlanHistoryResponse {
-  content: ActivityLog[];
+  records: ActivityLog[];
   totalPages: number;
   totalElements: number;
   size: number;

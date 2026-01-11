@@ -49,18 +49,23 @@ export default function TaskItem({
   teamId,
   planId,
   role,
+
   draftIndex,
 }: TaskItemProps) {
   const priorityColor = getPriorityColor(task.priority);
   const isCompleted = Boolean(task.completedAt);
 
   const handlePress = () => {
-    if (!teamId) return;
+    // if (!teamId) return;
+    console.log("AAA", task, planId);
 
-    if (planId === "new" && draftIndex !== undefined) {
+    if (planId === "new") {
+      console.log("fffffff");
       router.push({
         pathname: "/(team)/plan/addTask",
         params: {
+          content: task.content,
+          description: task.description,
           teamId,
           planId: "new",
           role: role || "MEMBER",

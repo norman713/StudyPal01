@@ -26,15 +26,19 @@ export default function AddTaskScreen() {
     teamId,
     planId,
     role: roleParam,
+    content: contentParams,
+    description: descriptionParams,
   } = useLocalSearchParams<{
     teamId: string;
     planId: string;
     role: string;
+    content: string;
+    description: string;
   }>();
 
   // Form states
-  const [taskName, setTaskName] = useState("");
-  const [taskNote, setTaskNote] = useState("");
+  const [taskName, setTaskName] = useState(contentParams || "");
+  const [taskNote, setTaskNote] = useState(descriptionParams || "");
 
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   const [assigneeId, setAssigneeId] = useState<string>("");
@@ -81,7 +85,11 @@ export default function AddTaskScreen() {
 
       if (isNewPlan) {
         // Save to local store
-        planCreationStore.addTask({
+        const oldTasks = planCreationStore.getTasks();
+
+        const exist = oldTasks.find((task) => task.tempId);
+
+        const data = {
           tempId,
           content: taskName.trim(),
           note: taskNote.trim(),
@@ -89,7 +97,13 @@ export default function AddTaskScreen() {
           dueDate: `${dayjs(toDate).format("YYYY-MM-DD")} ${toTime}:00`,
           assigneeId: assigneeId || undefined,
           priority,
-        });
+        };
+
+        if (exist) {
+          planCreationStore.updateTask(exist.tempId, data);
+        } else {
+          planCreationStore.addTask(data);
+        }
 
         router.back();
       } else {
@@ -335,6 +349,7 @@ export default function AddTaskScreen() {
               />
               {showToDatePicker && (
                 <DateTimePicker
+                  minimumDate={fromDate}
                   value={toDate}
                   mode="date"
                   display="default"

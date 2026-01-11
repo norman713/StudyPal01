@@ -1,4 +1,4 @@
-import planApi from "@/api/planApi";
+import planApi, { ActivityLog } from "@/api/planApi";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -8,15 +8,6 @@ import { Appbar, Text } from "react-native-paper";
 const ACCENT = "#90717E";
 
 type Role = "OWNER" | "ADMIN" | "MEMBER";
-
-interface ActivityLog {
-  id: string;
-  action: string;
-  entityName: string;
-  timestamp: string;
-  actorName: string;
-  actorAvatarUrl?: string;
-}
 
 // ==================== SUB COMPONENTS ====================
 function ActivityItem({
@@ -35,7 +26,7 @@ function ActivityItem({
       >
         <Image
           source={{
-            uri: activity.actorAvatarUrl || "https://i.pravatar.cc/150",
+            uri: activity.imageUrl || "https://i.pravatar.cc/150",
           }}
           className="w-full h-full"
           style={{ resizeMode: "cover" }}
@@ -48,8 +39,7 @@ function ActivityItem({
           {formatTimestamp(activity.timestamp)}
         </Text>
         <Text className="text-[16px] text-gray-800 font-normal">
-          <Text style={{ fontWeight: "bold" }}>{activity.actorName}</Text>{" "}
-          {activity.action} {activity.entityName}
+          {activity.message}
         </Text>
       </View>
     </View>
@@ -77,7 +67,8 @@ export default function PlanHistoryScreen() {
     try {
       setLoading(true);
       const data = await planApi.getPlanHistory(planId);
-      setActivities(data?.content || []);
+      console.log("history:", data);
+      setActivities(data?.records || []);
     } catch (error) {
       console.log("Error fetching history:", error);
       // Keep empty or show error
@@ -137,7 +128,7 @@ export default function PlanHistoryScreen() {
             ) : (
               activities.map((activity) => (
                 <ActivityItem
-                  key={activity.id}
+                  key={activity.timestamp}
                   activity={activity}
                   formatTimestamp={formatTimestamp}
                 />
