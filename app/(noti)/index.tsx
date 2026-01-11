@@ -35,7 +35,7 @@ export default function NotificationPage() {
             ? ("overdue" as const)
             : ("expired" as const),
           checked: false,
-          read: n.read ?? false,
+          read: n.isRead,
         }));
 
         setNotifications(mapped);
@@ -186,7 +186,7 @@ export default function NotificationPage() {
                 activeOpacity={0.8}
                 onPress={() => toggleOne(n.id)}
                 className={`relative flex-row items-start p-3 mb-3 rounded-lg ${
-                  n.read ? "bg-[#F1EFF1]" : "bg-[#fff]"
+                  n.isRead ? "bg-[#F1EFF1]" : "bg-[#fff]"
                 }`}
               >
                 {/* Checkbox */}
@@ -231,7 +231,7 @@ export default function NotificationPage() {
                 </View>
 
                 {/* tick if read */}
-                {n.read && (
+                {n.isRead && (
                   <View className="absolute top-2 right-2">
                     <MaterialCommunityIcons
                       name="check"

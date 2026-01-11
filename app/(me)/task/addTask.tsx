@@ -52,7 +52,6 @@ export default function TaskDetail() {
     try {
       setIsLoading(true);
 
-      // Payload cho API request, định dạng startDate và dueDate theo chuẩn "YYYY-MM-DD HH:mm:ss"
       const payload = {
         content: taskName,
         startDate: `${dayjs(fromDate).format("YYYY-MM-DD")} ${fromTime}:00`,
@@ -60,7 +59,7 @@ export default function TaskDetail() {
         priority: priority.toUpperCase() as TaskPriority,
         note: taskNote,
       };
-      // Gửi request đến API để tạo task
+
       const response = await taskApi.createTask(payload);
 
       console.log("[DEBUG] API Response:", response);

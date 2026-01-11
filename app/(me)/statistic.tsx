@@ -1,3 +1,4 @@
+import ErrorModal from "@/components/modal/error";
 import { FontAwesome5 } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { router } from "expo-router";
@@ -26,6 +27,9 @@ const DURATION_OPTIONS = [
 export default function StatisticPage() {
   const [duration, setDuration] = useState<number | "custom">(30);
   const [loading, setLoading] = useState(true);
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
   const [stats, setStats] = useState<TaskStatisticsResponse>({
     total: 0,
     unfinished: 0,
@@ -71,8 +75,13 @@ export default function StatisticPage() {
 
       setStats(taskData);
       setSessionStats(sessionData);
-    } catch (error) {
-      console.error("Failed to fetch statistics", error);
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to load statistics. Please try again.";
+      setErrorMessage(message);
+      setErrorVisible(true);
     } finally {
       setLoading(false);
     }
@@ -187,6 +196,13 @@ export default function StatisticPage() {
           )}
         </View>
       </ScrollView>
+      <ErrorModal
+        visible={errorVisible}
+        title="Error"
+        message={errorMessage}
+        confirmText="OK"
+        onConfirm={() => setErrorVisible(false)}
+      />
     </View>
   );
 }

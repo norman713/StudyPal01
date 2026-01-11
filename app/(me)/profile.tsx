@@ -260,8 +260,8 @@ export default function ProfileScreen({}: ProfileScreenProps) {
 
       <QuestionModal
         visible={showResetModal}
-        title="Reset password?"
-        message="We’ll send a reset code to your email. Are you sure?"
+        title="Reset password"
+        message="Are you sure you want to reset your password?"
         confirmText="Reset"
         cancelText="Cancel"
         onConfirm={() => {

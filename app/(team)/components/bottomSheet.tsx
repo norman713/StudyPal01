@@ -1,5 +1,11 @@
+// import * as FileSystem from "expo-file-system";
+import SuccessModal from "@/components/modal/success";
+import { Directory, Paths } from "expo-file-system";
+import * as MediaLibrary from "expo-media-library";
+
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   BackHandler,
   Dimensions,
@@ -11,7 +17,6 @@ import {
 } from "react-native";
 import { IconButton, Menu, Portal, Surface, Text } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.6);
 const ANIM_DUR = 220;
 
@@ -21,6 +26,7 @@ type Props = {
   onReset?: () => void;
   teamName: string;
   qrImage?: ImageSourcePropType;
+  qrBase64?: string;
 };
 
 export default function TeamQRSheetView({
@@ -29,6 +35,7 @@ export default function TeamQRSheetView({
   onReset,
   teamName,
   qrImage,
+  qrBase64,
 }: Props) {
   const insets = useSafeAreaInsets();
 
@@ -38,6 +45,9 @@ export default function TeamQRSheetView({
 
   // Menu states
   const [menuVisible, setMenuVisible] = useState(false);
+  const [successVisible, setSuccessVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
   const [anchorXY, setAnchorXY] = useState<
     { x: number; y: number } | undefined
   >(undefined);
@@ -52,14 +62,62 @@ export default function TeamQRSheetView({
     setMenuVisible(false);
     setAnchorXY(undefined);
   };
-  const handleSave = () => {
-    closeMenu();
-    // TODO: save QR to gallery
+  const handleSave = async () => {
+    try {
+      closeMenu();
+
+      if (!qrBase64) {
+        Alert.alert("Error", "QR code data not found");
+        return;
+      }
+
+      // 1) xin quyền
+      const { granted } = await MediaLibrary.requestPermissionsAsync();
+      if (!granted) {
+        Alert.alert("Permission denied");
+        return;
+      }
+
+      // 2) tạo folder cache/qr-temp nếu chưa có
+      const qrDir = new Directory(Paths.cache, "qr-temp");
+      const dirInfo = await qrDir.info();
+      if (!dirInfo.exists) {
+        await qrDir.create();
+      }
+
+      // 3) tạo file
+      const fileName = `qr_${Date.now()}.png`;
+      const qrFile = await qrDir.createFile(fileName, "image/png");
+
+      // 4) decode base64 → bytes
+      const base64Clean = qrBase64.replace(/^data:image\/png;base64,/, "");
+      const decoded = Uint8Array.from(atob(base64Clean), (c) =>
+        c.charCodeAt(0)
+      );
+
+      // 5) ghi file
+      await qrFile.write(decoded);
+
+      // 6) lưu vào gallery
+      const asset = await MediaLibrary.createAssetAsync(qrFile.uri);
+      await MediaLibrary.createAlbumAsync("QR Codes", asset, false);
+
+      setSuccessMessage("QR code saved to gallery.");
+      setSuccessVisible(true);
+    } catch (error) {
+      console.error("Save QR error", error);
+      Alert.alert("Error", "Failed to save QR code");
+    }
   };
+
   const handleReset = () => {
     closeMenu();
+
     if (onReset) {
       onReset();
+
+      setSuccessMessage("QR code has been reset successfully.");
+      setSuccessVisible(true);
     } else {
       console.warn("⚠️ No onReset handler provided");
     }
@@ -246,6 +304,16 @@ export default function TeamQRSheetView({
           </View>
         </Surface>
       </Animated.View>
+
+      <SuccessModal
+        visible={successVisible}
+        title="Success!"
+        message={successMessage}
+        confirmText="OK"
+        onConfirm={() => {
+          setSuccessVisible(false);
+        }}
+      />
     </Portal>
   );
 }

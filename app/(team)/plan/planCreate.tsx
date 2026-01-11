@@ -195,6 +195,10 @@ export default function PlanCreateScreen() {
     });
   };
 
+  const handleDeleteTask = (taskId: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+  };
+
   if (loading) {
     return (
       <View
@@ -332,7 +336,18 @@ export default function PlanCreateScreen() {
                 </Text>
               </View>
             ) : (
-              tasks.map((task) => <TaskItem key={task.id} task={task} />)
+              tasks.map((task) => (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  teamId={teamId}
+                  planId={planId}
+                  role={role}
+                  onDelete={
+                    canManage ? () => handleDeleteTask(task.id) : undefined
+                  }
+                />
+              ))
             )}
           </View>
         </ScrollView>

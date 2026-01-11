@@ -1,9 +1,10 @@
 import memberApi from "@/api/memberApi";
+import { getUserIdFromToken, readTokens } from "@/api/tokenStore";
 import ErrorModal from "@/components/modal/error";
 import QuestionModal from "@/components/modal/question";
 import SuccessModal from "@/components/modal/success";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, View } from "react-native";
 import {
   Appbar,
@@ -35,10 +36,14 @@ const RoleBadge = React.memo(({ role }: { role: Role }) => (
   <Text style={{ fontSize: 14, marginTop: 2, color: "#92AAA5" }}>{role}</Text>
 ));
 
-const canShowKebab = (row: User, currentRole: Role): boolean => {
-  if (currentRole === "OWNER") return true; // Owner can manage everyone
-  if (currentRole === "ADMIN") return row.role === "MEMBER"; // Admin manages Members only
-  return false; // Member manages no one
+// const canShowKebab = (row: User, currentRole: Role): boolean => {
+//   if (currentRole === "OWNER") return true;
+//   if (currentRole === "ADMIN") return row.role === "MEMBER"; // Admin manages Members only
+//   return false; // Member manages no one
+// };
+
+const canShowKebab = (): boolean => {
+  return true;
 };
 
 const getMenuItems = (
@@ -47,11 +52,20 @@ const getMenuItems = (
   onOpenUpdateRole: (user: User) => void,
   router: ReturnType<typeof useRouter>,
   currentRole: Role,
+  currentUserId: string | null,
   onRemove: (userId: string) => void
 ) => {
   const handleViewProfile = () => {
     closeMenu();
-    router.push({ pathname: "/(team)/profile/[id]", params: { id: row.id } });
+
+    if (row.id === currentUserId) {
+      router.push("/(me)/profile");
+    } else {
+      router.push({
+        pathname: "/(team)/profile/[id]",
+        params: { id: row.id },
+      });
+    }
   };
 
   const handleRemove = () => {
@@ -64,24 +78,32 @@ const getMenuItems = (
     onOpenUpdateRole(row);
   };
 
-  if (currentRole === "OWNER") {
+  // ✅ MEMBER: chỉ được xem profile
+  if (currentRole === "MEMBER") {
+    return <Menu.Item title="View profile" onPress={handleViewProfile} />;
+  }
+
+  // ✅ ADMIN
+  if (currentRole === "ADMIN") {
     return (
       <>
         <Menu.Item title="View profile" onPress={handleViewProfile} />
-        <Menu.Item title="Update role" onPress={handleUpdateRole} />
-        <Menu.Item
-          title="Remove from team"
-          onPress={handleRemove}
-          titleStyle={{ color: "#FF5F57" }}
-        />
+        {row.role === "MEMBER" && (
+          <Menu.Item
+            title="Remove from team"
+            onPress={handleRemove}
+            titleStyle={{ color: "#FF5F57" }}
+          />
+        )}
       </>
     );
   }
 
-  // Admin view (implied by usage logic: only sees menu for Members)
+  // ✅ OWNER
   return (
     <>
       <Menu.Item title="View profile" onPress={handleViewProfile} />
+      <Menu.Item title="Update role" onPress={handleUpdateRole} />
       <Menu.Item
         title="Remove from team"
         onPress={handleRemove}
@@ -99,6 +121,7 @@ const MemberRow = React.memo(
     router,
     onOpenUpdateRole,
     currentRole,
+    currentUserId,
     onRemove,
   }: {
     item: User;
@@ -107,9 +130,11 @@ const MemberRow = React.memo(
     router: ReturnType<typeof useRouter>;
     onOpenUpdateRole: (user: User) => void;
     currentRole: Role;
+    currentUserId: string | null;
     onRemove: (userId: string) => void;
   }) => {
-    const showDots = canShowKebab(item, currentRole);
+    const showDots = canShowKebab();
+
     const isMenuOpen = openMenuForId === item.id;
 
     const handleToggleMenu = useCallback(() => {
@@ -158,6 +183,7 @@ const MemberRow = React.memo(
                 onOpenUpdateRole,
                 router,
                 currentRole,
+                currentUserId,
                 onRemove
               )}
             </Menu>
@@ -172,6 +198,8 @@ const MemberRow = React.memo(
 // ================== MAIN COMPONENT ==================
 export default function TeamMembersScreen() {
   const router = useRouter();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
   const { teamId, number, role } = useLocalSearchParams<{
     teamId: string;
     number: string;
@@ -188,6 +216,8 @@ export default function TeamMembersScreen() {
   const [loading, setLoading] = useState(true);
 
   const currentRole = role as Role;
+  const [searchCursor, setSearchCursor] = useState<string | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
@@ -195,6 +225,20 @@ export default function TeamMembersScreen() {
 
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        const { accessToken } = await readTokens();
+        const uid = getUserIdFromToken(accessToken);
+        setCurrentUserId(uid);
+      } catch (err) {
+        console.error("❌ Failed to get current user from token:", err);
+      }
+    };
+
+    loadCurrentUser();
+  }, []);
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -221,15 +265,62 @@ export default function TeamMembersScreen() {
     fetchMembers();
   }, [teamId]);
 
-  const filteredMembers = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return members;
-    return members.filter(
-      (u) =>
-        u.name.toLowerCase().includes(q) ||
-        (u.email ?? "").toLowerCase().includes(q)
-    );
-  }, [members, query]);
+  const fetchSearchMembers = useCallback(
+    async (keyword: string) => {
+      if (!teamId) return;
+
+      try {
+        setSearchLoading(true);
+
+        const res = await memberApi.searchMember(teamId, keyword);
+
+        setMembers(
+          res.members.map((m) => ({
+            id: m.userId,
+            name: m.name,
+            avatar: m.avatarUrl,
+            email: "",
+            role: m.role,
+          }))
+        );
+
+        setSearchCursor(res.nextCursor ?? null);
+      } catch (err) {
+        console.error("❌ Search member failed:", err);
+      } finally {
+        setSearchLoading(false);
+      }
+    },
+    [teamId]
+  );
+
+  useEffect(() => {
+    if (!searchMode) return;
+
+    const keyword = query.trim();
+
+    // Không có keyword → load lại danh sách full
+    if (!keyword) {
+      memberApi.getAll(teamId).then((res) => {
+        setMembers(
+          res.members.map((m) => ({
+            id: m.userId,
+            name: m.name,
+            avatar: m.avatarUrl,
+            email: "",
+            role: m.role,
+          }))
+        );
+      });
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      fetchSearchMembers(keyword);
+    }, 400); // debounce 400ms
+
+    return () => clearTimeout(timer);
+  }, [query, searchMode, fetchSearchMembers, teamId]);
 
   const handleInvite = () => {
     router.push(`/(team)/invite?teamId=${teamId}`);
@@ -356,6 +447,7 @@ export default function TeamMembersScreen() {
         router={router}
         onOpenUpdateRole={onOpenUpdateRole}
         currentRole={currentRole}
+        currentUserId={currentUserId}
         onRemove={handleDeleteMember}
       />
     ),
@@ -384,31 +476,53 @@ export default function TeamMembersScreen() {
           >
             <Searchbar
               placeholder="Input text"
+              placeholderTextColor="#EDEDED"
               value={query}
               onChangeText={setQuery}
               autoFocus
               style={{
                 flex: 1,
-                backgroundColor: "#fff",
+                backgroundColor: "#90717E",
                 borderRadius: 5,
               }}
               inputStyle={{
                 fontSize: 15,
                 paddingVertical: 0,
                 textAlignVertical: "center",
+                color: "#FFFFFF", // ✅ text trắng
               }}
-              iconColor="#6B7280"
+              iconColor="#90717E" // ✅ icon search trùng bg
               clearIcon="close"
-              onIconPress={() => setQuery("")}
               right={() => (
                 <IconButton
                   icon="close"
                   size={20}
-                  iconColor="#6B7280"
+                  iconColor="#FFFFFF" // ✅ icon close trắng
                   style={{ marginRight: 4 }}
-                  onPress={() => {
+                  onPress={async () => {
                     setSearchMode(false);
                     setQuery("");
+                    setSearchCursor(null);
+
+                    if (!teamId) return;
+
+                    try {
+                      setLoading(true);
+                      const res = await memberApi.getAll(teamId);
+                      setMembers(
+                        res.members.map((m) => ({
+                          id: m.userId,
+                          name: m.name,
+                          avatar: m.avatarUrl,
+                          email: "",
+                          role: m.role,
+                        }))
+                      );
+                    } catch (err) {
+                      console.error("❌ Reload members failed:", err);
+                    } finally {
+                      setLoading(false);
+                    }
                   }}
                 />
               )}
@@ -454,9 +568,14 @@ export default function TeamMembersScreen() {
         </Text>
 
         <FlatList
-          data={filteredMembers}
+          data={members}
           keyExtractor={(u) => u.id}
           renderItem={renderItem}
+          ListFooterComponent={
+            searchLoading ? (
+              <ActivityIndicator style={{ marginVertical: 12 }} />
+            ) : null
+          }
         />
       </View>
 

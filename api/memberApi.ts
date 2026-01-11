@@ -70,6 +70,22 @@ async removeMember(
 },
 
 
+async searchMember(
+  teamId: string,
+  keyword: string,
+  cursor?: string,
+  size: number = 10
+): Promise<MemberListResponse> {
+  const url = "/members/search";
+  const params = { teamId, keyword, cursor, size };
+
+  const res = (await axiosInstance.get(url, {
+    params,
+  })) as MemberListResponse;
+
+  return res;
+},
+
 };
 
 export default memberApi;

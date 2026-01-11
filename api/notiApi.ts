@@ -10,7 +10,7 @@ export interface NotificationItem {
   content: string;
   subject: string; // ví dụ: "PLAN"
   subjectId: string;
-  read: boolean;
+  isRead: boolean;
   imageUrl:string |null
 }
 

@@ -1,3 +1,4 @@
+import ErrorModal from "@/components/modal/error";
 import { FontAwesome } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
@@ -170,6 +171,8 @@ function MemberItem({ member }: { member: MemberStat }) {
  */
 export default function StatisticScreen() {
   const { teamId } = useLocalSearchParams<{ teamId: string }>();
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [duration, setDuration] = useState<Duration>("30days");
   const [loading, setLoading] = useState(true);
@@ -269,8 +272,21 @@ export default function StatisticScreen() {
       membersData.sort((a, b) => b.finishedTasks - a.finishedTasks);
 
       setMembers(membersData);
-    } catch (err) {
-      console.error("Statistic API error", err);
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to load statistics. Please try again.";
+
+      setErrorMessage(message);
+      setErrorVisible(true);
+      setAnalysis({
+        high: 0,
+        medium: 0,
+        low: 0,
+        unfinished: 0,
+      });
+      setMembers([]);
     } finally {
       setLoading(false);
     }
@@ -389,6 +405,14 @@ export default function StatisticScreen() {
           )}
         </View>
       </ScrollView>
+
+      <ErrorModal
+        visible={errorVisible}
+        title="Error"
+        message={errorMessage}
+        confirmText="OK"
+        onConfirm={() => setErrorVisible(false)}
+      />
     </View>
   );
 }

@@ -10,10 +10,12 @@ type Role = "OWNER" | "ADMIN" | "MEMBER";
 
 interface TaskItemProps {
   task: Task;
-  onToggle?: () => void; // Optional - if not provided, won't show check button
+  onToggle?: () => void;
+  onDelete?: () => void;
   teamId?: string;
   planId?: string;
   role?: Role;
+  draftIndex?: number;
 }
 
 /**
@@ -43,24 +45,29 @@ function formatDate(dateStr: string): string {
 export default function TaskItem({
   task,
   onToggle,
+  onDelete,
   teamId,
   planId,
   role,
+  draftIndex,
 }: TaskItemProps) {
   const priorityColor = getPriorityColor(task.priority);
   const isCompleted = Boolean(task.completedAt);
 
   const handlePress = () => {
-    if (teamId && planId) {
+    if (!teamId) return;
+
+    if (planId === "new" && draftIndex !== undefined) {
       router.push({
-        pathname: "/(team)/plan/taskDetail",
+        pathname: "/(team)/plan/addTask",
         params: {
           teamId,
-          planId,
-          taskId: task.id,
+          planId: "new",
           role: role || "MEMBER",
+          draftIndex,
         },
       });
+      return;
     }
   };
 
@@ -76,7 +83,7 @@ export default function TaskItem({
       {/* Task Info */}
       <View style={styles.info}>
         <Text style={styles.name}>{task.content}</Text>
-        <Text style={styles.date}>
+        <Text className="font-normal text-[12px]">
           {formatDate(task.startDate)} - {formatDate(task.dueDate)}
         </Text>
 
@@ -104,23 +111,36 @@ export default function TaskItem({
         )}
       </View>
 
-      {/* Check Button - only show if onToggle provided */}
-      {onToggle && (
-        <View pointerEvents="none">
-          <View
-            style={[
-              styles.checkBtn,
-              isCompleted ? styles.checkBtnDone : styles.checkBtnIdle,
-            ]}
-          >
-            <Ionicons
-              name="checkmark"
-              size={18}
-              color={isCompleted ? "#fff" : "#7D8B91"}
-            />
+      {/* right icon */}
+
+      <View style={styles.rightActions}>
+        {onToggle && (
+          <View pointerEvents="none">
+            <View
+              style={[
+                styles.checkBtn,
+                isCompleted ? styles.checkBtnDone : styles.checkBtnIdle,
+              ]}
+            >
+              <Ionicons
+                name="checkmark"
+                size={18}
+                color={isCompleted ? "#fff" : "#7D8B91"}
+              />
+            </View>
           </View>
-        </View>
-      )}
+        )}
+
+        {onDelete && (
+          <TouchableOpacity
+            onPress={onDelete}
+            hitSlop={8}
+            style={styles.deleteBtn}
+          >
+            <Ionicons name="close" size={25} color="#92AAA5" />
+          </TouchableOpacity>
+        )}
+      </View>
     </TouchableOpacity>
   );
 }
@@ -198,5 +218,14 @@ const styles = StyleSheet.create({
   checkBtnDone: {
     borderColor: "#92AAA5",
     backgroundColor: "#92AAA5",
+  },
+  rightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginLeft: 8,
+  },
+  deleteBtn: {
+    padding: 4,
   },
 });

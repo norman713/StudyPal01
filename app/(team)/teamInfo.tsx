@@ -242,16 +242,17 @@ export default function TeamInfoScreen() {
   // ABOUT QR HANDLER
   const handleOpenQR = async () => {
     if (!id) return;
-    setQrVisible(true);
+
     setQrLoading(true);
     try {
       const base64 = await teamApi.getQR(id as string, 300, 300);
-      setQrBase64(base64);
-      if (base64) {
-        setQrBase64(base64);
-      } else {
-        console.error("QR field missing in response");
+
+      if (!base64) {
+        throw new Error("QR missing");
       }
+
+      setQrBase64(base64);
+      setQrVisible(true);
     } catch (err) {
       console.error("Failed to fetch QR:", err);
       setError("Failed to load QR code. Please try again later.");
@@ -265,7 +266,6 @@ export default function TeamInfoScreen() {
     try {
       setQrLoading(true);
       const res = await teamApi.resetQR(id as string);
-      Alert.alert("Success", res.message);
       const newBase64 = await teamApi.getQR(id as string, 300, 300);
       setQrBase64(newBase64);
     } catch (err) {
@@ -634,7 +634,16 @@ export default function TeamInfoScreen() {
                       color="#49454F"
                     />
                   )}
-                  onPress={() => console.log("Documents clicked")}
+                  onPress={() => {
+                    router.push({
+                      pathname: "/(team)/teamDocument",
+                      params: {
+                        teamId: id,
+                        role: team?.role || "MEMBER",
+                        teamName: team?.name || "",
+                      },
+                    });
+                  }}
                   style={{ paddingRight: 0, paddingLeft: 0 }}
                 />
 
@@ -766,6 +775,7 @@ export default function TeamInfoScreen() {
         onClose={closeQR}
         onReset={handleResetQR}
         teamName={team?.name}
+        qrBase64={qrBase64 ?? undefined}
         qrImage={
           qrBase64 ? { uri: `data:image/png;base64,${qrBase64}` } : undefined
         }

@@ -200,16 +200,6 @@ export default function PlanScreen() {
           showsVerticalScrollIndicator={false}
         />
       </View>
-      {/* 
-      <View className="items-center mb-6">
-        <TouchableOpacity onPress={handleCreatePlan} activeOpacity={0.7}>
-          <Image
-            source={addButtonImg}
-            style={{ width: 60, height: 60 }}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-      </View> */}
     </View>
   );
 }
