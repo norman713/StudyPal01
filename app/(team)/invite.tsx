@@ -176,8 +176,8 @@ export default function InviteUserScreen() {
             <Avatar.Text
               size={40}
               label={item.name?.[0]?.toUpperCase() || "U"}
-              style={{ backgroundColor: "#E0E7FF" }}
-              color="#334155"
+              style={{ backgroundColor: "#6B4EFF" }}
+              color="#fff"
             />
           )
         }

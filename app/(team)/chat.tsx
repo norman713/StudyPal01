@@ -372,7 +372,7 @@ export default function TeamChatScreen() {
                 className="w-10 h-10 rounded-full mr-2"
               />
             ) : (
-              <View className="w-10 h-10 rounded-full mr-2 items-center justify-center bg-[#6750A4]">
+              <View className="w-10 h-10 rounded-full mr-2 items-center justify-center bg-[#6B4EFF]">
                 <Text className="text-white font-semibold">
                   {senderName?.charAt(0).toUpperCase()}
                 </Text>
@@ -434,7 +434,7 @@ export default function TeamChatScreen() {
                     style={{ zIndex: index }}
                   />
                 ) : (
-                  <View className="w-6 h-6 rounded-full mr-2 items-center justify-center bg-[#6750A4]">
+                  <View className="w-6 h-6 rounded-full mr-2 items-center justify-center bg-[#6B4EFF]">
                     <Text className="text-white text-xs font-semibold s">
                       {u.name.charAt(0).toUpperCase()}
                     </Text>
@@ -460,7 +460,7 @@ export default function TeamChatScreen() {
             className="w-10 h-10 rounded-full"
           />
         ) : (
-          <View className="w-10 h-10 rounded-full bg-white/20 items-center justify-center">
+          <View className="w-10 h-10 rounded-full bg-[#6B4EFF] items-center justify-center">
             <Text className="text-white font-bold">
               {teamInfo?.name?.[0] || "?"}
             </Text>

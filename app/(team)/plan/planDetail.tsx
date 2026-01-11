@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   planMeta: { flex: 1, marginLeft: 16 },
-  planCode: { fontSize: 12, color: "#92AAA5", fontWeight: "600" },
+  planCode: { fontSize: 12, color: "#92AAA5", fontWeight: "700" },
   planName: { fontSize: 18, fontWeight: "700", color: "#0F0C0D", marginTop: 2 },
   planDesc: { fontSize: 14, color: "#0F0C0D", marginTop: 4, lineHeight: 20 },
 

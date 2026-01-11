@@ -14,10 +14,6 @@ export default function PlanItem({ plan, onPress }: PlanItemProps) {
     return dayjs(dateStr).format("HH:mm DD MMM, YYYY");
   };
 
-  // useEffect(() => {
-  //   console.log(plan.progress);
-  // })
-
   return (
     <TouchableOpacity
       style={styles.planItem}
@@ -30,7 +26,7 @@ export default function PlanItem({ plan, onPress }: PlanItemProps) {
           {formatDate(plan.startDate)} - {formatDate(plan.dueDate)}
         </Text>
       </View>
-      <ProgressCircle progress={plan.progress ?? 0} />
+      <ProgressCircle progress={plan.progress ? plan.progress*100 : 0} />
     </TouchableOpacity>
   );
 }
