@@ -265,8 +265,8 @@ export default function TaskDetail() {
           {/* Task ID and Check */}
           <View style={styles.taskHeader}>
             <View style={styles.taskIdContainer}>
-              <Text style={styles.planCode}>{planCode} / </Text>
-              <Text style={styles.taskId}>{taskCode}</Text>
+              <Text style={styles.planCode}>{planCode} </Text>
+              <Text style={styles.taskId}>/ {taskCode}</Text>
             </View>
             <Pressable
               onPress={handleToggleComplete}
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
   },
   planCode: {
     fontSize: 16,
-    fontFamily: "PoppinsRegular",
+    fontFamily: "PoppinsSemiBold",
     color: "#92AAA5",
   },
   taskId: {

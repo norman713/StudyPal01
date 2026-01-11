@@ -177,7 +177,14 @@ export default function PlanCreateScreen() {
         // Clear drafts after success
         planCreationStore.clearTasks();
       }
-      router.back();
+      router.push({
+        pathname: "/(team)/plan",
+        params: {
+          teamId,
+          planId,
+          role
+        },
+      });
     } catch (err: any) {
       console.error(err);
       const msg = err?.response?.data?.message || "Failed to save plan";

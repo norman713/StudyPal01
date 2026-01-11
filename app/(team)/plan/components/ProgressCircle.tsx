@@ -48,7 +48,7 @@ export default function ProgressCircle({
       </Svg>
 
       <View style={styles.progressTextContainer}>
-        <Text style={styles.progressTextLarge}>{progress.toFixed(1)}%</Text>
+        <Text style={styles.progressTextLarge}>{progress.toFixed(0)}%</Text>
       </View>
     </View>
   );

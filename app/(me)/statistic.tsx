@@ -170,11 +170,15 @@ export default function StatisticPage() {
                 value={`${sessionStats.completionPercentage.toFixed(1)}`}
                 label="Study sessions finished"
                 suffix="%"
+                bgClass="bg-[#E3DBDF]"
+                textClass="text-[#90717E]"
               />
               <StatCard
                 value={`${formatHours(sessionStats.timeSpentInSeconds)}`}
                 label="Spent on study sessions"
                 suffix="h"
+                bgClass="bg-[#F2EFF0]"
+                textClass="text-[#92AAA5]"
               />
             </View>
           )}
@@ -213,16 +217,20 @@ function StatCard({
   value,
   label,
   suffix,
+  bgClass,
+  textClass 
 }: {
   value: string;
   label: string;
   suffix: string;
+  bgClass : string,
+  textClass: string
 }) {
   return (
-    <View className="flex-1 bg-[#E3DBDF] rounded-2xl p-5 items-center">
-      <Text className="text-[35px] font-PoppinsBold text-[#8C6E79]">
+    <View className={`flex-1 rounded-2xl p-5 items-center ${bgClass}`}>
+      <Text className={`text-[35px] font-PoppinsBold ${textClass}`}>
         {value}
-        <Text className="text-[20px] font-PoppinsBold text-[#8C6E79]">
+        <Text className={`text-[20px] font-PoppinsBold ${textClass}`}>
           {suffix}
         </Text>
       </Text>

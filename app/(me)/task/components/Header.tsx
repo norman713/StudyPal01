@@ -171,6 +171,7 @@ export default function HeaderSection({
 const styles = StyleSheet.create({
   container: {
     marginBottom: 20,
+    paddingTop: 10,
     backgroundColor: "#fff",
   },
   calendarWrapper: {
