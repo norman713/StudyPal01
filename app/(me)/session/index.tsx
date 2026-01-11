@@ -152,22 +152,6 @@ export default function SessionScreen() {
         <Text className="text-white text-[16px] font-bold ml-3">Session</Text>
       </View>
 
-      {/* YOUTUBE PLAYER */}
-      {hasMusic && (
-        <View className="items-center mt-3 mb-[10px]">
-          <YoutubePlayer
-            width={300}
-            height={180}
-            videoId={currentVideoId}
-            play={false}
-            webViewProps={{
-              allowsInlineMediaPlayback: true,
-              mediaPlaybackRequiresUserAction: true,
-            }}
-          />
-        </View>
-      )}
-
       {/* CONTENT */}
       <View
         className={`flex-1 items-center ${
