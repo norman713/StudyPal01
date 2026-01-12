@@ -6,6 +6,7 @@ import { Checkbox, IconButton } from "react-native-paper";
 import notificationApi, {
   NotificationItem as ApiNotification,
 } from "../../api/notiApi";
+import { useUnreadNotification } from "@/context/unreadNotificationContext";
 
 interface NotificationItem extends ApiNotification {
   type: "expired" | "overdue";
@@ -19,19 +20,22 @@ export default function NotificationPage() {
 
   const [errorVisible, setErrorVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
+  const { clearUnread, unreadNotificationCount } = useUnreadNotification();
 
   //fetch api
   useEffect(() => {
     fetchNotifications();
   }, []);
 
+  useEffect(() => {
+    if (unreadNotificationCount === 0) return;
+    fetchNotifications();
+  }, [unreadNotificationCount])
+
   const fetchNotifications = async () => {
     try {
       setLoading(true);
       const res = await notificationApi.getAll();
-      // 🔥 LOG FULL RESPONSE
-      console.log("📩 [getAll notifications] raw response:", res);
-
       const mapped: NotificationItem[] = res.notifications.map((n) => ({
         ...n,
         type: n.content.includes("will be expired") ? "overdue" : "expired",
@@ -58,9 +62,8 @@ export default function NotificationPage() {
       setLoading(true);
 
       await notificationApi.markManyAsRead(idsToMark);
-
-      // 🔥 fetch lại ngay để sync với backend
       await fetchNotifications();
+      clearUnread(idsToMark.length);
     } catch (err: any) {
       const apiMessage =
         err?.response?.data?.message ?? "Something went wrong.";
@@ -100,6 +103,7 @@ export default function NotificationPage() {
       setNotifications((prev) =>
         prev.filter((n) => !idsToDelete.includes(n.id))
       );
+      clearUnread(idsToDelete.length);
     } catch (err) {
       console.error("[handleDelete] Error:", err);
     } finally {

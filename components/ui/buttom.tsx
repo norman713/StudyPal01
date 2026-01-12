@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   ImageBackground,
@@ -9,6 +9,10 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import notificationApi, {
+  NotificationItem as ApiNotification,
+} from "../../api/notiApi";
+import { useUnreadNotification } from "@/context/unreadNotificationContext";
 
 const bottomBg = require("../../assets/images/BottomNavbar.png");
 const addButtonImg = require("../../assets/images/Addbutton.png");
@@ -28,6 +32,7 @@ export default function BottomBar({
 }: BottomBarProps) {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const { unreadNotificationCount } = useUnreadNotification();
 
   /* =======================
      RESPONSIVE CALC
@@ -97,14 +102,21 @@ export default function BottomBar({
 
           {/* RIGHT GROUP */}
           <View style={{ flexDirection: "row", gap: width * 0.08 }}>
-            <TabItem
-              icon="bell-outline"
-              label="Notification"
-              active={activeTab === "notification"}
-              onPress={() => onTabPress("notification")}
-              activeColor={ICON_COLOR_ACTIVE}
-              inactiveColor={ICON_COLOR_INACTIVE}
-            />
+            <View className="relative">
+              <TabItem
+                icon="bell-outline"
+                label="Notification"
+                active={activeTab === "notification"}
+                onPress={() => onTabPress("notification")}
+                activeColor={ICON_COLOR_ACTIVE}
+                inactiveColor={ICON_COLOR_INACTIVE}
+              />
+              {unreadNotificationCount > 0 &&
+                <View className="absolute -top-0.5 right-4 h-3 w-3 rounded-full bg-red-500 items-center justify-center">
+                <Text className="text-[7px] text-white font-bold">{unreadNotificationCount}</Text>
+              </View>
+              } 
+            </View>
 
             <TabItem
               icon="trash-can-outline"

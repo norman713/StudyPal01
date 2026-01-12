@@ -5,7 +5,7 @@ import Loading from "@/components/loading";
 import QuestionModal from "@/components/modal/question";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { Modal, View } from "react-native";
 import { Avatar, Card, IconButton, List, Text } from "react-native-paper";
 
@@ -26,6 +26,7 @@ export default function ProfileScreen({}: ProfileScreenProps) {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -60,6 +61,8 @@ export default function ProfileScreen({}: ProfileScreenProps) {
       console.log("Logout error:", error);
     } finally {
       await clearTokens();
+      wsRef.current?.close();
+      wsRef.current = null;
       setShowLogoutModal(false);
       router.replace("/(auth)/login");
     }

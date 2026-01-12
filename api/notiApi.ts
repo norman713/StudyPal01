@@ -65,8 +65,8 @@ async markManyAsRead(ids: string[]) {
 
   async getUnreadCount(): Promise<{ count: number }> {
     const url = `/notifications/unread/count`;
-    const res = await axiosInstance.get(url);
-    return res.data;
+    const res = await axiosInstance.get(url) as { count: number };
+    return res;
   },
 };
 
