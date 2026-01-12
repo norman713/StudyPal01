@@ -90,28 +90,11 @@ export default function SessionSettingsModal({
       setMusics(initialData.musics);
     }
   }, [visible]);
+  const stages = calcStages(totalTime, focusTime, breakTime);
 
   /* =======================
      HANDLERS
   ======================= */
-
-  const handleAddMusic = async () => {
-    if (!musicLink.trim()) return;
-
-    // tránh add trùng
-    if (musics.some((m) => m.url === musicLink)) {
-      setMusicLink("");
-      return;
-    }
-
-    setLoading(true);
-    setMusicLink("");
-    setLoading(false);
-  };
-
-  const handleRemoveMusic = (id: string) => {
-    setMusics((prev) => prev.filter((m) => m.id !== id));
-  };
 
   const handleSave = () => {
     onSave({
@@ -164,7 +147,8 @@ export default function SessionSettingsModal({
           />
 
           <Text className="text-center text-[13px] text-gray-500 mb-4">
-            Your session will have <Text className="font-bold">4</Text> stages.
+            Your session will have <Text className="font-bold">{stages}</Text>{" "}
+            stages.
           </Text>
 
           {/* MUSIC INPUT */}
@@ -228,10 +212,24 @@ export default function SessionSettingsModal({
 /* =======================
    SUB COMPONENTS
 ======================= */
-function formatTime(date: Date): string {
-  const h = date.getHours().toString().padStart(2, "0");
-  const m = date.getMinutes().toString().padStart(2, "0");
-  return `${h}:${m}`;
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function calcStages(
+  totalTime: string,
+  focusTime: string,
+  breakTime: string
+): number {
+  const total = timeToMinutes(totalTime);
+  const focus = timeToMinutes(focusTime);
+  const rest = timeToMinutes(breakTime);
+
+  const cycle = focus + rest;
+  if (cycle <= 0) return 0;
+
+  return Math.floor(total / cycle);
 }
 
 function TimePickerRow({

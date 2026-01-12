@@ -79,8 +79,9 @@ export default function SessionScreen() {
   const [musics, setMusics] = useState<MusicItemType[]>([]);
 
   /* ===== TIMER ===== */
-  const TOTAL_SECONDS = parseTimeToSeconds(totalTime + ":00");
-  const [secondsLeft, setSecondsLeft] = useState(TOTAL_SECONDS);
+  const FOCUS_SECONDS = parseTimeToSeconds(focusTime + ":00");
+  const [secondsLeft, setSecondsLeft] = useState(FOCUS_SECONDS);
+
   const [isRunning, setIsRunning] = useState(false);
 
   /* ===== UI ===== */
@@ -131,7 +132,8 @@ export default function SessionScreen() {
      PROGRESS
   ======================= */
 
-  const progress = secondsLeft / TOTAL_SECONDS;
+  const progress = secondsLeft / FOCUS_SECONDS;
+
   const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
 
   /* =======================
@@ -248,12 +250,11 @@ export default function SessionScreen() {
         }}
         onClose={() => setShowSettings(false)}
         onSave={(data: SessionSettingData) => {
-          console.log("shdbfnm,", data);
           setTotalTime(data.totalTime);
           setFocusTime(data.focusTime);
           setBreakTime(data.breakTime);
           setMusics(data.musics);
-          setSecondsLeft(parseTimeToSeconds(data.totalTime + ":00"));
+          setSecondsLeft(parseTimeToSeconds(data.focusTime + ":00"));
           setShowSettings(false);
         }}
       />
