@@ -1,6 +1,9 @@
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import dayjs from "dayjs";
 import React, { useEffect, useState } from "react";
-import { Modal, Pressable, Text, TextInput, View } from "react-native";
+import { Modal, Pressable, Text, View } from "react-native";
+import { TextInput } from "react-native-paper";
 
 /* =======================
    TYPES
@@ -26,40 +29,52 @@ type Props = {
   onSave: (data: SessionSettingData) => void;
 };
 
+const AVAILABLE_MUSICS: MusicItemType[] = [
+  {
+    id: "rain",
+    title: "🌧 Rain sound",
+    url: "rain.mp3",
+  },
+  {
+    id: "forest",
+    title: "🌲 Forest ambience",
+    url: "forest.mp3",
+  },
+  {
+    id: "lofi",
+    title: "🎧 Lofi chill",
+    url: "lofi.mp3",
+  },
+];
+const NO_MUSIC_OPTION: MusicItemType = {
+  id: "none",
+  title: "🔇 No background music",
+  url: "",
+};
+
 /* =======================
    COMPONENT
 ======================= */
-function parseHHMMFromDigits(input: string): string {
-  const digits = input.replace(/\D/g, "").slice(0, 4);
-
-  if (digits.length === 0) return "";
-
-  if (digits.length <= 2) {
-    const m = Math.min(Number(digits), 59);
-    return `00:${m.toString().padStart(2, "0")}`;
-  }
-
-  let h = Number(digits.slice(0, digits.length - 2));
-  let m = Number(digits.slice(-2));
-
-  if (m > 59) m = 59;
-
-  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-}
-
 export default function SessionSettingsModal({
   visible,
   initialData,
   onClose,
   onSave,
 }: Props) {
-  const [totalTime, setTotalTime] = useState("03:00");
-  const [focusTime, setFocusTime] = useState("00:30");
-  const [breakTime, setBreakTime] = useState("00:10");
+  const now = dayjs();
+  const nextHour = now.add(1, "hour");
+  const [totalTime, setTotalTime] = useState(now.format("HH:mm"));
+  const [focusTime, setFocusTime] = useState(now.format("HH:mm"));
+  const [breakTime, setBreakTime] = useState(now.format("HH:mm"));
+  const [selectedMusic, setSelectedMusic] = useState<MusicItemType | null>(
+    null
+  );
 
   const [musicLink, setMusicLink] = useState("");
   const [musics, setMusics] = useState<MusicItemType[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   /* =======================
      INIT DATA
@@ -90,16 +105,6 @@ export default function SessionSettingsModal({
     }
 
     setLoading(true);
-
-    const title = await fetchYoutubeTitle(musicLink);
-
-    const newMusic: MusicItemType = {
-      id: Date.now().toString(),
-      url: musicLink,
-      title,
-    };
-
-    setMusics((prev) => [...prev, newMusic]);
     setMusicLink("");
     setLoading(false);
   };
@@ -140,17 +145,19 @@ export default function SessionSettingsModal({
           </Text>
 
           {/* TIME INPUTS */}
-          <TimeRow
+          <TimePickerRow
             label="Session total time:"
             value={totalTime}
             onChange={setTotalTime}
           />
-          <TimeRow
+
+          <TimePickerRow
             label="Focus time:"
             value={focusTime}
             onChange={setFocusTime}
           />
-          <TimeRow
+
+          <TimePickerRow
             label="Break time:"
             value={breakTime}
             onChange={setBreakTime}
@@ -161,36 +168,49 @@ export default function SessionSettingsModal({
           </Text>
 
           {/* MUSIC INPUT */}
-          <View className="flex-row items-center border border-gray-300 rounded-xl px-3 py-2 mb-3">
-            <TextInput
-              value={musicLink}
-              onChangeText={setMusicLink}
-              placeholder="Enter Youtube link"
-              placeholderTextColor="#777"
-              className="flex-1 text-[14px]"
-              autoCapitalize="none"
+          <Pressable
+            onPress={() => setDropdownOpen((prev) => !prev)}
+            className="border border-gray-300 rounded-xl px-3 py-3 mb-2 flex-row items-center justify-between"
+          >
+            <Text className="text-[14px] font-semibold text-gray-700">
+              {selectedMusic ? selectedMusic.title : "No background music"}
+            </Text>
+
+            <Ionicons
+              name={dropdownOpen ? "chevron-up" : "chevron-down"}
+              size={18}
+              color="#90717E"
             />
-            <Pressable hitSlop={10} onPress={handleAddMusic}>
-              <MaterialIcons name="add" size={20} color="#90717E" />
-            </Pressable>
-          </View>
+          </Pressable>
 
-          {/* MUSIC LIST */}
-          <View className="mb-4">
-            {musics.map((item) => (
-              <MusicItem
-                key={item.id}
-                title={item.title}
-                onRemove={() => handleRemoveMusic(item.id)}
-              />
-            ))}
+          {dropdownOpen && (
+            <View className="border border-gray-300 rounded-xl mb-3 overflow-hidden">
+              {[NO_MUSIC_OPTION, ...AVAILABLE_MUSICS].map((item) => {
+                const selected = selectedMusic?.id === item.id;
 
-            {loading && (
-              <Text className="text-center text-xs text-gray-400">
-                Fetching title…
-              </Text>
-            )}
-          </View>
+                return (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => {
+                      setSelectedMusic(item.id === "none" ? null : item);
+                      setDropdownOpen(false);
+                    }}
+                    className={`px-3 py-3 font-normal ${
+                      selected ? "bg-[#F2EFF0]" : "bg-white"
+                    }`}
+                  >
+                    <Text
+                      className={`text-[14px] ${
+                        selected ? "font-bold text-[#90717E]" : "text-gray-800"
+                      }`}
+                    >
+                      {item.title}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
 
           {/* SAVE */}
           <Pressable
@@ -208,65 +228,58 @@ export default function SessionSettingsModal({
 /* =======================
    SUB COMPONENTS
 ======================= */
-function TimeRow({
+function formatTime(date: Date): string {
+  const h = date.getHours().toString().padStart(2, "0");
+  const m = date.getMinutes().toString().padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+function TimePickerRow({
   label,
   value,
   onChange,
 }: {
   label: string;
-  value: string;
+  value: string; // "HH:mm"
   onChange: (v: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
   return (
     <View className="flex-row items-center justify-between mb-3">
       <Text className="text-[14px] font-medium text-gray-700">{label}</Text>
 
       <TextInput
-        keyboardType="number-pad"
-        placeholder="HH:MM"
+        mode="outlined"
         value={value}
-        onChangeText={(text) => {
-          const digits = text.replace(/\D/g, "");
-          onChange(parseHHMMFromDigits(digits));
-        }}
-        className="border border-gray-300 rounded-lg px-3 py-1.5 w-[110px] text-center text-[14px]"
+        editable={false}
+        style={{ width: 150 }}
+        right={
+          <TextInput.Icon
+            icon={() => (
+              <Ionicons name="time-outline" size={22} color="#49454F" />
+            )}
+            onPress={() => setOpen(true)}
+          />
+        }
       />
+
+      {open && (
+        <DateTimePicker
+          value={dayjs()
+            .hour(Number(value.split(":")[0]))
+            .minute(Number(value.split(":")[1]))
+            .toDate()}
+          mode="time"
+          is24Hour
+          display="spinner"
+          onChange={(e, selected) => {
+            setOpen(false);
+            if (selected) {
+              onChange(dayjs(selected).format("HH:mm"));
+            }
+          }}
+        />
+      )}
     </View>
   );
-}
-
-function MusicItem({
-  title,
-  onRemove,
-}: {
-  title: string;
-  onRemove: () => void;
-}) {
-  return (
-    <View className="flex-row items-center mb-2">
-      <Ionicons name="musical-notes" size={16} color="#000" />
-      <Text className="ml-2 text-[13px] text-gray-800 flex-1" numberOfLines={1}>
-        {title}
-      </Text>
-      <Pressable hitSlop={10} onPress={onRemove}>
-        <MaterialIcons name="remove-circle-outline" size={18} color="#90717E" />
-      </Pressable>
-    </View>
-  );
-}
-
-/* =======================
-   HELPERS
-======================= */
-
-async function fetchYoutubeTitle(url: string): Promise<string> {
-  try {
-    const res = await fetch(
-      `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`
-    );
-    const data = await res.json();
-    return data?.title ?? "Youtube track";
-  } catch {
-    return "Youtube track";
-  }
 }

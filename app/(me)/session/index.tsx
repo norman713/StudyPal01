@@ -34,11 +34,17 @@ const parseTimeToSeconds = (time: string) => {
 };
 
 const formatTime = (s: number) => {
-  const m = Math.floor(s / 60)
+  const h = Math.floor(s / 3600)
     .toString()
     .padStart(2, "0");
+
+  const m = Math.floor((s % 3600) / 60)
+    .toString()
+    .padStart(2, "0");
+
   const sec = (s % 60).toString().padStart(2, "0");
-  return `${m}:${sec}`;
+
+  return `${h}:${m}:${sec}`;
 };
 
 const extractYoutubeId = (url: string) => {
@@ -67,13 +73,13 @@ const extractYoutubeId = (url: string) => {
 
 export default function SessionScreen() {
   /* ===== SETTINGS ===== */
-  const [totalTime, setTotalTime] = useState("00:11:00");
-  const [focusTime, setFocusTime] = useState("00:05:00");
-  const [breakTime, setBreakTime] = useState("00:02:00");
+  const [totalTime, setTotalTime] = useState("00:11");
+  const [focusTime, setFocusTime] = useState("00:05");
+  const [breakTime, setBreakTime] = useState("00:02");
   const [musics, setMusics] = useState<MusicItemType[]>([]);
 
   /* ===== TIMER ===== */
-  const TOTAL_SECONDS = parseTimeToSeconds(totalTime);
+  const TOTAL_SECONDS = parseTimeToSeconds(totalTime + ":00");
   const [secondsLeft, setSecondsLeft] = useState(TOTAL_SECONDS);
   const [isRunning, setIsRunning] = useState(false);
 
@@ -242,11 +248,12 @@ export default function SessionScreen() {
         }}
         onClose={() => setShowSettings(false)}
         onSave={(data: SessionSettingData) => {
+          console.log("shdbfnm,", data);
           setTotalTime(data.totalTime);
           setFocusTime(data.focusTime);
           setBreakTime(data.breakTime);
           setMusics(data.musics);
-          setSecondsLeft(parseTimeToSeconds(data.totalTime));
+          setSecondsLeft(parseTimeToSeconds(data.totalTime + ":00"));
           setShowSettings(false);
         }}
       />
