@@ -1,22 +1,13 @@
+import { DeletedTask, TaskPriority } from "@/api/taskApi";
+import dayjs from "dayjs";
 import React from "react";
 import { Text, View } from "react-native";
 import { Checkbox } from "react-native-paper";
 
-type TaskPriority = "high" | "medium" | "low";
-
-type TrashTask = {
-  id: string;
-  code: string; // code là code của plan
-  title: string;
-  dateRange: string;
-  deleteDate: string;
-  priority: TaskPriority;
-};
-
-const priorityColors: Record<TaskPriority, string> = {
-  high: "#FF5F57",
-  medium: "#FEBC2F",
-  low: "#27C840",
+const PRIORITY_COLOR_MAP: Record<TaskPriority, string> = {
+  LOW: "#6BBF59",
+  MEDIUM: "#F2B705",
+  HIGH: "#E63946",
 };
 
 export default function TaskItem({
@@ -24,33 +15,35 @@ export default function TaskItem({
   isSelected,
   onToggle,
 }: {
-  task: TrashTask;
+  task: DeletedTask;
   isSelected: boolean;
   onToggle: () => void;
 }) {
+  const dateRange = `${dayjs(task.startDate).format("DD/MM/YYYY HH:mm")} → ${dayjs(
+    task.dueDate
+  ).format("DD/MM/YYYY HH:mm")}`;
+
+  const barColor = PRIORITY_COLOR_MAP[task.priority];
   return (
     <View className="flex-row w-full mb-2">
       {/* Priority bar */}
-      <View
-        style={{ backgroundColor: priorityColors[task.priority] }}
-        className="w-2 rounded-sm"
-      />
+      <View style={{ backgroundColor: barColor }} className="w-2 rounded-sm" />
 
       {/* Content */}
       <View className="flex-1 bg-[#F2EFF0] px-3 py-2 flex-row items-center justify-between">
         <View className="flex-1 space-y-[2px]">
           <Text className="text-[12px] text-[#49454F] font-PoppinsSemiBold">
-            {task.code}
+            {task.planCode}
           </Text>
 
           <Text className="text-[16px] font-medium text-[#0F0C0D]">
-            {task.title}
+            {task.content}
           </Text>
 
-          <Text className="text-[12px] text-[#0F0C0D]">{task.dateRange}</Text>
+          <Text className="text-[12px] text-[#0F0C0D]">{dateRange}</Text>
 
           <Text className="text-[12px] text-[#FF5F57]">
-            Delete at: {task.deleteDate}
+            Delete at: {dayjs(task.deletedAt).format("DD/MM/YYYY HH:mm")}
           </Text>
         </View>
 

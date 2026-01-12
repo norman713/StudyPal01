@@ -1,92 +1,74 @@
-import { router, useLocalSearchParams } from "expo-router";
-import React, { useState } from "react";
-import { ScrollView, View } from "react-native";
-import { Appbar } from "react-native-paper";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
+import { BackHandler, ScrollView, View } from "react-native";
 
 import TabSelector from "./components/TabSelector";
 import TrashDocuments from "./document";
 import TrashTasks from "./task";
 
-const ACCENT = "#90717E";
-
-/* =======================
-   MOCK DATA
-======================= */
-
-// ---- TASKS ----
-type TaskPriority = "high" | "medium" | "low";
-
-type TrashTask = {
-  id: string;
-  code: string;
-  title: string;
-  dateRange: string;
-  deleteDate: string;
-  priority: TaskPriority;
-};
-
-const deletedTasks: TrashTask[] = [
-  {
-    id: "task-1",
-    code: "PLN-1",
-    title: "Task 1",
-    dateRange: "12:00 27 Oct, 2025 - 24:00 29 Oct, 2025",
-    deleteDate: "12:00 26 Oct, 2025",
-    priority: "high",
-  },
-  {
-    id: "task-2",
-    code: "PLN-2",
-    title: "Task 2",
-    dateRange: "08:00 20 Oct, 2025 - 18:00 22 Oct, 2025",
-    deleteDate: "09:30 21 Oct, 2025",
-    priority: "medium",
-  },
-  {
-    id: "task-3",
-    code: "PLN-3",
-    title: "Task 3",
-    dateRange: "09:00 15 Oct, 2025 - 17:00 18 Oct, 2025",
-    deleteDate: "10:00 16 Oct, 2025",
-    priority: "low",
-  },
-];
-
-// ---- FOLDERS ----
-type FolderItem = {
-  name: string;
-  itemCount: number;
-};
-
-const folders: FolderItem[] = [
-  { name: "General", itemCount: 12 },
-  { name: "Math", itemCount: 8 },
-  { name: "Science", itemCount: 15 },
-];
-
-// ---- FILES ----
-type FileItem = {
-  name: string;
-  type: "excel" | "pdf" | "doc";
-};
-
-const files: FileItem[] = [
-  { name: "DeCuong.xlsx", type: "excel" },
-  { name: "TaiLieu.xlsx", type: "excel" },
-  { name: "Report.pdf", type: "pdf" },
-];
-
-/* =======================
-   SCREEN
-======================= */
+import taskApi, { DeletedTask } from "@/api/taskApi";
+import ErrorModal from "@/components/modal/error";
+import QuestionModal from "@/components/modal/question";
+import { Appbar } from "react-native-paper";
 
 export default function TrashScreen() {
   const { teamId, planId, role } = useLocalSearchParams();
 
   const [currentTab, setCurrentTab] = useState<"tasks" | "documents">("tasks");
+  const [deletedTasks, setDeletedTasks] = useState<DeletedTask[]>([]);
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
+  const [loading, setLoading] = useState(false);
 
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>(
+    undefined
+  );
+
+  const [confirmVisible, setConfirmVisible] = useState(false);
+
+  /* ======================= 
+  BLOCK ANDROID BACK
+  ===================== */
+
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        () => true
+      );
+
+      return () => {
+        subscription.remove();
+      };
+    }, [])
+  );
+
+  /* =======================
+     FETCH DELETED TASKS
+  ======================= */
+  useEffect(() => {
+    const fetchDeletedTasks = async () => {
+      try {
+        setLoading(true);
+        const res = await taskApi.getDeletedTasks({
+          teamId: teamId as string | undefined,
+          size: 20,
+        });
+        setDeletedTasks(res.tasks);
+      } catch (error) {
+        console.log("Failed to fetch deleted tasks", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDeletedTasks();
+  }, [teamId]);
+
+  /* =======================
+     HANDLERS
+  ======================= */
   const handleTaskToggle = (id: string) => {
     const next = new Set(selectedTasks);
     next.has(id) ? next.delete(id) : next.add(id);
@@ -102,40 +84,69 @@ export default function TrashScreen() {
     setSelectAll(!selectAll);
   };
 
-  const handleRecover = () => {
-    if (teamId && planId) {
-      router.push({
-        pathname: "/(team)/plan/planDetail",
-        params: { teamId, planId, role },
-      });
-    } else {
-      router.back();
+  const doRecover = async () => {
+    try {
+      setLoading(true);
+
+      await Promise.all(
+        Array.from(selectedTasks).map((taskId) =>
+          taskApi.recoverTask(taskId, "CURRENT_ONLY")
+        )
+      );
+
+      // remove recovered tasks from list
+      setDeletedTasks((prev) =>
+        prev.filter((task) => !selectedTasks.has(task.id))
+      );
+
+      setSelectedTasks(new Set());
+      setSelectAll(false);
+    } catch (err: any) {
+      console.error("Recover task failed", err);
+
+      let message = "Recover task failed. Please try again.";
+
+      if (err?.response?.data) {
+        const data = err.response.data;
+
+        if (typeof data.message === "string") {
+          message = data.message;
+        } else if (Array.isArray(data.message)) {
+          message = data.message.join("\n");
+        }
+      }
+
+      setErrorMessage(message);
+      setErrorVisible(true);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleRecover = () => {
+    if (selectedTasks.size === 0) return;
+    setConfirmVisible(true);
   };
 
   return (
     <View className="flex-1 bg-[#F2EFF0]">
-      <Appbar.Header style={{ backgroundColor: ACCENT }}>
-        <Appbar.BackAction color="#fff" onPress={() => router.back()} />
+      <Appbar.Header mode="small" style={{ backgroundColor: "#90717E" }}>
+        <Appbar.BackAction color="#F8F6F7" onPress={() => router.back()} />
         <Appbar.Content
           title="Recover"
-          color="#fff"
-          titleStyle={{ fontSize: 18, fontWeight: "600" }}
+          titleStyle={{ color: "#F8F6F7", fontWeight: "700", fontSize: 16 }}
         />
       </Appbar.Header>
 
-      <View style={{ padding: 10, flex: 1 }}>
-        <View
-          style={{
-            backgroundColor: "#F8F6F7",
-            borderRadius: 10,
-            padding: 10,
-            flex: 1,
-          }}
-        >
+      {/* CONTENT */}
+      <View className="flex-1 p-2">
+        <View className="flex-1 bg-[#F8F6F7] rounded-xl p-2">
           <TabSelector activeTab={currentTab} onTabChange={setCurrentTab} />
 
-          <ScrollView>
+          <ScrollView
+            contentContainerStyle={{ paddingBottom: 90 }}
+            showsVerticalScrollIndicator={true}
+          >
             {currentTab === "tasks" && (
               <TrashTasks
                 deletedTasks={deletedTasks}
@@ -147,12 +158,31 @@ export default function TrashScreen() {
               />
             )}
 
-            {currentTab === "documents" && (
-              <TrashDocuments folders={folders} files={files} />
-            )}
+            {currentTab === "documents" && <TrashDocuments />}
           </ScrollView>
         </View>
       </View>
+
+      <QuestionModal
+        visible={confirmVisible}
+        title="Recover tasks"
+        message="Are you sure you want to recover these selected tasks?"
+        confirmText="Recover"
+        cancelText="Cancel"
+        onConfirm={() => {
+          setConfirmVisible(false);
+          doRecover();
+        }}
+        onCancel={() => setConfirmVisible(false)}
+      />
+
+      <ErrorModal
+        visible={errorVisible}
+        title="Recover failed"
+        message={errorMessage}
+        confirmText="OK"
+        onConfirm={() => setErrorVisible(false)}
+      />
     </View>
   );
 }

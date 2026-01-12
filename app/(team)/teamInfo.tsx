@@ -687,6 +687,7 @@ export default function TeamInfoScreen() {
                       router.push({
                         pathname: "/(team)/trash",
                         params: {
+                          teamId: id,
                           role: team?.role || "MEMBER",
                         },
                       })

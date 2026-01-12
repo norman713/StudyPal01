@@ -1,77 +1,70 @@
-import { DeletedFileItem } from "@/api/folderApi";
+import folderApi, { DeletedFileItem } from "@/api/folderApi";
 import DeletedDocumentItem from "@/app/(trash)/components/DeletedDocumentItem";
-import React, { useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView } from "react-native";
 import { Text } from "react-native-paper";
 
-/* =======================
-   MOCK DATA
-======================= */
-
-const MOCK_DELETED_DOCUMENTS: (DeletedFileItem & { folderName?: string })[] = [
-  {
-    id: "file-1",
-    name: "File_A.txt",
-    extension: "txt",
-    url: "",
-    folderName: "Folder A",
-    deletedAt: "2025-10-27T12:00:00Z",
-  },
-  {
-    id: "file-2",
-    name: "Report_2024.pdf",
-    extension: "pdf",
-    url: "",
-    folderName: "Finance",
-    deletedAt: "2025-10-26T09:30:00Z",
-  },
-  {
-    id: "file-3",
-    name: "Budget.xlsx",
-    extension: "xlsx",
-    url: "",
-    folderName: "Planning",
-    deletedAt: "2025-10-25T16:45:00Z",
-  },
-];
-
-/* =======================
-   COMPONENT
-======================= */
-
 export default function TrashDocuments() {
+  const { teamId } = useLocalSearchParams<{ teamId?: string }>();
+  const [documents, setDocuments] = useState<DeletedFileItem[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  const handleRecover = (id: string) => {
-    setActiveMenuId(null);
-    console.log("Recover document:", id);
+  const fetchDeletedFiles = async (cursor?: string) => {
+    if (!teamId) return;
+
+    try {
+      setLoading(true);
+      const res = await folderApi.getDeletedFiles({
+        teamId,
+        cursor,
+        size: 10,
+      });
+      setDocuments((prev) => (cursor ? [...prev, ...res.files] : res.files));
+      setNextCursor(res.nextCursor ?? null);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeletePermanently = (id: string) => {
-    setActiveMenuId(null);
-    console.log("Delete permanently:", id);
+  useEffect(() => {
+    fetchDeletedFiles();
+  }, []);
+
+  const handleRecover = async (id: string) => {
+    try {
+      setActiveMenuId(null);
+      await folderApi.recoverFile(id);
+      fetchDeletedFiles();
+    } catch (err) {
+      console.error("Recover document failed:", err);
+    }
+  };
+
+  const handleDeletePermanently = async (id: string) => {
+    try {
+      setActiveMenuId(null);
+      await folderApi.deleteFilePermanently(id);
+      fetchDeletedFiles();
+    } catch (err) {
+      console.error("Delete permanently failed:", err);
+    }
   };
 
   return (
-    <View className="flex-1">
+    <Pressable className="flex-1" onPress={() => setActiveMenuId(null)}>
       <Text variant="titleMedium" style={{ marginBottom: 10 }}>
         Deleted documents
       </Text>
 
-      {/* 🔥 TAP OUTSIDE LAYER */}
-      {activeMenuId && (
-        <Pressable
-          className="absolute inset-0 z-40"
-          onPress={() => setActiveMenuId(null)}
-        />
-      )}
-
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled" // 🔥 QUAN TRỌNG
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: 24 }}
       >
-        {MOCK_DELETED_DOCUMENTS.map((doc) => (
+        {documents.map((doc) => (
           <DeletedDocumentItem
             key={doc.id}
             document={doc}
@@ -84,7 +77,18 @@ export default function TrashDocuments() {
             onDeletePermanently={() => handleDeletePermanently(doc.id)}
           />
         ))}
+
+        {nextCursor && !loading && (
+          <Pressable
+            onPress={() => fetchDeletedFiles(nextCursor)}
+            className="py-3 items-center"
+          >
+            <Text>Load more</Text>
+          </Pressable>
+        )}
+
+        {loading && <ActivityIndicator style={{ marginTop: 16 }} />}
       </ScrollView>
-    </View>
+    </Pressable>
   );
 }

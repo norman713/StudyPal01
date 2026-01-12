@@ -247,6 +247,7 @@ export default function DocumentScreen() {
                   params: {
                     folderId: folder.id,
                     folderName: folder.name,
+                    teamId,
                   },
                 });
               }}

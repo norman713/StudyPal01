@@ -296,6 +296,24 @@ const folderApi = {
 
     return data;
   },
+
+  // PATCH recover deleted file
+  async recoverFile(fileId: string): Promise<UpdateFileResponse> {
+    const url = `/files/${fileId}/recover`;
+
+    const data: UpdateFileResponse = await axiosInstance.patch(url);
+
+    return data;
+  },
+
+  // DELETE permanently delete file
+  async deleteFilePermanently(fileId: string): Promise<UpdateFileResponse> {
+    const url = `/files/${fileId}/permanent`;
+
+    const data: UpdateFileResponse = await axiosInstance.delete(url);
+
+    return data;
+  },
 };
 
 export default folderApi;

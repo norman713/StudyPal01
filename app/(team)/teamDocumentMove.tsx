@@ -16,7 +16,10 @@ import {
 import { Appbar } from "react-native-paper";
 
 export default function DocumentScreen() {
-  const { fileId } = useLocalSearchParams<{ fileId: string }>();
+  const { fileId, teamId } = useLocalSearchParams<{
+    fileId: string;
+    teamId?: string;
+  }>();
 
   // State
   const [currentFolder, setCurrentFolder] = useState<{
@@ -28,15 +31,20 @@ export default function DocumentScreen() {
 
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [usageLoading, setUsageLoading] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // Statistics (Mock or API? Image shows static text "2GB...", keeping mock for now as API doesn't fully support usage yet)
-  const usedGB = 2;
-  const totalGB = 10;
-  const progressPercent = (usedGB / totalGB) * 100;
+  // Statistics
+  const [usageUsed, setUsageUsed] = useState(0);
+  const [usageLimit, setUsageLimit] = useState(0);
+
+  const usedGB = usageUsed / 1024 / 1024 / 1024;
+  const totalGB = usageLimit / 1024 / 1024 / 1024;
+  const progressPercent =
+    totalGB > 0 ? Math.min((usedGB / totalGB) * 100, 100) : 0;
 
   const fetchData = async () => {
     setLoading(true);
@@ -47,7 +55,7 @@ export default function DocumentScreen() {
         setFiles(res.files || []);
       } else {
         // Fetch folder list
-        const res = await folderApi.getFolders();
+        const res = await folderApi.getFolders({ teamId });
         setFolders(res.folders || []);
       }
     } catch (e) {
@@ -57,9 +65,26 @@ export default function DocumentScreen() {
     }
   };
 
+  const fetchUsage = async () => {
+    if (!teamId) return;
+    try {
+      setUsageLoading(true);
+      const res = await folderApi.getTeamFolderUsage(teamId);
+      setUsageUsed(res.usageUsed || 0);
+      setUsageLimit(res.usageLimit || 0);
+    } catch (e) {
+      console.error("Fetch usage failed", e);
+    } finally {
+      setUsageLoading(false);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       fetchData();
+      if (!currentFolder) {
+        fetchUsage();
+      }
 
       const onBackPress = () => {
         if (currentFolder) {
@@ -75,14 +100,14 @@ export default function DocumentScreen() {
         onBackPress
       );
       return () => sub.remove();
-    }, [currentFolder])
+    }, [currentFolder, teamId])
   );
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
     try {
       setCreating(true);
-      await folderApi.createFolder({ name: newFolderName });
+      await folderApi.createFolder({ name: newFolderName, teamId });
       setNewFolderName("");
       setShowCreateModal(false);
       fetchData();
@@ -124,7 +149,9 @@ export default function DocumentScreen() {
           />
         </View>
         <Text className="text-sm text-center mt-2">
-          {usedGB}GB has been used out of a total of {totalGB}GB
+          {usageLoading
+            ? "Loading..."
+            : `${usedGB.toFixed(2)}GB has been used out of a total of ${totalGB.toFixed(2)}GB`}
         </Text>
       </View>
 

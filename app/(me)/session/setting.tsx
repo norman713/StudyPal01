@@ -219,12 +219,12 @@ function TimeRow({
 }) {
   return (
     <View className="flex-row items-center justify-between mb-3">
-      <Text className="text-[14px] text-gray-700">{label}</Text>
+      <Text className="text-[14px] font-medium text-gray-700">{label}</Text>
 
       <TextInput
         keyboardType="number-pad"
         placeholder="HH:MM"
-        value={value} // ✅ hiển thị HH:MM
+        value={value}
         onChangeText={(text) => {
           const digits = text.replace(/\D/g, "");
           onChange(parseHHMMFromDigits(digits));

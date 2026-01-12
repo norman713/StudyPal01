@@ -34,9 +34,10 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 export default function FileScreen() {
-  const { folderName, folderId } = useLocalSearchParams<{
+  const { folderName, folderId, teamId } = useLocalSearchParams<{
     folderName?: string;
     folderId?: string;
+    teamId?: string;
   }>();
 
   const [files, setFiles] = useState<FileItemApi[]>([]);
@@ -482,7 +483,7 @@ export default function FileScreen() {
                       setActiveMenuId(null);
                       router.push({
                         pathname: "/(team)/teamDocumentMove",
-                        params: { fileId: item.id },
+                        params: { fileId: item.id, teamId },
                       });
                     }}
                   />

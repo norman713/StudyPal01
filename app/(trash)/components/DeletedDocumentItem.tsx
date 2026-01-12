@@ -7,10 +7,8 @@ import { Pressable, Text, View } from "react-native";
 interface Props {
   document: DeletedFileItem;
   folderName?: string;
-
   menuVisible: boolean;
   onToggleMenu: () => void;
-
   onRecover: () => void;
   onDeletePermanently: () => void;
 }
@@ -24,25 +22,25 @@ export default function DeletedDocumentItem({
   onDeletePermanently,
 }: Props) {
   return (
-    <View className="relative mx-2 mb-3 bg-white rounded-2xl px-4 py-3">
+    <View className="relative mx-4 mb-3 bg-white rounded-2xl px-4 py-3">
       {/* MAIN ROW */}
-      <View className="flex-row items-center justify-between">
+      <View className="flex-row items-center justify-between bg-[#F2EFF0] p-3 rounded-xl">
         <View className="flex-row items-center gap-3 flex-1">
-          {/* Icon */}
+          {/* ICON */}
           <View className="w-10 h-11 rounded-xl bg-[#90717E] items-center justify-center">
-            <Ionicons name="document-outline" size={26} color="#FFF" />
+            <Ionicons name="document-outline" size={28} color="#FFF" />
           </View>
 
-          {/* Info */}
+          {/* INFO */}
           <View className="flex-1 pr-2">
             {!!folderName && (
-              <Text className="text-[12px] text-[#0F0C0D] mb-[2px]">
+              <Text className="text-[12px] text-gray-600 mb-[2px]">
                 {folderName}
               </Text>
             )}
 
             <Text
-              className="text-[15px] font-semibold text-[#0F0C0D]"
+              className="text-[15px] font-bold text-[#0F0C0D]"
               numberOfLines={1}
             >
               {document.name}
@@ -63,9 +61,13 @@ export default function DeletedDocumentItem({
 
       {/* MENU */}
       {menuVisible && (
-        <View className="absolute right-3 top-12 z-50 w-[150px] rounded-xl bg-[#F1EBEE]  py-1 ">
+        <View className="absolute right-3 top-14 z-50 w-44 rounded-xl bg-[#F1EBEE] shadow-md py-1">
           <MenuItem label="Recover" onPress={onRecover} />
-          <MenuItem label="Delete permanently" onPress={onDeletePermanently} />
+          <MenuItem
+            label="Delete permanently"
+            danger
+            onPress={onDeletePermanently}
+          />
         </View>
       )}
     </View>
@@ -79,14 +81,12 @@ function MenuItem({
   danger,
 }: {
   label: string;
-  onPress?: () => void;
+  onPress: () => void;
   danger?: boolean;
 }) {
   return (
     <Pressable onPress={onPress} className="px-4 py-2">
-      <Text
-        className={`text-[13px] ${danger ? "text-red-500" : "text-gray-800"}`}
-      >
+      <Text className={`text-sm ${danger ? "text-red-500" : "text-gray-800"}`}>
         {label}
       </Text>
     </Pressable>

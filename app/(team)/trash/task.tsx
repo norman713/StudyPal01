@@ -34,7 +34,14 @@ export default function TrashTasks({
       >
         <Text variant="titleMedium">Tasks</Text>
 
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingRight: 10 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            paddingRight: 10,
+          }}
+        >
           <TouchableOpacity
             onPress={onRecover}
             disabled={selectedTasks.size === 0}

@@ -160,20 +160,7 @@ export default function TrashScreen() {
               />
             )}
 
-            {currentTab === "documents" && (
-              <TrashDocuments
-                folders={[
-                  { name: "General", itemCount: 12 },
-                  { name: "Math", itemCount: 8 },
-                  { name: "Science", itemCount: 15 },
-                ]}
-                files={[
-                  { name: "DeCuong.xlsx", type: "excel" },
-                  { name: "TaiLieu.xlsx", type: "excel" },
-                  { name: "Report.pdf", type: "pdf" },
-                ]}
-              />
-            )}
+            {currentTab === "documents" && <TrashDocuments />}
           </ScrollView>
         </View>
       </View>

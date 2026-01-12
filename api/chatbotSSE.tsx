@@ -23,6 +23,11 @@ interface SendSSEOptions {
     contextId?: string;
     contextType?: string;
   };
+  attachments?: {
+    uri: string;
+    name: string;
+    type: string;
+  }[];
   idempotencyKey: string;
   onChunk: OnChunk;
   onDone?: OnDone;
@@ -117,7 +122,14 @@ export async function sendChatbotSSE(options: SendSSEOptions) {
  * Internal function that handles the actual connection/request logic
  */
 async function connectSSE(
-  { payload, idempotencyKey, onChunk, onDone, onError }: SendSSEOptions,
+  {
+    payload,
+    attachments,
+    idempotencyKey,
+    onChunk,
+    onDone,
+    onError,
+  }: SendSSEOptions,
   accessToken: string
 ) {
   // ===============================
@@ -139,9 +151,46 @@ async function connectSSE(
     } as any);
   }
 
+  /* ---------- FILE ATTACHMENTS ---------- */
+  // if (attachments?.length) {
+  //   attachments.forEach((file, index) => {
+  //     if (Platform.OS === "web") {
+  //       // web: uri = blob url / object url
+  //       fetch(file.uri)
+  //         .then((r) => r.blob())
+  //         .then((blob) => {
+  //           formData.append("files", blob, file.name);
+  //         });
+  //     } else {
+  //       // native
+  //       formData.append("files", {
+  //         uri: file.uri,
+  //         name: file.name,
+  //         type: file.type,
+  //       } as any);
+  //     }
+  //   });
+  // }
   // ===============================
   // 🌐 EXECUTION
   // ===============================
+
+  if (attachments?.length) {
+    for (const file of attachments) {
+      if (Platform.OS === "web") {
+        const res = await fetch(file.uri);
+        const blob = await res.blob();
+        formData.append("files", blob, file.name);
+      } else {
+        formData.append("files", {
+          uri: file.uri,
+          name: file.name,
+          type: file.type,
+        } as any);
+      }
+    }
+  }
+
   const sseUrl = `${BASE_URL}/sse/chatbot/messages`;
   const headers = {
     Authorization: `Bearer ${accessToken}`,

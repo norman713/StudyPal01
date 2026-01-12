@@ -178,18 +178,14 @@ export default function PlanCreateScreen() {
         // Clear drafts after success
         planCreationStore.clearTasks();
       }
-<<<<<<< Updated upstream
       router.push({
         pathname: "/(team)/plan",
         params: {
           teamId,
           planId,
-          role
+          role,
         },
       });
-=======
-      router.push("/(team)/plan");
->>>>>>> Stashed changes
     } catch (err: any) {
       console.error(err);
       const msg = err?.response?.data?.message || "Failed to save plan";

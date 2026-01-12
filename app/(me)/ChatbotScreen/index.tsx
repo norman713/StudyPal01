@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useHeaderHeight } from "@react-navigation/elements";
 import * as Crypto from "expo-crypto";
+import * as DocumentPicker from "expo-document-picker";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -23,6 +24,13 @@ type UIMessage = {
   content: string;
 };
 
+type PickedFile = {
+  uri: string;
+  name: string;
+  mimeType?: string;
+  size?: number;
+};
+
 export default function ChatbotScreen() {
   const headerHeight = useHeaderHeight();
   const [messages, setMessages] = useState<UIMessage[]>([]);
@@ -33,6 +41,8 @@ export default function ChatbotScreen() {
     usedQuota: number;
     dailyQuota: number;
   } | null>(null); // Store quota data
+
+  const [attachedFile, setAttachedFile] = useState<PickedFile | null>(null);
 
   const mapToUIMessage = (m: ChatbotMessage): UIMessage => ({
     id: m.id,
@@ -55,6 +65,24 @@ export default function ChatbotScreen() {
     }
   };
 
+  const pickFile = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+
+    if (result.canceled) return;
+
+    const file = result.assets[0];
+
+    setAttachedFile({
+      uri: file.uri,
+      name: file.name,
+      mimeType: file.mimeType,
+      size: file.size,
+    });
+  };
+
   // Fetch the quota usage and calculate the percentage
   const fetchQuotaUsage = async () => {
     try {
@@ -65,30 +93,114 @@ export default function ChatbotScreen() {
     }
   };
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  // const handleSend = async () => {
 
-    // 🚫 BLOCK nếu đang stream
+  //   if (!input.trim()) return;
+
+  //   // 🚫 BLOCK nếu đang stream
+  //   if (isStreaming) return;
+
+  //   setIsStreaming(true);
+
+  //   const idempotencyKey = Crypto.randomUUID();
+  //   const prompt = input;
+
+  //   const userId = `${idempotencyKey}-user`;
+  //   const botId = `${idempotencyKey}-bot`;
+
+  //   setMessages((prev) => [
+  //     { id: botId, role: "bot", content: "" },
+  //     { id: userId, role: "user", content: prompt },
+  //     ...prev,
+  //   ]);
+
+  //   setInput("");
+
+  //   sendChatbotSSE({
+  //     payload: { prompt },
+  //     idempotencyKey,
+
+  //     onChunk: (chunk) => {
+  //       setMessages((prev) =>
+  //         prev.map((m) =>
+  //           m.id === botId ? { ...m, content: m.content + chunk } : m
+  //         )
+  //       );
+  //     },
+
+  //     onError: () => {
+  //       setMessages((prev) =>
+  //         prev.map((m) =>
+  //           m.id === botId ? { ...m, content: "❌ Bot error" } : m
+  //         )
+  //       );
+  //       setIsStreaming(false); // 🔓 unlock
+  //     },
+
+  //     onDone: async () => {
+  //       await new Promise((r) => setTimeout(r, 300));
+  //       await fetchQuotaUsage();
+  //       setIsStreaming(false); // 🔓 unlock
+  //     },
+  //   });
+  // };
+
+  // Calculate the usage percentage
+
+  const handleSend = async () => {
+    if (!input.trim() && !attachedFile) return;
     if (isStreaming) return;
 
     setIsStreaming(true);
 
     const idempotencyKey = Crypto.randomUUID();
-    const prompt = input;
+    const prompt = input.trim();
 
     const userId = `${idempotencyKey}-user`;
     const botId = `${idempotencyKey}-bot`;
 
     setMessages((prev) => [
       { id: botId, role: "bot", content: "" },
-      { id: userId, role: "user", content: prompt },
+      {
+        id: userId,
+        role: "user",
+        content: attachedFile ? `${prompt}\n📎 ${attachedFile.name}` : prompt,
+      },
       ...prev,
     ]);
 
+    const payload = { prompt };
+
+    const attachments = attachedFile
+      ? [
+          {
+            uri: attachedFile.uri,
+            name: attachedFile.name,
+            type: attachedFile.mimeType || "application/octet-stream",
+          },
+        ]
+      : undefined;
+
+    console.log("[ChatbotScreen] payload =", payload);
+    console.log(
+      "[ChatbotScreen] attachments =",
+      attachments?.map((f) => ({
+        name: f.name,
+        type: f.type,
+        uri: f.uri,
+      }))
+    );
+    console.log(
+      "[ChatbotScreen] attachments count =",
+      attachments?.length ?? 0
+    );
+
     setInput("");
+    setAttachedFile(null);
 
     sendChatbotSSE({
-      payload: { prompt },
+      payload,
+      attachments,
       idempotencyKey,
 
       onChunk: (chunk) => {
@@ -105,18 +217,17 @@ export default function ChatbotScreen() {
             m.id === botId ? { ...m, content: "❌ Bot error" } : m
           )
         );
-        setIsStreaming(false); // 🔓 unlock
+        setIsStreaming(false);
       },
 
       onDone: async () => {
         await new Promise((r) => setTimeout(r, 300));
         await fetchQuotaUsage();
-        setIsStreaming(false); // 🔓 unlock
+        setIsStreaming(false);
       },
     });
   };
 
-  // Calculate the usage percentage
   const calculateQuotaPercentage = () => {
     if (!quotaUsage || quotaUsage.dailyQuota === 0) return 0;
     const percentage = (quotaUsage.usedQuota / quotaUsage.dailyQuota) * 100;
@@ -217,15 +328,33 @@ export default function ChatbotScreen() {
         </View>
       </View>
 
+      {attachedFile && (
+        <View className="flex-row items-center mx-3 mb-1 px-3 py-1 bg-neutral-100 rounded-lg">
+          <Text className="flex-1 text-sm" numberOfLines={1}>
+            📎 {attachedFile.name}
+          </Text>
+
+          <TouchableOpacity onPress={() => setAttachedFile(null)}>
+            <Ionicons name="close" size={16} color="#666" />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* INPUT */}
       <View className="flex-row items-center bg-white mx-3 mb-3 px-4 py-2 rounded-full">
+        {/* ATTACH FILE */}
+        <TouchableOpacity onPress={pickFile} disabled={isStreaming}>
+          <Ionicons name="attach" size={22} color="#8B5D6A" />
+        </TouchableOpacity>
+
         <TextInput
           placeholder="Ask anything"
-          className="flex-1 text-xl"
+          className="flex-1 text-xl ml-2"
           value={input}
           editable={!isStreaming}
           onChangeText={setInput}
         />
+
         <TouchableOpacity onPress={handleSend} disabled={isStreaming}>
           <Ionicons
             name="send"
