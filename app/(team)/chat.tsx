@@ -15,7 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
+import clsx from 'clsx';
 import { chatApi, Message } from "../../api/chatApi";
 import memberApi, { Member } from "../../api/memberApi";
 import teamApi, { TeamInfoResponse } from "../../api/teamApi";
@@ -173,23 +173,56 @@ export default function TeamChatScreen() {
       try {
         const parsed = JSON.parse(e.data);
 
-        // Expect structure: { type: "SEND", data: { ... } }
-        if (parsed.type === "SEND" && parsed.data) {
+        if(parsed.data){
           const msgData = parsed.data;
-          // The backend sends the full message object now, which matches our new interface
           const newMsg: Message = msgData;
-
           setMessages((prev) => {
-            if (prev.find((m) => m.id === newMsg.id)) return prev;
-            return [newMsg, ...prev];
+            switch (parsed.type) {
+              case "SEND":
+                if (prev.find((m) => m.id === newMsg.id)) return prev;
+                return [newMsg, ...prev];
+
+              case "DELETE":
+                return prev.map((m) =>
+                  m.id === newMsg.id ? { ...m, isDeleted: true } : m
+                );
+
+              case "EDIT":
+                return prev.map((m) =>
+                  m.id === newMsg.id 
+                    ? { ...m, content: newMsg.content, updatedAt: newMsg.updatedAt } 
+                    : m
+                );
+
+              default:
+                return prev;
+            }
           });
 
-          // Mark as read if from someone else
           if (newMsg.id && newMsg.user?.id !== myUserId) {
             console.log("WS: Mark read", newMsg.id);
             chatApi.markMessageRead(newMsg.id).catch(() => {});
           }
         }
+        // if (parsed.type === "SEND" && parsed.data) {
+        //   const msgData = parsed.data;
+        //   // The backend sends the full message object now, which matches our new interface
+        //   const newMsg: Message = msgData;
+
+        //   setMessages((prev) => {
+        //     if (prev.find((m) => m.id === newMsg.id)) return prev;
+        //     return [newMsg, ...prev];
+        //   });
+
+        //   // Mark as read if from someone else
+        //   if (newMsg.id && newMsg.user?.id !== myUserId) {
+        //     console.log("WS: Mark read", newMsg.id);
+        //     chatApi.markMessageRead(newMsg.id).catch(() => {});
+        //   }
+        // }
+        // else if(parsed.type === "Edited" && parsed.data){
+
+        // }
       } catch (err) {
         console.log("WS Parse error", err);
       }
@@ -367,6 +400,13 @@ export default function TeamChatScreen() {
       minute: "2-digit",
     });
 
+    const bubbleClass = clsx("rounded-2xl max-w-[75%] px-3 py-2 shadow-sm", {
+      "bg-transparent border-2 border-dashed rounded-tr-sm": item.isDeleted && isMe,
+      "bg-transparent border-2 border-dashed rounded-tl-sm": item.isDeleted && !isMe,
+      "bg-[#90717E] rounded-tr-sm": !item.isDeleted && isMe,
+      "bg-white rounded-tl-sm border border-gray-100": !item.isDeleted && !isMe,
+    });
+
     return (
       <View className={`mb-3 flex-col ${isMe ? "items-end" : "items-start"}`}>
         <View className={`flex-row ${isMe ? "justify-end" : "justify-start"}`}>
@@ -386,28 +426,25 @@ export default function TeamChatScreen() {
 
           <TouchableOpacity
             activeOpacity={0.8}
-            className="w-full items-end"
+            className={`w-full ${isMe ? "items-end" : "items-start"}`}
             onLongPress={() => {
-              if (!isMe) return; // ❗ chỉ cho phép message của mình
+              if (!isMe || item.isDeleted) return; // ❗ chỉ cho phép message của mình
               setSelectedMessage(item);
               setMenuVisible(true);
             }}
           >
+            {item.createdAt != item.updatedAt && !item.isDeleted && <Text className="text-[12px]">Edited</Text>}
             <View
-              className={`max-w-[75%] px-3 py-2 shadow-sm ${
-                isMe
-                  ? "bg-[#90717E] rounded-2xl rounded-tr-sm"
-                  : "bg-white rounded-2xl rounded-tl-sm border border-gray-100"
-              }`}
+              className={bubbleClass}
             >
-              {!isMe && (
+              {!isMe && !item.isDeleted && (
                 <Text className="text-[12px] font-bold text-[#1D1B20] mb-1">
                   {senderName}
                 </Text>
               )}
 
               {/* Attachments */}
-              {item.attachments && item.attachments.length > 0 && (
+              {item.attachments && item.attachments.length > 0 && !item.isDeleted && (
                 <View className="mb-1">
                   {renderImageGrid(item.attachments)}
                 </View>
@@ -415,23 +452,29 @@ export default function TeamChatScreen() {
 
               {/* Text Content */}
               {item.content ? (
-                <Text
-                  className={`text-[15px] font-semibold leading-5 ${
-                    isMe ? "text-white" : "text-[#1D1B20]"
-                  }`}
-                >
-                  {item.content}
-                </Text>
-              ) : null}
+                item.isDeleted ? (
+                  <Text className="text-[15px] font-normal leading-5 text-[#1D1B20] italic">
+                    Message was deleted.
+                  </Text>
+                ) : (<Text
+                    className={`text-[15px] font-semibold leading-5 ${
+                      isMe ? "text-white" : "text-[#1D1B20]"
+                    }`}
+                  >
+                    {item.content}
+                  </Text>)
+              ): null}
 
               {/* Timestamp */}
-              <Text
+              {!item.isDeleted && 
+                <Text
                 className={`text-[10px] mt-1 self-end font-normal ${
-                  isMe ? "text-white/80" : "text-gray-400"
-                }`}
-              >
-                {timeStr}
-              </Text>
+                    isMe ? "text-white/80" : "text-gray-400"
+                  }`}
+                >
+                  {timeStr}
+                </Text>
+              }
             </View>
           </TouchableOpacity>
         </View>
@@ -469,9 +512,6 @@ export default function TeamChatScreen() {
 
     try {
       await chatApi.deleteMessage(selectedMessage.id);
-
-      // update UI ngay
-      setMessages((prev) => prev.filter((m) => m.id !== selectedMessage.id));
     } catch (err) {
       Alert.alert("Error", "Failed to delete message");
     }
@@ -482,19 +522,6 @@ export default function TeamChatScreen() {
 
     try {
       await chatApi.editMessage(editingMessage.id, editText);
-
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === editingMessage.id
-            ? {
-                ...m,
-                content: editText,
-                updatedAt: new Date().toISOString(),
-              }
-            : m
-        )
-      );
-
       setEditingMessage(null);
     } catch (err) {
       Alert.alert("Error", "Failed to edit message");

@@ -55,7 +55,7 @@ export const chatApi = {
         if (cursor) {
             params.cursor = cursor;
         }
-        const response = await axiosClient.get(
+        const response: GetMessagesResponse = await axiosClient.get(
             `/teams/${teamId}/messages`,
             { params }
         );
@@ -134,13 +134,12 @@ export const chatApi = {
         await axiosClient.patch(`/messages/${messageId}/mark`);
     },
 
-deleteMessage: async (
-  messageId: string
-): Promise<DeleteMessageResponse> => {
-  const url = `/messages/${messageId}`;
-  const data: DeleteMessageResponse = await axiosClient.delete(url);
-  return data;
-},
+    deleteMessage: async (messageId: string): Promise<DeleteMessageResponse> => {
+        const url = `/messages/${messageId}`;
+        const data: DeleteMessageResponse = await axiosClient.delete(url);
+        return data;
+    },
+
 editMessage: async (
   messageId: string,
   content: string
