@@ -1,4 +1,5 @@
 import { AuthProvider } from "@/context/auth";
+import { UnreadNotificationProvider } from "@/context/unreadNotificationContext";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -25,6 +26,7 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
+      <UnreadNotificationProvider>
       <PaperProvider>
         <Stack
           screenOptions={{ headerShown: false }}
@@ -34,6 +36,7 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)/login" />
         </Stack>
       </PaperProvider>
+      </UnreadNotificationProvider>
     </AuthProvider>
   );
 }

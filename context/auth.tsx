@@ -18,6 +18,7 @@ type AuthState = {
 };
 
 type AuthContextType = AuthState & {
+  accessToken: string | null;
   logout: () => Promise<void>;
   refreshFromStorage: () => Promise<void>;
 };
@@ -36,6 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   const lastTokenRef = useRef<string | null>(null);
 
@@ -44,6 +46,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ======================= */
   const refreshFromStorage = async () => {
     const { accessToken } = await readTokens();
+
+    setAccessToken(accessToken ?? null);
 
     if (!accessToken) {
       setUserId(null);
@@ -82,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const interval = setInterval(async () => {
       const { accessToken } = await readTokens();
+      setAccessToken(accessToken ?? null);
 
       if (lastTokenRef.current !== accessToken) {
         lastTokenRef.current = accessToken;
@@ -106,6 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         userId,
         isAuthenticated,
         isLoading,
+        accessToken,
         logout,
         refreshFromStorage,
       }}
