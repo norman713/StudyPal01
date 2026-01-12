@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { BackHandler, ScrollView, View } from "react-native";
 
 import BottomBar from "@/components/ui/buttom";
+import Header from "@/components/ui/header";
 import TabSelector from "./components/TabSelector";
 import TrashDocuments from "./document";
 import TrashTasks from "./task";
@@ -10,41 +11,31 @@ import TrashTasks from "./task";
 import taskApi, { DeletedTask } from "@/api/taskApi";
 import ErrorModal from "@/components/modal/error";
 import QuestionModal from "@/components/modal/question";
-import Header from "@/components/ui/header";
 
 /* =======================
    SCREEN
 ======================= */
 
 export default function TrashScreen() {
-  const { teamId, planId, role } = useLocalSearchParams();
+  const { teamId } = useLocalSearchParams();
 
   const [currentTab, setCurrentTab] = useState<"tasks" | "documents">("tasks");
+
   const [deletedTasks, setDeletedTasks] = useState<DeletedTask[]>([]);
-  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
-  const [selectAll, setSelectAll] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
-
-  const [errorVisible, setErrorVisible] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | undefined>(
-    undefined
-  );
-
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>();
 
   /* =======================
      🔒 BLOCK ANDROID BACK
   ======================= */
   useFocusEffect(
     useCallback(() => {
-      const subscription = BackHandler.addEventListener(
-        "hardwareBackPress",
-        () => true
-      );
-
-      return () => {
-        subscription.remove();
-      };
+      const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
+      return () => sub.remove();
     }, [])
   );
 
@@ -60,8 +51,8 @@ export default function TrashScreen() {
           size: 20,
         });
         setDeletedTasks(res.tasks);
-      } catch (error) {
-        console.log("Failed to fetch deleted tasks", error);
+      } catch (err) {
+        console.log("Failed to fetch deleted tasks", err);
       } finally {
         setLoading(false);
       }
@@ -71,65 +62,32 @@ export default function TrashScreen() {
   }, [teamId]);
 
   /* =======================
-     HANDLERS
+     RECOVER ONE TASK
   ======================= */
-  const handleTaskToggle = (id: string) => {
-    const next = new Set(selectedTasks);
-    next.has(id) ? next.delete(id) : next.add(id);
-    setSelectedTasks(next);
-  };
+  const doRecoverOne = async () => {
+    if (!selectedTaskId) return;
 
-  const handleSelectAllToggle = () => {
-    if (!selectAll) {
-      setSelectedTasks(new Set(deletedTasks.map((t) => t.id)));
-    } else {
-      setSelectedTasks(new Set());
-    }
-    setSelectAll(!selectAll);
-  };
-
-  const doRecover = async () => {
     try {
       setLoading(true);
 
-      await Promise.all(
-        Array.from(selectedTasks).map((taskId) =>
-          taskApi.recoverTask(taskId, "CURRENT_ONLY")
-        )
-      );
+      await taskApi.recoverTask(selectedTaskId, "CURRENT_ONLY");
 
-      // remove recovered tasks from list
-      setDeletedTasks((prev) =>
-        prev.filter((task) => !selectedTasks.has(task.id))
-      );
+      // remove recovered task khỏi list
+      setDeletedTasks((prev) => prev.filter((t) => t.id !== selectedTaskId));
 
-      setSelectedTasks(new Set());
-      setSelectAll(false);
+      setSelectedTaskId(null);
     } catch (err: any) {
-      console.error("Recover task failed", err);
-
       let message = "Recover task failed. Please try again.";
 
-      if (err?.response?.data) {
-        const data = err.response.data;
-
-        if (typeof data.message === "string") {
-          message = data.message;
-        } else if (Array.isArray(data.message)) {
-          message = data.message.join("\n");
-        }
-      }
+      const apiMsg = err?.response?.data?.message;
+      if (typeof apiMsg === "string") message = apiMsg;
+      if (Array.isArray(apiMsg)) message = apiMsg.join("\n");
 
       setErrorMessage(message);
       setErrorVisible(true);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleRecover = () => {
-    if (selectedTasks.size === 0) return;
-    setConfirmVisible(true);
   };
 
   /* =======================
@@ -145,18 +103,16 @@ export default function TrashScreen() {
         <View className="flex-1 bg-[#F8F6F7] rounded-xl p-2">
           <TabSelector activeTab={currentTab} onTabChange={setCurrentTab} />
 
-          <ScrollView
-            contentContainerStyle={{ paddingBottom: 90 }}
-            showsVerticalScrollIndicator={true}
-          >
+          <ScrollView contentContainerStyle={{ paddingBottom: 90 }}>
             {currentTab === "tasks" && (
               <TrashTasks
                 deletedTasks={deletedTasks}
-                selectedTasks={selectedTasks}
-                selectAll={selectAll}
-                onTaskToggle={handleTaskToggle}
-                onSelectAllToggle={handleSelectAllToggle}
-                onRecover={handleRecover}
+                selectedTaskId={selectedTaskId}
+                onSelectTask={setSelectedTaskId}
+                onRecover={() => {
+                  if (!selectedTaskId) return;
+                  setConfirmVisible(true);
+                }}
               />
             )}
 
@@ -179,24 +135,25 @@ export default function TrashScreen() {
             case "me":
               router.replace("/(me)");
               break;
-            case "trash":
-              break;
           }
         }}
       />
+
+      {/* CONFIRM MODAL */}
       <QuestionModal
         visible={confirmVisible}
-        title="Recover tasks"
-        message="Are you sure you want to recover these selected tasks?"
+        title="Recover task"
+        message="Are you sure you want to recover this task?"
         confirmText="Recover"
         cancelText="Cancel"
         onConfirm={() => {
           setConfirmVisible(false);
-          doRecover();
+          doRecoverOne();
         }}
         onCancel={() => setConfirmVisible(false)}
       />
 
+      {/* ERROR MODAL */}
       <ErrorModal
         visible={errorVisible}
         title="Recover failed"

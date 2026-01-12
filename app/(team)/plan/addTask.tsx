@@ -28,12 +28,14 @@ export default function AddTaskScreen() {
     role: roleParam,
     content: contentParams,
     description: descriptionParams,
+    taskId,
   } = useLocalSearchParams<{
     teamId: string;
     planId: string;
     role: string;
     content: string;
     description: string;
+    taskId?: string;
   }>();
 
   // Form states
@@ -61,6 +63,28 @@ export default function AddTaskScreen() {
   // Submit state
   const [loading, setLoading] = useState(false);
 
+  // Load initial data if editing a draft
+  React.useEffect(() => {
+    if ((!planId || planId === "new") && taskId) {
+      const drafts = planCreationStore.getTasks();
+      const draft = drafts.find((d) => d.tempId === taskId);
+      if (draft) {
+        setTaskName(draft.content);
+        setTaskNote(draft.note || "");
+        setPriority(draft.priority);
+        setAssigneeId(draft.assigneeId || "");
+
+        const start = dayjs(draft.startDate);
+        setFromDate(start.toDate());
+        setFromTime(start.format("HH:mm"));
+
+        const end = dayjs(draft.dueDate);
+        setToDate(end.toDate());
+        setToTime(end.format("HH:mm"));
+      }
+    }
+  }, [planId, taskId]);
+
   const formatDateDisplay = (date: Date) => {
     return dayjs(date).format("DD/MM/YYYY");
   };
@@ -71,13 +95,43 @@ export default function AddTaskScreen() {
       setShowErrorModal(true);
       return false;
     }
+
+    const startStr = `${dayjs(fromDate).format("YYYY-MM-DD")}T${fromTime}:00`;
+    const endStr = `${dayjs(toDate).format("YYYY-MM-DD")}T${toTime}:00`;
+
+    const start = dayjs(startStr);
+    const end = dayjs(endStr);
+
+    const now = dayjs();
+
+    // if (start.isBefore(now)) {
+    //   setErrorMessage("Start time must be in the future");
+    //   setShowErrorModal(true);
+    //   return false;
+    // }
+
+    if (end.isBefore(start)) {
+      setErrorMessage("End time must be after Start time");
+      setShowErrorModal(true);
+      return false;
+    }
+
+    if (end.isBefore(now)) {
+      setErrorMessage("End time must be in the future");
+      setShowErrorModal(true);
+      return false;
+    }
+
     return true;
   };
 
   const handleCreate = async () => {
     if (!validate()) return;
     if (!teamId) return;
-    const tempId = nanoid();
+
+    // Use existing ID if editing, else create new
+    const tempId = taskId || nanoid();
+
     setLoading(true);
     try {
       // Check if we are creating a new plan (planId is "new" or missing)
@@ -87,7 +141,7 @@ export default function AddTaskScreen() {
         // Save to local store
         const oldTasks = planCreationStore.getTasks();
 
-        const exist = oldTasks.find((task) => task.tempId);
+        const exist = oldTasks.find((task) => task.tempId === tempId);
 
         const data = {
           tempId,

@@ -15,6 +15,7 @@ interface DateTimeInputProps {
   value: string;
   onChangeText: (text: string) => void;
   icon: "time-outline" | "calendar-outline";
+  minimumDate?: Date;
 }
 
 export default function DateTimeInput({
@@ -22,6 +23,7 @@ export default function DateTimeInput({
   value,
   onChangeText,
   icon,
+  minimumDate,
 }: DateTimeInputProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -116,6 +118,7 @@ export default function DateTimeInput({
           mode="date"
           display="calendar" // Use calendar display for date selection
           onChange={onDateChange}
+          minimumDate={minimumDate}
         />
       )}
     </View>

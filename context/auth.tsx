@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsAuthenticated(true);
         }
       }
-    }, 1000); // 1s là đủ, rất nhẹ
+    }, 1000);
 
     return () => clearInterval(interval);
   }, []);

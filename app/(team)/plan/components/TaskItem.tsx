@@ -69,10 +69,22 @@ export default function TaskItem({
           teamId,
           planId: "new",
           role: role || "MEMBER",
-          draftIndex,
+          taskId: task.id,
         },
       });
       return;
+    }
+
+    if (teamId && planId) {
+      router.push({
+        pathname: "/(team)/plan/taskDetail",
+        params: {
+          teamId,
+          planId,
+          taskId: task.id,
+          role: role || "MEMBER",
+        },
+      });
     }
   };
 

@@ -6,6 +6,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -75,7 +76,7 @@ export default function PlanCreateScreen() {
     (draft: any, index: number): Task => {
       const assignee = members.find((m) => m.userId === draft.assigneeId);
       return {
-        id: `draft-${index}`,
+        id: draft.tempId, // Use tempId as stable ID
         content: draft.content,
         description: draft.note,
         startDate: draft.startDate,
@@ -204,7 +205,30 @@ export default function PlanCreateScreen() {
   };
 
   const handleDeleteTask = (taskId: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    if (!isEditMode) {
+      // Create Mode: Remove from store
+      planCreationStore.removeTask(taskId);
+    } else {
+      // Edit Mode: Delete from API
+      Alert.alert("Delete Task", "Are you sure you want to delete this task?", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              if (teamId && planId) {
+                await planApi.deleteTask(teamId, planId, taskId);
+                setTasks((prev) => prev.filter((t) => t.id !== taskId));
+              }
+            } catch (err) {
+              console.error("Failed to delete task", err);
+              Alert.alert("Error", "Failed to delete task");
+            }
+          },
+        },
+      ]);
+    }
   };
 
   if (loading) {

@@ -41,7 +41,7 @@ export default function TaskDetail() {
   const [teamId, setTeamId] = useState<string>(teamIdParam || "");
   const [planId, setPlanId] = useState<string>(planIdParam || "");
 
-  const { user } = useAuth();
+  const { userId: currentUserId } = useAuth();
 
   const role: Role = (roleParam as Role) || "MEMBER";
   const canManage = role === "OWNER" || role === "ADMIN";
@@ -65,6 +65,12 @@ export default function TaskDetail() {
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   const [assigneeId, setAssigneeId] = useState<string>("");
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+
+  // Parse utils
+  const parseDateTime = (d: string, t: string) =>
+    dayjs(`${d} ${t}`, "DD-MM-YYYY HH:mm");
+  const parseDate = (d: string) => dayjs(d, "DD-MM-YYYY");
 
   const showApiError = (error: any, fallback?: string) => {
     const message =
@@ -156,24 +162,52 @@ export default function TaskDetail() {
     fetchTaskDetail();
   }, [fetchTaskDetail]);
 
-  const handleSave = async () => {
+  const validateDates = () => {
+    const start = parseDateTime(fromDate, fromTime);
+    const end = parseDateTime(toDate, toTime);
+    const now = dayjs();
+
+    if (end.isBefore(start)) {
+      setErrorMessage("End time must be after Start time");
+      setShowErrorModal(true);
+      return false;
+    }
+    if (end.isBefore(now)) {
+      setErrorMessage("End time must be in the future");
+      setShowErrorModal(true);
+      return false;
+    }
+    return true;
+  };
+
+  const handleSave = () => {
     if (!taskId) return;
     if (!taskName.trim()) {
       setErrorMessage("Task name is required");
       setShowErrorModal(true);
       return;
     }
+    if (!validateDates()) return;
 
+    if (!canManage) {
+      setErrorMessage("You don't have permission to edit this task");
+      setShowErrorModal(true);
+      return;
+    }
+
+    setShowSaveModal(true);
+  };
+
+  const handleConfirmSave = async () => {
     setSaving(true);
+    setShowSaveModal(false);
     try {
-      const startDateTime = dayjs(
-        `${fromDate} ${fromTime}`,
-        "DD-MM-YYYY HH:mm"
-      ).format("YYYY-MM-DD HH:mm:ss");
-      const endDateTime = dayjs(
-        `${toDate} ${toTime}`,
-        "DD-MM-YYYY HH:mm"
-      ).format("YYYY-MM-DD HH:mm:ss");
+      const startDateTime = parseDateTime(fromDate, fromTime).format(
+        "YYYY-MM-DD HH:mm:ss"
+      );
+      const endDateTime = parseDateTime(toDate, toTime).format(
+        "YYYY-MM-DD HH:mm:ss"
+      );
 
       await planApi.updatePlanTask(taskId, {
         content: taskName,
@@ -214,6 +248,13 @@ export default function TaskDetail() {
 
   const handleToggleComplete = () => {
     if (!taskId) return;
+    const currentAssignee = task?.assigneeId || assigneeId;
+    if (currentUserId !== currentAssignee) {
+      setErrorMessage("You are not assigned to this task");
+      setShowErrorModal(true);
+      return;
+    }
+
     setShowCompleteModal(true);
   };
   const handleConfirmComplete = async () => {
@@ -353,6 +394,7 @@ export default function TaskDetail() {
               value={toDate}
               onChangeText={setToDate}
               icon="calendar-outline"
+              minimumDate={parseDate(fromDate).toDate()}
             />
           </View>
         </View>
@@ -369,7 +411,7 @@ export default function TaskDetail() {
           />
         )}
 
-        {(canManage || task?.assigneeId === user?.id) && (
+        {(canManage || task?.assigneeId === currentUserId) && (
           <Pressable
             style={styles.menuItem}
             onPress={() =>
@@ -414,6 +456,15 @@ export default function TaskDetail() {
         onConfirm={handleConfirmDelete}
         onCancel={() => setShowDeleteModal(false)}
         confirmText="Delete"
+        cancelText="Cancel"
+      />
+      <QuestionModal
+        visible={showSaveModal}
+        title="Confirm"
+        message="Are you sure you want to save changes?"
+        onConfirm={handleConfirmSave}
+        onCancel={() => setShowSaveModal(false)}
+        confirmText="Save"
         cancelText="Cancel"
       />
       <QuestionModal
