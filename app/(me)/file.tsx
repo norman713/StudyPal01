@@ -1,4 +1,5 @@
 import folderApi, { FileDetail, FileItemApi } from "@/api/folderApi";
+import ErrorModal from "@/components/modal/error";
 import QuestionModal from "@/components/modal/question";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
@@ -45,6 +46,8 @@ export default function FileScreen() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>();
 
   const [editFile, setEditFile] = useState<FileItemApi | null>(null);
   const [newFileName, setNewFileName] = useState("");
@@ -167,9 +170,16 @@ export default function FileScreen() {
       // Refresh list
       await fetchFiles();
       setShowUploadModal(false);
-    } catch (e) {
-      console.error("Upload failed", e);
-      setError("Failed to upload file");
+    } catch (e: any) {
+      const apiMessage =
+        typeof e?.message === "string"
+          ? e.message
+          : (e?.message?.message ??
+            e?.response?.data?.message ??
+            "Upload failed");
+
+      setErrorMessage(apiMessage);
+      setErrorVisible(true);
     } finally {
       setUploading(false);
     }
@@ -309,8 +319,15 @@ export default function FileScreen() {
       await folderApi.updateFile(editFile.id, finalName);
       setEditFile(null);
       await fetchFiles();
-    } catch (e) {
-      Alert.alert("Error", "Failed to rename file");
+    } catch (e: any) {
+      const msg = e?.response?.data?.message
+        ? Array.isArray(e.response.data.message)
+          ? e.response.data.message.join("\n")
+          : e.response.data.message
+        : "Failed to rename file";
+
+      setErrorMessage(msg);
+      setErrorVisible(true);
     } finally {
       setRenaming(false);
     }
@@ -742,6 +759,13 @@ export default function FileScreen() {
           </View>
         </View>
       )}
+      <ErrorModal
+        visible={errorVisible}
+        title="Error"
+        message={errorMessage}
+        confirmText="OK"
+        onConfirm={() => setErrorVisible(false)}
+      />
     </Pressable>
   );
 }

@@ -88,6 +88,13 @@ export default function SessionSettingsModal({
       setFocusTime(initialData.focusTime);
       setBreakTime(initialData.breakTime);
       setMusics(initialData.musics);
+
+      // Initialize selectedMusic from musics array
+      if (initialData.musics && initialData.musics.length > 0) {
+        setSelectedMusic(initialData.musics[0]);
+      } else {
+        setSelectedMusic(null);
+      }
     }
   }, [visible]);
   const stages = calcStages(totalTime, focusTime, breakTime);
@@ -97,11 +104,14 @@ export default function SessionSettingsModal({
   ======================= */
 
   const handleSave = () => {
+    // Construct musics array from selectedMusic
+    const currentMusics = selectedMusic ? [selectedMusic] : [];
+
     onSave({
       totalTime,
       focusTime,
       breakTime,
-      musics,
+      musics: currentMusics,
     });
   };
 
@@ -229,7 +239,7 @@ function calcStages(
   const cycle = focus + rest;
   if (cycle <= 0) return 0;
 
-  return Math.floor(total / cycle);
+  return Math.ceil(total / cycle);
 }
 
 function TimePickerRow({

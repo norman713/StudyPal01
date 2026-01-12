@@ -1,8 +1,12 @@
 import { FontAwesome6, Ionicons, MaterialIcons } from "@expo/vector-icons";
+import dayjs from "dayjs";
+
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Alert, Pressable, Text, View } from "react-native";
+import sessionApi, { SessionSettings } from "../../../api/sessionApi";
+
 import Svg, {
   Circle,
   Defs,
@@ -30,7 +34,23 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 const parseTimeToSeconds = (time: string) => {
   const [h, m, s] = time.split(":").map(Number);
-  return h * 3600 + m * 60 + s;
+  return h * 3600 + m * 60 + (s || 0);
+};
+
+const secondsToHHMM = (totalSeconds: number) => {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  // If we want to show seconds in the timer, we should return HH:mm:ss logic if needed,
+  // but for the INPUTS we use HH:mm.
+  // The TIMER display uses `formatTime` which includes seconds.
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+};
+
+const calcStages = (total: number, focus: number, rest: number) => {
+  const cycle = focus + rest;
+  if (cycle <= 0) return 0;
+  return Math.ceil(total / cycle);
 };
 
 const formatTime = (s: number) => {
@@ -73,10 +93,69 @@ const extractYoutubeId = (url: string) => {
 
 export default function SessionScreen() {
   /* ===== SETTINGS ===== */
-  const [totalTime, setTotalTime] = useState("00:11");
-  const [focusTime, setFocusTime] = useState("00:05");
-  const [breakTime, setBreakTime] = useState("00:02");
+  const [totalTime, setTotalTime] = useState("00:00");
+  const [focusTime, setFocusTime] = useState("00:00");
+  const [breakTime, setBreakTime] = useState("00:00");
   const [musics, setMusics] = useState<MusicItemType[]>([]);
+
+  // Keep track of raw seconds for logic
+  const [focusSeconds, setFocusSeconds] = useState(0);
+  const [breakSeconds, setBreakSeconds] = useState(0);
+  const [totalSeconds, setTotalSeconds] = useState(0);
+
+  /* ===== SESSION STATE ===== */
+  const [studiedAt, setStudiedAt] = useState<string | null>(null);
+  const [currentStage, setCurrentStage] = useState(1);
+  const [totalStages, setTotalStages] = useState(1);
+  const [isBreak, setIsBreak] = useState(false);
+
+  /* ===== DATA LOADING ===== */
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const data = await sessionApi.getSettings();
+      console.log(
+        "🔥 [SESSION] getSettings response:",
+        JSON.stringify(data, null, 2)
+      );
+
+      // Backend returns seconds, we convert to HH:mm for UI
+      setTotalTime(secondsToHHMM(data.totalTimeInSeconds));
+      setFocusTime(secondsToHHMM(data.focusTimeInSeconds));
+      setBreakTime(secondsToHHMM(data.breakTimeInSeconds));
+
+      // Update the timer initial state
+      setSecondsLeft(data.focusTimeInSeconds);
+
+      // Initialize numeric states for logic
+      setFocusSeconds(data.focusTimeInSeconds);
+      setBreakSeconds(data.breakTimeInSeconds);
+      setTotalSeconds(data.totalTimeInSeconds);
+      const stages = calcStages(
+        data.totalTimeInSeconds,
+        data.focusTimeInSeconds,
+        data.breakTimeInSeconds
+      );
+      setTotalStages(stages);
+
+      // Handle music
+      // If enableBgMusic is true but we don't know WHICH music, we just select the first one as default?
+      // Or we can leave it empty if the user hasn't selected anything locally yet?
+      // Since backend only stores boolean, we might want to default to 'rain' if true and no local music is set.
+      // For now, let's just respect the boolean for "has music" if possible, but the UI requires specific music item.
+      if (data.enableBgMusic) {
+        // Default to Rain if enabled but we don't know what
+        setMusics([{ id: "rain", title: "🌧 Rain sound", url: "rain.mp3" }]);
+      } else {
+        setMusics([]);
+      }
+    } catch (error) {
+      console.log("Error fetching session settings", error);
+    }
+  };
 
   /* ===== TIMER ===== */
   const FOCUS_SECONDS = parseTimeToSeconds(focusTime + ":00");
@@ -97,13 +176,28 @@ export default function SessionScreen() {
     }
   }, [showSettings]);
 
+  /* =======================
+     TIMER LOGIC
+  ======================= */
   useEffect(() => {
-    if (!isRunning) return;
+    if (showSettings) {
+      setIsRunning(false);
+    }
+  }, [showSettings]);
+
+  useEffect(() => {
+    if (!isRunning) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      return;
+    }
 
     intervalRef.current = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
-          stopTimer();
+          handleTimerComplete();
           return 0;
         }
         return prev - 1;
@@ -116,9 +210,116 @@ export default function SessionScreen() {
         intervalRef.current = null;
       }
     };
-  }, [isRunning]);
+  }, [isRunning, isBreak, currentStage]); // Add dependencies to handle stage switching correctly
 
-  const togglePlay = () => setIsRunning((p) => !p);
+  const handleTimerComplete = () => {
+    // Current timer finished
+    if (isBreak) {
+      // Break finished
+      if (currentStage >= totalStages) {
+        // All stages done
+        const totalRun = totalStages * (focusSeconds + breakSeconds);
+        finishSession(totalRun);
+      } else {
+        // Next stage
+        setCurrentStage((s) => s + 1);
+        setIsBreak(false);
+        setSecondsLeft(focusSeconds);
+        // Keep running
+      }
+    } else {
+      // Focus finished
+
+      // Check if we hit the total requested time
+      // Elapsed so far = (currentStage - 1) * cycle + focus
+      const cycleSeconds = focusSeconds + breakSeconds;
+      const elapsedSoFar = (currentStage - 1) * cycleSeconds + focusSeconds;
+
+      // If we have reached or exceeded total time, we stop here (skip break)
+      if (elapsedSoFar >= totalSeconds) {
+        finishSession(elapsedSoFar);
+        return;
+      }
+
+      // Go to break
+      setIsBreak(true);
+      setSecondsLeft(breakSeconds);
+      // Keep running
+    }
+  };
+
+  /* ===== HELPERS FOR ELAPSED TIME ===== */
+  const calcElapsed = () => {
+    // If we haven't started, 0
+    if (!studiedAt) return 0;
+
+    const cycleSeconds = focusSeconds + breakSeconds;
+    const completedStagesSeconds = (currentStage - 1) * cycleSeconds;
+
+    let currentStageElapsed = 0;
+    if (isBreak) {
+      // Finished focus fully, now in break
+      currentStageElapsed = focusSeconds + (breakSeconds - secondsLeft);
+    } else {
+      // In focus
+      currentStageElapsed = focusSeconds - secondsLeft;
+    }
+
+    return completedStagesSeconds + currentStageElapsed;
+  };
+
+  const finishSession = async (explicitElapsed?: number) => {
+    setIsRunning(false);
+    if (!studiedAt) return;
+
+    // Use explicit value (natural finish) or calculate (manual finish)
+    const elapsed = explicitElapsed ?? calcElapsed();
+
+    // Ensure integers
+    const finalDuration = Math.round(totalSeconds);
+    const finalElapsed = Math.round(elapsed);
+
+    try {
+      const payload = {
+        studiedAt: studiedAt,
+        durationInSeconds: finalDuration, // User requested: session total time
+        elapsedTimeInSeconds: finalElapsed, // User requested: time passed
+      };
+
+      console.log(
+        "🔥 [SESSION] saveSession payload:",
+        JSON.stringify(payload, null, 2)
+      );
+
+      await sessionApi.saveSession(payload);
+      console.log("🔥 [SESSION] saveSession success");
+
+      Alert.alert("Success", "Study session saved!");
+    } catch (e: any) {
+      console.log("🔥 [SESSION] saveSession error:", e);
+      if (e.response) {
+        console.log(
+          "🔥 [SESSION] saveSession error status:",
+          e.response.status
+        );
+        console.log(
+          "🔥 [SESSION] saveSession error data:",
+          JSON.stringify(e.response.data, null, 2)
+        );
+      }
+      Alert.alert("Error", "Failed to save session.");
+    }
+
+    resetState();
+  };
+
+  const togglePlay = () => {
+    if (!isRunning && !studiedAt) {
+      // First start
+      setStudiedAt(dayjs().format("YYYY-MM-DD HH:mm:ss"));
+    }
+    setIsRunning((p) => !p);
+  };
 
   const stopTimer = () => {
     setIsRunning(false);
@@ -126,14 +327,25 @@ export default function SessionScreen() {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    // RESET STATE as per user instruction
+    resetState();
+  };
+
+  const resetState = () => {
+    setIsRunning(false);
+    setStudiedAt(null);
+    setCurrentStage(1);
+    setIsBreak(false);
+    setSecondsLeft(focusSeconds); // Reset to focus time
   };
 
   /* =======================
      PROGRESS
   ======================= */
 
-  const progress = secondsLeft / FOCUS_SECONDS;
-
+  // Progress based on current block (Focus or Break)
+  const currentTotal = isBreak ? breakSeconds : focusSeconds;
+  const progress = currentTotal > 0 ? secondsLeft / currentTotal : 0;
   const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
 
   /* =======================
@@ -210,7 +422,7 @@ export default function SessionScreen() {
         </View>
 
         {/* CONTROLS */}
-        <View className="flex-row items-center gap-10 mb-10">
+        <View className="flex-row items-center gap-10 mb-6">
           <Pressable onPress={stopTimer}>
             <FontAwesome6 name="ban" size={40} color="white" />
           </Pressable>
@@ -231,8 +443,21 @@ export default function SessionScreen() {
           </Pressable>
         </View>
 
+        {/* STATUS TEXT */}
+        <View className="mb-4">
+          <Text className="text-white/80 font-bold text-[16px]">
+            {isBreak ? "REST TIME" : "FOCUS TIME"}
+          </Text>
+          <Text className="text-white/60 text-center text-[14px]">
+            Stage {currentStage} / {totalStages}
+          </Text>
+        </View>
+
         {/* FINISH */}
-        <Pressable className="border-[3px] border-white rounded-full px-8 py-3">
+        <Pressable
+          onPress={() => finishSession()}
+          className="border-[3px] border-white rounded-full px-8 py-3"
+        >
           <Text className="text-white text-[24px] font-bold">
             FINISH STUDY SESSION
           </Text>
@@ -249,13 +474,48 @@ export default function SessionScreen() {
           musics,
         }}
         onClose={() => setShowSettings(false)}
-        onSave={(data: SessionSettingData) => {
-          setTotalTime(data.totalTime);
-          setFocusTime(data.focusTime);
-          setBreakTime(data.breakTime);
-          setMusics(data.musics);
-          setSecondsLeft(parseTimeToSeconds(data.focusTime + ":00"));
-          setShowSettings(false);
+        onSave={async (data: SessionSettingData) => {
+          try {
+            const fSeconds = parseTimeToSeconds(data.focusTime + ":00");
+            const bSeconds = parseTimeToSeconds(data.breakTime + ":00");
+            const tSeconds = parseTimeToSeconds(data.totalTime + ":00");
+            const enableBgMusic = data.musics.length > 0;
+
+            const payload: SessionSettings = {
+              focusTimeInSeconds: fSeconds,
+              breakTimeInSeconds: bSeconds,
+              totalTimeInSeconds: tSeconds,
+              enableBgMusic,
+            };
+
+            console.log(
+              "🔥 [SESSION] updateSettings payload:",
+              JSON.stringify(payload, null, 2)
+            );
+
+            await sessionApi.updateSettings(payload);
+            console.log("🔥 [SESSION] updateSettings success");
+
+            setTotalTime(data.totalTime);
+            setFocusTime(data.focusTime);
+            setBreakTime(data.breakTime);
+            setMusics(data.musics);
+
+            // Update internal numeric state
+            setFocusSeconds(fSeconds);
+            setBreakSeconds(bSeconds);
+            setTotalSeconds(tSeconds);
+
+            const stages = calcStages(tSeconds, fSeconds, bSeconds);
+            setTotalStages(stages);
+
+            // Reset timer
+            resetState();
+
+            setShowSettings(false);
+          } catch (e) {
+            Alert.alert("Error", "Failed to save settings");
+          }
         }}
       />
     </LinearGradient>

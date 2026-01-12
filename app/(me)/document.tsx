@@ -1,4 +1,5 @@
 import folderApi, { GetFolderDetailResponse } from "@/api/folderApi";
+import ErrorModal from "@/components/modal/error";
 import QuestionModal from "@/components/modal/question";
 import BottomBar from "@/components/ui/buttom";
 import Header from "@/components/ui/header";
@@ -126,6 +127,9 @@ export default function DocumentScreen() {
   const [usageUsed, setUsageUsed] = useState(0);
   const [usageLimit, setUsageLimit] = useState(0);
   const [isUsageLoading, setIsUsageLoading] = useState(false);
+
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>();
 
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [detailFolder, setDetailFolder] =
@@ -339,17 +343,29 @@ export default function DocumentScreen() {
                 try {
                   setIsCreating(true);
 
-                  await folderApi.createFolder({
+                  const res = await folderApi.createFolder({
                     name: folderName.trim(),
                   });
-
+                  console.log("haaasdd:", res);
                   /* fetch lại danh sách folder */
                   await fetchFolders();
 
                   setFolderName("");
                   setIsCreateModalOpen(false);
-                } catch (e) {
-                  console.error("Create folder failed", e);
+                } catch (e: any) {
+                  console.log("Create folder error:", e?.response ?? e);
+
+                  let message = "Create folder failed";
+
+                  const apiMsg = e?.response?.data?.message;
+                  if (typeof apiMsg === "string") {
+                    message = apiMsg;
+                  } else if (Array.isArray(apiMsg)) {
+                    message = apiMsg.join("\n");
+                  }
+
+                  setErrorMessage(message);
+                  setErrorVisible(true);
                 } finally {
                   setIsCreating(false);
                 }
@@ -459,7 +475,7 @@ export default function DocumentScreen() {
                   const msg =
                     e?.response?.data?.message || "Something went wrong";
 
-                  Alert.alert("Error", msg);
+                  console.log("sdfghjkl;", msg);
                 } finally {
                   setIsUpdating(false);
                 }
@@ -516,6 +532,14 @@ export default function DocumentScreen() {
           </View>
         </View>
       )}
+
+      <ErrorModal
+        visible={errorVisible}
+        title="Error"
+        message={errorMessage}
+        confirmText="OK"
+        onConfirm={() => setErrorVisible(false)}
+      />
     </View>
   );
 }

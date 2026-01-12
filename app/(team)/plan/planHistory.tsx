@@ -126,9 +126,9 @@ export default function PlanHistoryScreen() {
                 </Text>
               </View>
             ) : (
-              activities.map((activity) => (
+              activities.map((activity, index) => (
                 <ActivityItem
-                  key={activity.timestamp}
+                  key={index}
                   activity={activity}
                   formatTimestamp={formatTimestamp}
                 />
