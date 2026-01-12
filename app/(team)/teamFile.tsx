@@ -1,4 +1,5 @@
 import folderApi, { FileDetail, FileItemApi } from "@/api/folderApi";
+import ErrorModal from "@/components/modal/error";
 import QuestionModal from "@/components/modal/question";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
@@ -46,6 +47,8 @@ export default function FileScreen() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>();
 
   const [editFile, setEditFile] = useState<FileItemApi | null>(null);
   const [newFileName, setNewFileName] = useState("");
@@ -100,7 +103,8 @@ export default function FileScreen() {
       setFiles(res.files || []);
     } catch (e) {
       console.error("Search failed", e);
-      Alert.alert("Error", "Failed to search files");
+      setErrorMessage("Failed to search files");
+      setErrorVisible(true);
     } finally {
       setLoading(false);
       setIsSearching(false);
@@ -123,7 +127,8 @@ export default function FileScreen() {
       setDetailFile(detail);
     } catch (e) {
       console.error("Get detail failed", e);
-      Alert.alert("Error", "Failed to get file details");
+      setErrorMessage("Failed to get file details");
+      setErrorVisible(true);
       setIsDetailOpen(false);
     } finally {
       setDetailLoading(false);
@@ -165,7 +170,8 @@ export default function FileScreen() {
       setShowUploadModal(false);
     } catch (e) {
       console.error("Upload failed", e);
-      setError("Failed to upload file");
+      setErrorMessage("Failed to upload file");
+      setErrorVisible(true);
     } finally {
       setUploading(false);
     }
@@ -265,7 +271,8 @@ export default function FileScreen() {
       await fetchFiles();
     } catch (e) {
       console.error("Delete failed", e);
-      Alert.alert("Error", "Failed to delete file");
+      setErrorMessage("Failed to delete file");
+      setErrorVisible(true);
     } finally {
       setLoading(false);
       setIsDeleteModalVisible(false);
@@ -280,9 +287,16 @@ export default function FileScreen() {
       await folderApi.updateFile(editFile.id, newFileName);
       setEditFile(null);
       await fetchFiles();
-    } catch (e) {
+    } catch (e: any) {
       console.error("Rename failed", e);
-      Alert.alert("Error", "Failed to rename file");
+      const msg = e?.response?.data?.message
+        ? Array.isArray(e.response.data.message)
+          ? e.response.data.message.join("\n")
+          : e.response.data.message
+        : "Failed to rename file";
+
+      setErrorMessage(msg);
+      setErrorVisible(true);
     } finally {
       setRenaming(false);
     }
@@ -350,7 +364,8 @@ export default function FileScreen() {
       }
     } catch (e) {
       console.error("Download failed", e);
-      Alert.alert("Error", "Failed to download file");
+      setErrorMessage("Failed to download file");
+      setErrorVisible(true);
     } finally {
       setLoading(false);
     }
@@ -714,6 +729,13 @@ export default function FileScreen() {
           </View>
         </View>
       )}
+      <ErrorModal
+        visible={errorVisible}
+        title="Error"
+        message={errorMessage}
+        confirmText="OK"
+        onConfirm={() => setErrorVisible(false)}
+      />
     </Pressable>
   );
 }

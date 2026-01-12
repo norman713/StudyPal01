@@ -30,7 +30,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       <Text className="text-[13px] font-PoppinsBold text-[#1C1B1F]">
         {label}:
       </Text>
-      <Text className="text-[13px] text-[#1C1B1F]">{value}</Text>
+      <Text className="text-[13px] font-semibold text-[#1C1B1F]">{value}</Text>
     </View>
   );
 }
@@ -107,7 +107,8 @@ export default function FileScreen() {
       setFiles(res.files || []);
     } catch (e) {
       console.error("Search failed", e);
-      Alert.alert("Error", "Failed to search files");
+      setErrorMessage("Failed to search files");
+      setErrorVisible(true);
     } finally {
       setLoading(false);
       setIsSearching(false);
@@ -130,7 +131,8 @@ export default function FileScreen() {
       setDetailFile(detail);
     } catch (e) {
       console.error("Get detail failed", e);
-      Alert.alert("Error", "Failed to get file details");
+      setErrorMessage("Failed to get file details");
+      setErrorVisible(true);
       setIsDetailOpen(false);
     } finally {
       setDetailLoading(false);
@@ -279,7 +281,8 @@ export default function FileScreen() {
       await fetchFiles();
     } catch (e) {
       console.error("Delete failed", e);
-      Alert.alert("Error", "Failed to delete file");
+      setErrorMessage("Failed to delete file");
+      setErrorVisible(true);
     } finally {
       setLoading(false);
       setIsDeleteModalVisible(false);
@@ -395,7 +398,8 @@ export default function FileScreen() {
       }
     } catch (e) {
       console.error("Download failed", e);
-      Alert.alert("Error", "Failed to download file");
+      setErrorMessage("Failed to download file");
+      setErrorVisible(true);
     } finally {
       setLoading(false);
     }
@@ -732,11 +736,8 @@ export default function FileScreen() {
                 <ActivityIndicator size="large" color="#90717E" />
               </View>
             ) : (
-              <View className="px-5 gap-3">
+              <View className="px-5 gap-2">
                 <DetailRow label="Name" value={detailFile.name} />
-                <DetailRow label="Extension" value={detailFile.extension} />
-                <DetailRow label="Size" value={detailFile.bytes + " bytes"} />
-                <DetailRow label="Created by" value={detailFile.createdBy} />
                 <DetailRow
                   label="Created at"
                   value={
@@ -745,7 +746,13 @@ export default function FileScreen() {
                       : "-"
                   }
                 />
-                <DetailRow label="Updated by" value={detailFile.updatedBy} />
+
+                <DetailRow label="Created by" value={detailFile.createdBy} />
+
+                <DetailRow
+                  label="Last updated by"
+                  value={detailFile.updatedBy}
+                />
                 <DetailRow
                   label="Last updated at"
                   value={
@@ -754,6 +761,7 @@ export default function FileScreen() {
                       : "-"
                   }
                 />
+                <DetailRow label="Size" value={detailFile.bytes + " bytes"} />
               </View>
             )}
           </View>

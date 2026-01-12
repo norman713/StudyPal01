@@ -1,11 +1,11 @@
 import folderApi, { GetFolderDetailResponse } from "@/api/folderApi";
+import ErrorModal from "@/components/modal/error";
 import QuestionModal from "@/components/modal/question";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   BackHandler,
   FlatList,
   Pressable,
@@ -125,6 +125,8 @@ export default function DocumentScreen() {
   const [usageUsed, setUsageUsed] = useState(0);
   const [usageLimit, setUsageLimit] = useState(0);
   const [isUsageLoading, setIsUsageLoading] = useState(false);
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>();
 
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [detailFolder, setDetailFolder] =
@@ -269,7 +271,8 @@ export default function DocumentScreen() {
                   const data = await folderApi.getFolderDetail(item.id);
                   setDetailFolder(data);
                 } catch (e) {
-                  Alert.alert("Error", "Failed to load folder details");
+                  setErrorMessage("Failed to load folder details");
+                  setErrorVisible(true);
                 } finally {
                   setIsDetailLoading(false);
                 }
@@ -453,7 +456,8 @@ export default function DocumentScreen() {
                   const msg =
                     e?.response?.data?.message || "Something went wrong";
 
-                  Alert.alert("Error", msg);
+                  setErrorMessage(msg);
+                  setErrorVisible(true);
                 } finally {
                   setIsUpdating(false);
                 }
@@ -510,6 +514,13 @@ export default function DocumentScreen() {
           </View>
         </View>
       )}
+      <ErrorModal
+        visible={errorVisible}
+        title="Error"
+        message={errorMessage}
+        confirmText="OK"
+        onConfirm={() => setErrorVisible(false)}
+      />
     </View>
   );
 }
