@@ -1,6 +1,4 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
-import { readTokens } from "@/api/tokenStore";
-import { NotificationItem } from "@/api/notiApi";
 import notificationApi from "@/api/notiApi";
 import { useAuth } from "./auth";
 
@@ -18,7 +16,6 @@ const UnreadNotificationContext = createContext<UnreadNotificationContextValue>(
 
 export function UnreadNotificationProvider({ children }: { children: React.ReactNode }) {
   const wsRef = useRef<WebSocket | null>(null);
-  const [unreadNotificationList, setUnreadNotificationList] = useState<NotificationItem[]>([]);
   const { accessToken } = useAuth();
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
@@ -36,7 +33,7 @@ export function UnreadNotificationProvider({ children }: { children: React.React
       setUnreadNotificationCount(res.count);
     };
     init();
-  }, []);
+  }, [accessToken]);
 
   useEffect(() => {
     let ws: WebSocket | null = null;

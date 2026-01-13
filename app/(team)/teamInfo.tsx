@@ -586,7 +586,7 @@ export default function TeamInfoScreen() {
                     }
                     router.push({
                       pathname: "/(team)/chat",
-                      params: { teamId: id },
+                      params: { teamId: id, role: team?.role },
                     });
                   }}
                   style={{ paddingRight: 0, paddingLeft: 0 }}
