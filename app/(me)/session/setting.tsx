@@ -262,6 +262,11 @@ function TimePickerRow({
         value={value}
         editable={false}
         style={{ width: 150 }}
+        theme={{
+          colors: {
+            background: "#FFFFFF",
+          },
+        }}
         right={
           <TextInput.Icon
             icon={() => (

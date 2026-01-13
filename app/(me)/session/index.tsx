@@ -22,6 +22,7 @@ import Svg, {
   LinearGradient as SvgGradient,
 } from "react-native-svg";
 
+import QuestionModal from "@/components/modal/question";
 import SessionSettingsModal, {
   MusicItemType,
   SessionSettingData,
@@ -230,6 +231,7 @@ export default function SessionScreen() {
 
   const [isRunning, setIsRunning] = useState(false);
   const [enableBgMusic, setEnableBgMusic] = useState(false);
+  const [confirmStopVisible, setConfirmStopVisible] = useState(false);
 
   /* ===== UI ===== */
   const [showSettings, setShowSettings] = useState(false);
@@ -261,11 +263,9 @@ export default function SessionScreen() {
     const sub = AppState.addEventListener("change", (state) => {
       if (state !== "active") {
         Alert.alert(
-          "Session stopped",
-          "You left the app. The session has been stopped."
+          "Session in progress",
+          "You must finish the study session before leaving the app."
         );
-
-        stopTimer();
       }
     });
 
@@ -427,6 +427,22 @@ export default function SessionScreen() {
     resetState();
   };
 
+  const stopWithoutSave = () => {
+    // dừng timer + reset
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    setIsRunning(false);
+    setStrictMode(false);
+    stopMusic();
+    // reset state
+    setStudiedAt(null);
+    setCurrentStage(1);
+    setIsBreak(false);
+    setSecondsLeft(focusSeconds);
+  };
   const resetState = () => {
     setIsRunning(false);
     setStudiedAt(null);
@@ -465,6 +481,23 @@ export default function SessionScreen() {
       pauseMusic();
     }
   }, [isRunning, enableBgMusic, musics]);
+
+  const confirmStopSession = () => {
+    Alert.alert(
+      "Stop study session?",
+      "If you stop now, this session will not be saved.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Stop",
+          style: "destructive",
+          onPress: () => {
+            stopTimer();
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <LinearGradient
@@ -528,7 +561,7 @@ export default function SessionScreen() {
 
         {/* CONTROLS */}
         <View className="flex-row items-center gap-10 mb-6">
-          <Pressable onPress={stopTimer}>
+          <Pressable onPress={() => setConfirmStopVisible(true)}>
             <FontAwesome6 name="ban" size={40} color="white" />
           </Pressable>
 
@@ -568,6 +601,23 @@ export default function SessionScreen() {
           </Text>
         </Pressable>
       </View>
+
+      <QuestionModal
+        visible={confirmStopVisible}
+        title="Strict mode?"
+        message="Strict mode will block leaving the app until you FINISH the session (it will be saved). If you don't want strict mode, we'll stop now and NOT save."
+        confirmText="Enable"
+        cancelText="Stop (No save)"
+        onConfirm={() => {
+          setConfirmStopVisible(false);
+          setStrictMode(true);
+        }}
+        onCancel={() => {
+          setConfirmStopVisible(false);
+          stopWithoutSave();
+          router.back();
+        }}
+      />
 
       {/* SETTINGS */}
       <SessionSettingsModal

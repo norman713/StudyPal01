@@ -211,12 +211,13 @@ export default function ChatbotScreen() {
         );
       },
 
-      onError: () => {
+      onError: async () => {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === botId ? { ...m, content: "❌ Bot error" } : m
           )
         );
+        await fetchQuotaUsage();
         setIsStreaming(false);
         Alert.alert("Error", "Failed to send message. Please try again.");
       },
@@ -344,7 +345,7 @@ export default function ChatbotScreen() {
       </Text>
 
       {/* CONTEXT */}
-      <View className="flex-row items-center mb-2">
+      <View className="flex-row p-2 items-center mb-2">
         <TouchableOpacity
           className="bg-[#90717E] px-3 py-1.5 rounded-full"
           onPress={() => {
@@ -379,7 +380,7 @@ export default function ChatbotScreen() {
           <View className="bg-neutral-200 mx-2 px-3 py-1.5 rounded-full flex-row items-center">
             <Text className="text-xl mr-2" numberOfLines={1}>
               {context.type === "TASK" ? "Task" : "Plan"}:{" "}
-              {context.id || context.id}
+              {context.title || context.id}
             </Text>
             <TouchableOpacity onPress={() => setContext(null)}>
               <Ionicons name="close-circle" size={20} color="#666" />

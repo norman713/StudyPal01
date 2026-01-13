@@ -2,12 +2,13 @@ import ErrorModal from "@/components/modal/error";
 import { FontAwesome } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
   ScrollView,
   StyleSheet,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -41,7 +42,6 @@ interface TeamAnalysis {
 function DonutChart({ data }: { data: TeamAnalysis }) {
   const total = data.high + data.medium + data.low + data.unfinished;
 
-  // Use a small total to prevent division by zero and show empty ring if total is 0
   const safeTotal = total === 0 ? 1 : total;
 
   const size = 220;
@@ -50,7 +50,6 @@ function DonutChart({ data }: { data: TeamAnalysis }) {
   const circumference = 2 * Math.PI * radius;
   const center = size / 2;
 
-  // Segments với màu giống Figma
   const segments = [
     { value: data.high, color: "#FF5F57", label: "High" },
     { value: data.medium, color: "#FEBC2F", label: "Medium" },
@@ -64,7 +63,6 @@ function DonutChart({ data }: { data: TeamAnalysis }) {
     <View style={styles.chartContainer}>
       <View style={styles.chartWrapper}>
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          {/* Background circle */}
           <Circle
             cx={center}
             cy={center}
@@ -75,14 +73,11 @@ function DonutChart({ data }: { data: TeamAnalysis }) {
             opacity={0.4}
           />
 
-          {/* Segments */}
           <G rotation="-90" origin={`${center}, ${center}`}>
             {segments.map((segment, index) => {
               if (segment.value <= 0) return null;
 
               const percentage = segment.value / safeTotal;
-              const strokeDasharray = circumference;
-              const strokeDashoffset = circumference * (1 - percentage);
               const rotation = accumulatedPercentage * 360;
 
               accumulatedPercentage += percentage;
@@ -119,22 +114,16 @@ function DonutChart({ data }: { data: TeamAnalysis }) {
             </View>
             <Text style={styles.legendValue}>
               {total > 0
-                ? `${((segment.value / total) * 100).toFixed(1).replace(".", ",")}%`
+                ? `${((segment.value / total) * 100)
+                    .toFixed(1)
+                    .replace(".", ",")}%`
                 : "0%"}
             </Text>
           </View>
         ))}
       </View>
-      <Text
-        style={{
-          textAlign: "center",
-          marginTop: 10,
-          color: "#666",
-          fontSize: 12,
-        }}
-      >
-        Total tasks: {total}
-      </Text>
+
+      <Text style={styles.totalText}>Total tasks: {total}</Text>
     </View>
   );
 }
@@ -145,37 +134,40 @@ function DonutChart({ data }: { data: TeamAnalysis }) {
 function MemberItem({
   member,
   isSelected,
+  onPress,
 }: {
   member: MemberStat;
   isSelected: boolean;
   onPress: () => void;
 }) {
   return (
-    <View
-      style={[
-        styles.memberItem,
-        isSelected && { borderColor: ACCENT, borderWidth: 2 },
-      ]}
-    >
-      {member.avatarUrl ? (
-        <Image source={{ uri: member.avatarUrl }} style={styles.memberAvatar} />
-      ) : (
-        <View style={styles.memberAvatarPlaceholder}>
-          <Text style={styles.memberAvatarText}>
-            {member.name?.charAt(0)?.toUpperCase() ?? "U"}
+    <TouchableOpacity activeOpacity={0.75} onPress={onPress}>
+      <View
+        style={[styles.memberItem, isSelected && styles.memberItemSelected]}
+      >
+        {member.avatarUrl ? (
+          <Image
+            source={{ uri: member.avatarUrl }}
+            style={styles.memberAvatar}
+          />
+        ) : (
+          <View style={styles.memberAvatarPlaceholder}>
+            <Text style={styles.memberAvatarText}>
+              {member.name?.charAt(0)?.toUpperCase() ?? "U"}
+            </Text>
+          </View>
+        )}
+
+        <View style={styles.memberInfo}>
+          <Text style={styles.memberName}>{member.name}</Text>
+          <Text style={styles.memberTasks}>
+            has finished{" "}
+            <Text style={styles.memberTaskCount}>{member.finishedTasks}</Text>{" "}
+            tasks
           </Text>
         </View>
-      )}
-
-      <View style={styles.memberInfo}>
-        <Text style={styles.memberName}>{member.name}</Text>
-        <Text style={styles.memberTasks}>
-          has finished{" "}
-          <Text style={styles.memberTaskCount}>{member.finishedTasks}</Text>{" "}
-          tasks
-        </Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -217,18 +209,26 @@ export default function StatisticScreen() {
 
   const [duration, setDuration] = useState<Duration>("30days");
   const [loading, setLoading] = useState(true);
+
   const [analysis, setAnalysis] = useState<TeamAnalysis>({
     high: 0,
     medium: 0,
     low: 0,
     unfinished: 0,
   });
+
   const [members, setMembers] = useState<MemberStat[]>([]);
+  const [memberStatsMap, setMemberStatsMap] = useState<
+    Record<string, TeamAnalysis>
+  >({});
 
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [memberAnalysis, setMemberAnalysis] = useState<TeamAnalysis | null>(
     null
   );
+
+  // Search state (inline)
+  const [searchText, setSearchText] = useState("");
 
   // Custom date range state
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -237,39 +237,45 @@ export default function StatisticScreen() {
     to: string;
   } | null>(null);
 
-  // Fetch statistics
+  const selectedMemberName = useMemo(() => {
+    if (!selectedMemberId) return null;
+    return members.find((m) => m.id === selectedMemberId)?.name ?? "Member";
+  }, [selectedMemberId, members]);
+
+  const filteredMembers = useMemo(() => {
+    const q = searchText.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter((m) => (m.name ?? "").toLowerCase().includes(q));
+  }, [members, searchText]);
+
   async function fetchStatistics(
     teamId: string,
     fromDate: string,
     toDate: string
   ) {
-    console.log("[Statistic] fetch payload:", {
-      teamId,
-      fromDate,
-      toDate,
-    });
-
     setLoading(true);
 
     try {
-      // 1. Team stats
+      // 1) Team stats
       const teamStats = await teamApi.getTaskStatistics(
         teamId,
         fromDate,
         toDate
       );
 
-      setAnalysis({
-        high: teamStats.high,
-        medium: teamStats.medium,
-        low: teamStats.low,
-        unfinished: teamStats.unfinished,
-      });
+      const teamAnalysis: TeamAnalysis = {
+        high: teamStats.high || 0,
+        medium: teamStats.medium || 0,
+        low: teamStats.low || 0,
+        unfinished: teamStats.unfinished || 0,
+      };
+      setAnalysis(teamAnalysis);
 
-      // 2. Members
+      // 2) Members list
       const membersRes = await memberApi.getAll(teamId, undefined, 50);
 
-      const membersData: MemberStat[] = await Promise.all(
+      // 3) Fetch stats per member (để vừa tính finishedTasks, vừa lưu breakdown cho donut)
+      const results = await Promise.all(
         membersRes.members.map(async (member) => {
           try {
             const stats = await teamApi.getTaskStatistics(
@@ -279,25 +285,59 @@ export default function StatisticScreen() {
               member.userId
             );
 
-            return {
+            const mAnalysis: TeamAnalysis = {
+              high: stats.high || 0,
+              medium: stats.medium || 0,
+              low: stats.low || 0,
+              unfinished: stats.unfinished || 0,
+            };
+
+            const finishedTasks = (stats.total || 0) - (stats.unfinished || 0);
+
+            const mStat: MemberStat = {
               id: member.userId,
               name: member.name,
               avatarUrl: member.avatarUrl,
-              finishedTasks: (stats.total || 0) - (stats.unfinished || 0),
+              finishedTasks,
             };
+
+            return { mStat, mAnalysis };
           } catch {
-            return {
+            const mStat: MemberStat = {
               id: member.userId,
               name: member.name,
               avatarUrl: member.avatarUrl,
               finishedTasks: 0,
             };
+            const mAnalysis: TeamAnalysis = {
+              high: 0,
+              medium: 0,
+              low: 0,
+              unfinished: 0,
+            };
+            return { mStat, mAnalysis };
           }
         })
       );
 
-      membersData.sort((a, b) => b.finishedTasks - a.finishedTasks);
+      const membersData = results
+        .map((r) => r.mStat)
+        .sort((a, b) => b.finishedTasks - a.finishedTasks);
+
+      const map: Record<string, TeamAnalysis> = {};
+      results.forEach((r) => {
+        map[r.mStat.id] = r.mAnalysis;
+      });
+
       setMembers(membersData);
+      setMemberStatsMap(map);
+
+      // Nếu đang chọn member, update donut theo map mới (theo date range mới)
+      if (selectedMemberId && map[selectedMemberId]) {
+        setMemberAnalysis(map[selectedMemberId]);
+      } else {
+        setMemberAnalysis(null);
+      }
     } catch (err: any) {
       setErrorMessage(
         err?.response?.data?.message ||
@@ -305,22 +345,26 @@ export default function StatisticScreen() {
           "Failed to load statistics"
       );
       setErrorVisible(true);
+
       setAnalysis({ high: 0, medium: 0, low: 0, unfinished: 0 });
       setMembers([]);
+      setMemberStatsMap({});
+      setSelectedMemberId(null);
+      setMemberAnalysis(null);
     } finally {
       setLoading(false);
     }
   }
+
   useEffect(() => {
     if (!teamId) return;
 
     const { fromDate, toDate } = getDateRange(duration, customRange);
-
     fetchStatistics(teamId, fromDate, toDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId, duration, customRange]);
 
   const handleCustomAnalyze = (from: Date, to: Date) => {
-    const FORMAT = "YYYY-MM-DD HH:mm:ss";
     setCustomRange({
       from: dayjs(from).startOf("day").format(FORMAT),
       to: dayjs(to).endOf("day").format(FORMAT),
@@ -335,6 +379,9 @@ export default function StatisticScreen() {
     { key: "90days", label: "90 days" },
   ];
 
+  const chartData =
+    selectedMemberId && memberAnalysis ? memberAnalysis : analysis;
+
   return (
     <View style={styles.container}>
       <DateRangeModal
@@ -342,7 +389,7 @@ export default function StatisticScreen() {
         onClose={() => setIsModalVisible(false)}
         onAnalyze={handleCustomAnalyze}
       />
-      {/* Header */}
+
       <Appbar.Header mode="small" style={{ backgroundColor: ACCENT }}>
         <Appbar.BackAction color="#fff" onPress={() => router.back()} />
         <Appbar.Content
@@ -352,7 +399,7 @@ export default function StatisticScreen() {
       </Appbar.Header>
 
       <ScrollView style={styles.scrollView}>
-        {/* Duration Section */}
+        {/* Duration */}
         <View style={styles.card}>
           <View style={styles.durationHeader}>
             <Text style={styles.sectionTitle}>Duration</Text>
@@ -388,13 +435,15 @@ export default function StatisticScreen() {
           </View>
         </View>
 
-        {/* Team Analysis Section */}
+        {/* Team / Member Analysis */}
         <View style={styles.card}>
           <View style={styles.analysisHeader}>
             <Text style={styles.sectionTitle}>Team's analysis</Text>
 
             <View style={styles.teamBadge}>
-              <Text style={styles.teamBadgeText}>Team</Text>
+              <Text style={styles.teamBadgeText}>
+                {selectedMemberId ? selectedMemberName : "Team"}
+              </Text>
             </View>
           </View>
 
@@ -403,45 +452,76 @@ export default function StatisticScreen() {
               <ActivityIndicator size="large" color={ACCENT} />
             </View>
           ) : (
-            <DonutChart
-              data={
-                selectedMemberId && memberAnalysis ? memberAnalysis : analysis
-              }
-            />
+            <DonutChart data={chartData} />
           )}
         </View>
 
-        {/* Members Section */}
+        {/* Members + Inline Search */}
         <View style={styles.card}>
-          <TouchableOpacity
-            onPress={() => {
-              router.push({
-                pathname: "/(team)/searchMemberStatistic",
-                params: {
-                  teamId,
-                },
-              });
-            }}
-          >
-            <View style={styles.membersHeader}>
-              <FontAwesome name="filter" size={16} color="#49454F" />
-              <Text style={styles.sectionTitle}>Members</Text>
-            </View>
-          </TouchableOpacity>
+          <View style={styles.membersHeader}>
+            <FontAwesome name="users" size={16} color="#49454F" />
+            <Text style={styles.sectionTitle}>Members</Text>
+
+            {/* Optional: nút clear selection */}
+            {selectedMemberId ? (
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedMemberId(null);
+                  setMemberAnalysis(null);
+                }}
+                style={styles.clearBtn}
+              >
+                <Text style={styles.clearBtnText}>Clear</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {/* Search bar (inline) */}
+          <View style={styles.searchBox}>
+            <FontAwesome name="search" size={16} color="#777" />
+            <TextInput
+              value={searchText}
+              onChangeText={setSearchText}
+              placeholder="Search by member name"
+              placeholderTextColor="#999"
+              style={styles.searchInput}
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+            {searchText.length > 0 ? (
+              <TouchableOpacity onPress={() => setSearchText("")}>
+                <FontAwesome name="times-circle" size={16} color="#777" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
 
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color={ACCENT} />
             </View>
-          ) : members.length > 0 ? (
-            members.map((member) => (
-              <MemberItem
-                key={member.id}
-                member={member}
-                isSelected={false}
-                onPress={() => {}}
-              />
-            ))
+          ) : filteredMembers.length > 0 ? (
+            filteredMembers.map((member) => {
+              const isSelected = selectedMemberId === member.id;
+
+              return (
+                <MemberItem
+                  key={member.id}
+                  member={member}
+                  isSelected={isSelected}
+                  onPress={() => {
+                    // toggle select
+                    if (isSelected) {
+                      setSelectedMemberId(null);
+                      setMemberAnalysis(null);
+                      return;
+                    }
+
+                    setSelectedMemberId(member.id);
+                    setMemberAnalysis(memberStatsMap[member.id] ?? null);
+                  }}
+                />
+              );
+            })
           ) : (
             <Text style={{ textAlign: "center", color: "#888", padding: 20 }}>
               No members found
@@ -462,25 +542,17 @@ export default function StatisticScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8F6F7",
-  },
-  scrollView: {
-    flex: 1,
-    padding: 16,
-  },
+  container: { flex: 1, backgroundColor: "#F8F6F7" },
+  scrollView: { flex: 1, padding: 16 },
+
   card: {
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#0F0C0D",
-  },
+  sectionTitle: { fontSize: 16, fontWeight: "600", color: "#0F0C0D" },
+
   // Duration
   durationHeader: {
     flexDirection: "row",
@@ -488,27 +560,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  durationButtons: {
-    flexDirection: "row",
-    gap: 8,
-  },
+  durationButtons: { flexDirection: "row", gap: 8 },
   durationBtn: {
     padding: 10,
     borderRadius: 20,
     backgroundColor: "#F2EFF0",
   },
-  durationBtnActive: {
-    backgroundColor: ACCENT,
-  },
-  durationBtnText: {
-    fontSize: 14,
-    color: "#0F0C0D",
-    fontWeight: "600",
-  },
-  durationBtnTextActive: {
-    color: "#fff",
-    fontWeight: "600",
-  },
+  durationBtnActive: { backgroundColor: ACCENT },
+  durationBtnText: { fontSize: 14, color: "#0F0C0D", fontWeight: "600" },
+  durationBtnTextActive: { color: "#fff", fontWeight: "600" },
+
   // Analysis
   analysisHeader: {
     flexDirection: "row",
@@ -521,24 +582,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
+    maxWidth: 180,
   },
-  teamBadgeText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  loadingContainer: {
-    paddingVertical: 40,
-    alignItems: "center",
-  },
+  teamBadgeText: { color: "#fff", fontSize: 12, fontWeight: "600" },
+
+  loadingContainer: { paddingVertical: 40, alignItems: "center" },
+
   // Chart
-  chartContainer: {
-    alignItems: "center",
-  },
-  chartWrapper: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  chartContainer: { alignItems: "center" },
+  chartWrapper: { alignItems: "center", justifyContent: "center" },
   legendContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -546,35 +598,56 @@ const styles = StyleSheet.create({
     marginTop: 24,
     paddingHorizontal: 8,
   },
-  legendItem: {
-    alignItems: "center",
-  },
-  legendRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  legendColor: {
-    width: 18,
-    height: 18,
-  },
-  legendLabel: {
-    fontSize: 12,
-    color: "#0F0C0D",
-  },
+  legendItem: { alignItems: "center" },
+  legendRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  legendColor: { width: 18, height: 18 },
+  legendLabel: { fontSize: 12, color: "#0F0C0D" },
   legendValue: {
     fontSize: 12,
     fontWeight: "700",
     color: "#0F0C0D",
     marginTop: 2,
   },
+  totalText: {
+    textAlign: "center",
+    marginTop: 10,
+    color: "#666",
+    fontSize: 12,
+  },
+
   // Members
   membersHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
+  clearBtn: {
+    marginLeft: "auto",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: "#F2EFF0",
+  },
+  clearBtnText: { color: "#49454F", fontSize: 12, fontWeight: "600" },
+
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#F8F6F7",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: "#0F0C0D",
+    paddingVertical: 0,
+  },
+
   memberItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -582,6 +655,12 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  memberItemSelected: {
+    borderColor: ACCENT,
+    backgroundColor: "#F6EFF2",
   },
   memberAvatar: {
     width: 40,
@@ -598,25 +677,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
   },
-  memberAvatarText: {
-    fontSize: 16,
-    color: "#fff",
-    fontWeight: "600",
-  },
-  memberInfo: {
-    flex: 1,
-  },
-  memberName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0F0C0D",
-  },
-  memberTasks: {
-    fontSize: 12,
-    color: "#49454F",
-  },
-  memberTaskCount: {
-    fontWeight: "600",
-    color: ACCENT,
-  },
+  memberAvatarText: { fontSize: 16, color: "#fff", fontWeight: "600" },
+  memberInfo: { flex: 1 },
+  memberName: { fontSize: 14, fontWeight: "600", color: "#0F0C0D" },
+  memberTasks: { fontSize: 12, color: "#49454F" },
+  memberTaskCount: { fontWeight: "600", color: ACCENT },
 });

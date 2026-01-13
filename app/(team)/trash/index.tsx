@@ -8,10 +8,13 @@ import TrashTasks from "./task";
 
 import taskApi, { DeletedTask } from "@/api/taskApi";
 import ErrorModal from "@/components/modal/error";
+import QuestionModal from "@/components/modal/question";
 import { Appbar } from "react-native-paper";
 
 export default function TrashScreen() {
   const { teamId } = useLocalSearchParams();
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [confirmVisible, setConfirmVisible] = useState(false);
 
   const [currentTab, setCurrentTab] = useState<"tasks" | "documents">("tasks");
   const [deletedTasks, setDeletedTasks] = useState<DeletedTask[]>([]);
@@ -59,18 +62,27 @@ export default function TrashScreen() {
   /* =======================
      RECOVER (simple action)
   ======================= */
-  const handleRecover = async () => {
+
+  const doRecoverOne = async () => {
+    if (!selectedTaskId) return;
+
     try {
       setLoading(true);
 
-      await Promise.all(
-        deletedTasks.map((task) => taskApi.recoverTaskInPlan(task.id))
-      );
+      await taskApi.recoverTaskInPlan(selectedTaskId);
 
-      setDeletedTasks([]);
+      // remove task vừa recover khỏi list
+      setDeletedTasks((prev) => prev.filter((t) => t.id !== selectedTaskId));
+
+      setSelectedTaskId(null);
     } catch (err: any) {
-      console.error("Recover failed", err);
-      setErrorMessage("Recover task failed. Please try again.");
+      let message = "Recover task failed. Please try again.";
+
+      const apiMsg = err?.response?.data?.message;
+      if (typeof apiMsg === "string") message = apiMsg;
+      if (Array.isArray(apiMsg)) message = apiMsg.join("\n");
+
+      setErrorMessage(message);
       setErrorVisible(true);
     } finally {
       setLoading(false);
@@ -96,7 +108,12 @@ export default function TrashScreen() {
             {currentTab === "tasks" && (
               <TrashTasks
                 deletedTasks={deletedTasks}
-                onRecover={handleRecover}
+                selectedTaskId={selectedTaskId}
+                onSelectTask={setSelectedTaskId}
+                onRecover={() => {
+                  if (!selectedTaskId) return;
+                  setConfirmVisible(true);
+                }}
               />
             )}
 
@@ -104,6 +121,19 @@ export default function TrashScreen() {
           </ScrollView>
         </View>
       </View>
+
+      <QuestionModal
+        visible={confirmVisible}
+        title="Recover task"
+        message="Are you sure you want to recover this task?"
+        confirmText="Recover"
+        cancelText="Cancel"
+        onConfirm={() => {
+          setConfirmVisible(false);
+          doRecoverOne();
+        }}
+        onCancel={() => setConfirmVisible(false)}
+      />
 
       <ErrorModal
         visible={errorVisible}
