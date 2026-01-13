@@ -1,4 +1,6 @@
+import planApi from "@/api/planApi";
 import { Ionicons } from "@expo/vector-icons";
+import clsx from "clsx";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -7,6 +9,7 @@ import {
   Alert,
   FlatList,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -15,13 +18,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import clsx from 'clsx';
 import { chatApi, Message } from "../../api/chatApi";
 import memberApi, { Member } from "../../api/memberApi";
 import teamApi, { TeamInfoResponse } from "../../api/teamApi";
 import { getUserIdFromToken, readTokens } from "../../api/tokenStore";
-import planApi from "@/api/planApi";
-import taskApi from "@/api/taskApi";
 
 const ACCENT = "#90717E";
 type Role = "MEMBER" | "ADMIN" | "OWNER";
@@ -31,7 +31,7 @@ const DEFAULT_AVATAR = "https://i.pravatar.cc/150?img=12";
 export default function TeamChatScreen() {
   const router = useRouter();
   const { teamId } = useLocalSearchParams<{ teamId: string }>();
-  const { role } = useLocalSearchParams<{role: Role}>();
+  const { role } = useLocalSearchParams<{ role: Role }>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -40,7 +40,23 @@ export default function TeamChatScreen() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showAttachModal, setShowAttachModal] = useState(false);
-  
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
   const [menuVisible, setMenuVisible] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
@@ -63,13 +79,19 @@ export default function TeamChatScreen() {
     return others.length > 0;
   };
 
+  const [composerHeight, setComposerHeight] = useState(0);
+
   const hasExactMention = (content: string, name: string) => {
     const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const regex = new RegExp(`@${escaped}\\b`, "i");
     return regex.test(content);
   };
 
-  const sendMessage = async(teamId: string, content: string, file?: any | null) => {
+  const sendMessage = async (
+    teamId: string,
+    content: string,
+    file?: any | null
+  ) => {
     let mentionType: "ALL" | "CUSTOM" | undefined;
 
     console.log(nameIdMap);
@@ -78,7 +100,7 @@ export default function TeamChatScreen() {
 
     const map = nameIdMap.current;
 
-    for (const name of  Array.from(map.keys())) {
+    for (const name of Array.from(map.keys())) {
       if (!hasExactMention(content, name)) {
         map.delete(name);
       }
@@ -86,40 +108,40 @@ export default function TeamChatScreen() {
 
     mentionType = /@ALL\b/i.test(content) ? "ALL" : "CUSTOM";
 
-    await chatApi.sendMessage(teamId, content, {mentionType: mentionType, memberIds: Array.from(map.values())}, file ?? undefined);
+    await chatApi.sendMessage(
+      teamId,
+      content,
+      { mentionType: mentionType, memberIds: Array.from(map.values()) },
+      file ?? undefined
+    );
     map.clear();
-  }
+  };
 
   const textChangeRecommendation = (value: string) => {
     setNewMessage(value);
     const lastLine = value.split("\n").pop() ?? "";
     const match = lastLine.match(/@([^\s@]*)$/);
 
-    if(match){
+    if (match) {
       setMentionQuery(match[1]);
       setShowMentions(true);
     } else {
       setShowMentions(false);
     }
-  }
+  };
 
-  const memberList = useMemo(
-    () => Object.values(members),
-    [members]
-  );
+  const memberList = useMemo(() => Object.values(members), [members]);
 
   const filteredMembers = useMemo(() => {
     if (!mentionQuery) return memberList;
 
-    return memberList.filter(m =>
+    return memberList.filter((m) =>
       m.name.toLowerCase().includes(mentionQuery.toLowerCase())
     );
   }, [mentionQuery, memberList]);
 
   const insertMention = (member: Member) => {
-    setNewMessage(prev =>
-      prev.replace(/@([^\s@]*)$/, `@${member.name} `)
-    );
+    setNewMessage((prev) => prev.replace(/@([^\s@]*)$/, `@${member.name} `));
     nameIdMap.current.set(member.name, member.userId);
     console.log(nameIdMap);
     setShowMentions(false);
@@ -128,11 +150,14 @@ export default function TeamChatScreen() {
   const USER_REGEX = /^@[a-zA-Z0-9_]+$/;
   const PLAN_REGEX = /^@PLN-[0-9]+$/;
 
-  const getPlanByPlanCode = async(planCode: string) => {
-    const data = await planApi.searchPlans(teamId, {keyword: planCode, size: 1});
-    const num:string  = data.plans[0].id;
+  const getPlanByPlanCode = async (planCode: string) => {
+    const data = await planApi.searchPlans(teamId, {
+      keyword: planCode,
+      size: 1,
+    });
+    const num: string = data.plans[0].id;
     return num;
-  }
+  };
 
   const handlePressPlan = async (planCode: string) => {
     const planId = await getPlanByPlanCode(planCode);
@@ -149,7 +174,11 @@ export default function TeamChatScreen() {
     });
   };
 
-  const manageChatBubble = (content: string, isMe: boolean, onPlanPress: (planCode: string) => void) => {
+  const manageChatBubble = (
+    content: string,
+    isMe: boolean,
+    onPlanPress: (planCode: string) => void
+  ) => {
     const parts = content.split(/(\s+)/);
 
     return parts.map((part, index) => {
@@ -167,27 +196,22 @@ export default function TeamChatScreen() {
 
       if (USER_REGEX.test(part)) {
         return (
-          <Text
-            key={index}
-            className="text-[#92AAA5] font-semibold"
-          >
+          <Text key={index} className="text-[#92AAA5] font-semibold">
             {part}
           </Text>
         );
       }
-      
+
       return (
         <Text
           key={index}
-          className={`${
-            isMe ? "text-white" : "text-[#1D1B20]"
-          }`}
+          className={`${isMe ? "text-white" : "text-[#1D1B20]"}`}
         >
           {part}
         </Text>
-      )
-    })
-  }
+      );
+    });
+  };
 
   // Initial Data Fetch
   useEffect(() => {
@@ -302,7 +326,7 @@ export default function TeamChatScreen() {
       try {
         const parsed = JSON.parse(e.data);
 
-        if(parsed.data){
+        if (parsed.data) {
           const msgData = parsed.data;
           const newMsg: Message = msgData;
           setMessages((prev) => {
@@ -318,8 +342,12 @@ export default function TeamChatScreen() {
 
               case "EDIT":
                 return prev.map((m) =>
-                  m.id === newMsg.id 
-                    ? { ...m, content: newMsg.content, updatedAt: newMsg.updatedAt } 
+                  m.id === newMsg.id
+                    ? {
+                        ...m,
+                        content: newMsg.content,
+                        updatedAt: newMsg.updatedAt,
+                      }
                     : m
                 );
 
@@ -513,8 +541,10 @@ export default function TeamChatScreen() {
     });
 
     const bubbleClass = clsx("rounded-2xl max-w-[75%] px-3 py-2 shadow-sm", {
-      "bg-transparent border-2 border-dashed rounded-tr-sm": item.isDeleted && isMe,
-      "bg-transparent border-2 border-dashed rounded-tl-sm": item.isDeleted && !isMe,
+      "bg-transparent border-2 border-dashed rounded-tr-sm":
+        item.isDeleted && isMe,
+      "bg-transparent border-2 border-dashed rounded-tl-sm":
+        item.isDeleted && !isMe,
       "bg-[#90717E] rounded-tr-sm": !item.isDeleted && isMe,
       "bg-white rounded-tl-sm border border-gray-100": !item.isDeleted && !isMe,
     });
@@ -545,10 +575,10 @@ export default function TeamChatScreen() {
               setMenuVisible(true);
             }}
           >
-            {item.createdAt != item.updatedAt && !item.isDeleted && <Text className="text-[12px]">Edited</Text>}
-            <View
-              className={bubbleClass}
-            >
+            {item.createdAt != item.updatedAt && !item.isDeleted && (
+              <Text className="text-[12px]">Edited</Text>
+            )}
+            <View className={bubbleClass}>
               {!isMe && !item.isDeleted && (
                 <Text className="text-[12px] font-bold text-[#1D1B20] mb-1">
                   {senderName}
@@ -556,11 +586,13 @@ export default function TeamChatScreen() {
               )}
 
               {/* Attachments */}
-              {item.attachments && item.attachments.length > 0 && !item.isDeleted && (
-                <View className="mb-1">
-                  {renderImageGrid(item.attachments)}
-                </View>
-              )}
+              {item.attachments &&
+                item.attachments.length > 0 &&
+                !item.isDeleted && (
+                  <View className="mb-1">
+                    {renderImageGrid(item.attachments)}
+                  </View>
+                )}
 
               {/* Text Content */}
               {item.content ? (
@@ -568,29 +600,25 @@ export default function TeamChatScreen() {
                   <Text className="text-[15px] font-normal leading-5 text-[#1D1B20] italic">
                     Message was deleted.
                   </Text>
-                ) : (<Text
-                    className={`text-[15px] font-semibold leading-5`}
-                  >
-                    {manageChatBubble(
-                        item.content,
-                        isMe,
-                        (planCode) => {
-                          handlePressPlan(planCode);
-                        }
-                      )}
-                  </Text>)
-              ): null}
+                ) : (
+                  <Text className={`text-[15px] font-semibold leading-5`}>
+                    {manageChatBubble(item.content, isMe, (planCode) => {
+                      handlePressPlan(planCode);
+                    })}
+                  </Text>
+                )
+              ) : null}
 
               {/* Timestamp */}
-              {!item.isDeleted && 
+              {!item.isDeleted && (
                 <Text
-                className={`text-[10px] mt-1 self-end font-normal ${
+                  className={`text-[10px] mt-1 self-end font-normal ${
                     isMe ? "text-white/80" : "text-gray-400"
                   }`}
                 >
                   {timeStr}
                 </Text>
-              }
+              )}
             </View>
           </TouchableOpacity>
         </View>
@@ -703,19 +731,29 @@ export default function TeamChatScreen() {
         )}
 
         <View className="relative bg-white">
-        {showMentions && filteredMembers.length > 0 && (
-          <View className="absolute bottom-full ml-12 mb-2 w-[70%] bg-white rounded-xl shadow">
-            {filteredMembers.map(member => (
-              <TouchableOpacity
-                key={member.userId}
-                onPress={() => insertMention(member)}
-                className="flex-row items-center px-4 py-3 border-b border-gray-100"
-              >
-                {member.avatarUrl ? (
-                  <Image
-                    source={{ uri: member.avatarUrl }}
-                    className="w-8 h-8 rounded-full mr-3"
-                  />
+          {showMentions && filteredMembers.length > 0 && (
+            <View
+              style={{
+                position: "absolute",
+                bottom: composerHeight + 8,
+                left: 48,
+                width: "70%",
+                zIndex: 999,
+                elevation: 999,
+              }}
+              className="bg-white rounded-xl shadow"
+            >
+              {filteredMembers.map((member) => (
+                <TouchableOpacity
+                  key={member.userId}
+                  onPress={() => insertMention(member)}
+                  className="flex-row items-center px-4 py-3 border-b border-gray-100"
+                >
+                  {member.avatarUrl ? (
+                    <Image
+                      source={{ uri: member.avatarUrl }}
+                      className="w-8 h-8 rounded-full mr-3"
+                    />
                   ) : (
                     <View className="w-8 h-8 rounded-full mr-2 items-center justify-center bg-[#6B4EFF]">
                       <Text className="text-white font-semibold">
@@ -723,33 +761,36 @@ export default function TeamChatScreen() {
                       </Text>
                     </View>
                   )}
-                <View>
-                  <Text className="font-medium">{member.name}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+                  <View>
+                    <Text className="font-medium">{member.name}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* ===== INPUT ===== */}
+          <View
+            onLayout={(e) => setComposerHeight(e.nativeEvent.layout.height)}
+            className="flex-row items-center gap-3 bg-white px-3 py-2 pb-4"
+          >
+            <TouchableOpacity onPress={() => setShowAttachModal(true)}>
+              <Ionicons name="attach" size={22} color="#B8B8B8" />
+            </TouchableOpacity>
+
+            <TextInput
+              value={newMessage}
+              onChangeText={textChangeRecommendation}
+              placeholder="Ask anything"
+              placeholderTextColor="#B8B8B8"
+              className="flex-1 bg-[#F2F2F2] rounded-full px-4 py-2 text-[14px]"
+              multiline
+            />
+
+            <TouchableOpacity onPress={handleSend}>
+              <Ionicons name="send" size={22} color={ACCENT} />
+            </TouchableOpacity>
           </View>
-        )}
-
-        {/* ===== INPUT ===== */}
-        <View className="flex-row items-center gap-3 bg-white px-3 py-2 pb-4">
-          <TouchableOpacity onPress={() => setShowAttachModal(true)}>
-            <Ionicons name="attach" size={22} color="#B8B8B8" />
-          </TouchableOpacity>
-
-          <TextInput
-            value={newMessage}
-            onChangeText={textChangeRecommendation}
-            placeholder="Ask anything"
-            placeholderTextColor="#B8B8B8"
-            className="flex-1 bg-[#F2F2F2] rounded-full px-4 py-2 text-[14px]"
-            multiline
-          />
-
-          <TouchableOpacity onPress={handleSend}>
-            <Ionicons name="send" size={22} color={ACCENT} />
-          </TouchableOpacity>
-        </View>
         </View>
       </KeyboardAvoidingView>
 

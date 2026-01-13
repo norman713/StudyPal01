@@ -104,12 +104,6 @@ export default function AddTaskScreen() {
 
     const now = dayjs();
 
-    // if (start.isBefore(now)) {
-    //   setErrorMessage("Start time must be in the future");
-    //   setShowErrorModal(true);
-    //   return false;
-    // }
-
     if (end.isBefore(start)) {
       setErrorMessage("End time must be after Start time");
       setShowErrorModal(true);

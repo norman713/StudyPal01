@@ -2,10 +2,13 @@ import ErrorModal from "@/components/modal/error";
 import { FontAwesome } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -14,22 +17,15 @@ import {
 } from "react-native";
 import { Appbar, Text } from "react-native-paper";
 import Svg, { Circle, G } from "react-native-svg";
-import memberApi from "../../api/memberApi";
-import teamApi from "../../api/teamApi";
+import teamApi, { TeamMemberTaskStatistic } from "../../api/teamApi";
 import DateRangeModal from "./components/DateRangeModal";
 
 const ACCENT = "#90717E";
 
 type Duration = "1week" | "30days" | "60days" | "90days" | "custom";
 
-interface MemberStat {
-  id: string;
-  name: string;
-  avatarUrl?: string;
-  finishedTasks: number;
-}
-
 interface TeamAnalysis {
+  total: number;
   high: number;
   medium: number;
   low: number;
@@ -40,7 +36,7 @@ interface TeamAnalysis {
  * Donut Chart Component - giống design Figma
  */
 function DonutChart({ data }: { data: TeamAnalysis }) {
-  const total = data.high + data.medium + data.low + data.unfinished;
+  const total = data.total;
 
   const safeTotal = total === 0 ? 1 : total;
 
@@ -136,7 +132,7 @@ function MemberItem({
   isSelected,
   onPress,
 }: {
-  member: MemberStat;
+  member: TeamMemberTaskStatistic;
   isSelected: boolean;
   onPress: () => void;
 }) {
@@ -162,7 +158,9 @@ function MemberItem({
           <Text style={styles.memberName}>{member.name}</Text>
           <Text style={styles.memberTasks}>
             has finished{" "}
-            <Text style={styles.memberTaskCount}>{member.finishedTasks}</Text>{" "}
+            <Text style={styles.memberTaskCount}>
+              {member.completedTaskCount}
+            </Text>{" "}
             tasks
           </Text>
         </View>
@@ -191,11 +189,17 @@ function getDateRange(
     "90days": 90,
   };
 
-  const days = daysMap[duration as Exclude<Duration, "custom">] ?? 30;
+  const days = daysMap[duration as Exclude<Duration, "custom">] ?? 7;
+
+  // Requirement:
+  // toDate = hôm nay lúc 00:00:00
+  // fromDate = X ngày trước lúc 00:00:00
+  const today = dayjs().startOf("day");
+  const pastDate = today.subtract(days, "day");
 
   return {
-    fromDate: dayjs().subtract(days, "day").format(FORMAT),
-    toDate: dayjs().format(FORMAT),
+    fromDate: pastDate.format(FORMAT),
+    toDate: today.format(FORMAT),
   };
 }
 
@@ -207,27 +211,29 @@ export default function StatisticScreen() {
   const [errorVisible, setErrorVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const [duration, setDuration] = useState<Duration>("30days");
+  const [duration, setDuration] = useState<Duration>("1week");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [analysis, setAnalysis] = useState<TeamAnalysis>({
     high: 0,
     medium: 0,
     low: 0,
     unfinished: 0,
+    total: 0,
   });
 
-  const [members, setMembers] = useState<MemberStat[]>([]);
-  const [memberStatsMap, setMemberStatsMap] = useState<
-    Record<string, TeamAnalysis>
-  >({});
+  const [members, setMembers] = useState<TeamMemberTaskStatistic[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
 
+  // Selected member logic
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [memberAnalysis, setMemberAnalysis] = useState<TeamAnalysis | null>(
     null
   );
+  const [loadingMemberStats, setLoadingMemberStats] = useState(false);
 
-  // Search state (inline)
+  // Search state
   const [searchText, setSearchText] = useState("");
 
   // Custom date range state
@@ -239,130 +245,170 @@ export default function StatisticScreen() {
 
   const selectedMemberName = useMemo(() => {
     if (!selectedMemberId) return null;
-    return members.find((m) => m.id === selectedMemberId)?.name ?? "Member";
+    return members.find((m) => m.userId === selectedMemberId)?.name ?? "Member";
   }, [selectedMemberId, members]);
 
-  const filteredMembers = useMemo(() => {
-    const q = searchText.trim().toLowerCase();
-    if (!q) return members;
-    return members.filter((m) => (m.name ?? "").toLowerCase().includes(q));
-  }, [members, searchText]);
+  // 1. Fetch Team Overall Statistics
+  const fetchTeamAnalysis = useCallback(
+    async (tId: string, from: string, to: string) => {
+      try {
+        const teamStats = await teamApi.getTaskStatistics(tId, from, to);
+        console.log("TEAM ID:", tId);
+        console.log("TEAM FROM:", from);
 
-  async function fetchStatistics(
-    teamId: string,
-    fromDate: string,
-    toDate: string
-  ) {
-    setLoading(true);
+        console.log("TEAM to:", to);
+        console.log("TEAM INFO:", teamStats);
+
+        setAnalysis({
+          high: teamStats.high || 0,
+          medium: teamStats.medium || 0,
+          low: teamStats.low || 0,
+          unfinished: teamStats.unfinished || 0,
+          total: teamStats.total || 0,
+        });
+      } catch (err: any) {
+        console.log("fetchTeamAnalysis error:", err);
+        setAnalysis({ high: 0, medium: 0, low: 0, unfinished: 0, total: 0 });
+      }
+    },
+    []
+  );
+
+  // 2. Search/Fetch Members List
+  const fetchMembers = useCallback(
+    async (
+      tId: string,
+      from: string,
+      to: string,
+      keyword: string,
+      showLoading = false
+    ) => {
+      if (showLoading) setLoadingMembers(true);
+      try {
+        const res = await teamApi.searchTeamTaskStatistics(tId, {
+          fromDate: from,
+          toDate: to,
+          keyword: keyword,
+          size: 50, // Fetch top 50 matches
+        });
+        console.log("FRIST ROUTE:", res);
+        setMembers(res.statistics || []);
+      } catch (err: any) {
+        console.log("fetchMembers error:", err);
+        // Don't clear members on error if we had some
+      } finally {
+        if (showLoading) setLoadingMembers(false);
+      }
+    },
+    []
+  );
+
+  // 3. Fetch Specific Member Statistics
+  const fetchMemberAnalysis = async (
+    tId: string,
+    memId: string,
+    from: string,
+    to: string
+  ) => {
+    setLoadingMemberStats(true);
+
+    // ✅ log payload gửi đi
+    console.log("[Statistic] member stats payload:", {
+      teamId: tId,
+      memberId: memId,
+      fromDate: from,
+      toDate: to,
+    });
 
     try {
-      // 1) Team stats
-      const teamStats = await teamApi.getTaskStatistics(
-        teamId,
-        fromDate,
-        toDate
-      );
+      const res = await teamApi.getTaskStatistics(tId, from, to, memId);
 
-      const teamAnalysis: TeamAnalysis = {
-        high: teamStats.high || 0,
-        medium: teamStats.medium || 0,
-        low: teamStats.low || 0,
-        unfinished: teamStats.unfinished || 0,
-      };
-      setAnalysis(teamAnalysis);
+      // ✅ log response trả về
+      console.log("[Statistic] member stats response:", res);
 
-      // 2) Members list
-      const membersRes = await memberApi.getAll(teamId, undefined, 50);
-
-      // 3) Fetch stats per member (để vừa tính finishedTasks, vừa lưu breakdown cho donut)
-      const results = await Promise.all(
-        membersRes.members.map(async (member) => {
-          try {
-            const stats = await teamApi.getTaskStatistics(
-              teamId,
-              fromDate,
-              toDate,
-              member.userId
-            );
-
-            const mAnalysis: TeamAnalysis = {
-              high: stats.high || 0,
-              medium: stats.medium || 0,
-              low: stats.low || 0,
-              unfinished: stats.unfinished || 0,
-            };
-
-            const finishedTasks = (stats.total || 0) - (stats.unfinished || 0);
-
-            const mStat: MemberStat = {
-              id: member.userId,
-              name: member.name,
-              avatarUrl: member.avatarUrl,
-              finishedTasks,
-            };
-
-            return { mStat, mAnalysis };
-          } catch {
-            const mStat: MemberStat = {
-              id: member.userId,
-              name: member.name,
-              avatarUrl: member.avatarUrl,
-              finishedTasks: 0,
-            };
-            const mAnalysis: TeamAnalysis = {
-              high: 0,
-              medium: 0,
-              low: 0,
-              unfinished: 0,
-            };
-            return { mStat, mAnalysis };
-          }
-        })
-      );
-
-      const membersData = results
-        .map((r) => r.mStat)
-        .sort((a, b) => b.finishedTasks - a.finishedTasks);
-
-      const map: Record<string, TeamAnalysis> = {};
-      results.forEach((r) => {
-        map[r.mStat.id] = r.mAnalysis;
+      setMemberAnalysis({
+        high: res.high || 0,
+        medium: res.medium || 0,
+        low: res.low || 0,
+        unfinished: res.unfinished || 0,
+        total: res.total,
       });
-
-      setMembers(membersData);
-      setMemberStatsMap(map);
-
-      // Nếu đang chọn member, update donut theo map mới (theo date range mới)
-      if (selectedMemberId && map[selectedMemberId]) {
-        setMemberAnalysis(map[selectedMemberId]);
-      } else {
-        setMemberAnalysis(null);
-      }
     } catch (err: any) {
-      setErrorMessage(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to load statistics"
-      );
-      setErrorVisible(true);
+      console.log("[Statistic] member stats error:", err);
+      console.log("[Statistic] member stats error.response:", err?.response);
 
-      setAnalysis({ high: 0, medium: 0, low: 0, unfinished: 0 });
-      setMembers([]);
-      setMemberStatsMap({});
-      setSelectedMemberId(null);
       setMemberAnalysis(null);
+      setErrorMessage("Failed to load member statistics");
+      setErrorVisible(true);
     } finally {
-      setLoading(false);
+      setLoadingMemberStats(false);
     }
-  }
+  };
 
+  const handleRefresh = async () => {
+    if (!teamId) return;
+    setRefreshing(true);
+    const { fromDate, toDate } = getDateRange(duration, customRange);
+
+    await Promise.all([
+      fetchTeamAnalysis(teamId, fromDate, toDate),
+      fetchMembers(teamId, fromDate, toDate, searchText, false),
+    ]);
+
+    if (selectedMemberId) {
+      await fetchMemberAnalysis(teamId, selectedMemberId, fromDate, toDate);
+    }
+
+    setRefreshing(false);
+  };
+
+  // Initial load & Date change & Search
   useEffect(() => {
     if (!teamId) return;
 
     const { fromDate, toDate } = getDateRange(duration, customRange);
-    fetchStatistics(teamId, fromDate, toDate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    const init = async () => {
+      setLoading(true);
+      // Fetch team stats
+      await fetchTeamAnalysis(teamId, fromDate, toDate);
+
+      // Fetch member list (search with empty keyword initially)
+      await fetchMembers(teamId, fromDate, toDate, searchText, true);
+
+      // If a member is already selected, re-fetch their stats with new date
+      if (selectedMemberId) {
+        await fetchMemberAnalysis(teamId, selectedMemberId, fromDate, toDate);
+      }
+      setLoading(false);
+    };
+
+    init();
   }, [teamId, duration, customRange]);
+
+  useEffect(() => {
+    if (!teamId) return;
+    const { fromDate, toDate } = getDateRange(duration, customRange);
+
+    const timer = setTimeout(() => {
+      fetchMembers(teamId, fromDate, toDate, searchText, true);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  const onSelectMember = async (memId: string) => {
+    if (selectedMemberId === memId) {
+      setSelectedMemberId(null);
+      setMemberAnalysis(null);
+    } else {
+      // Select
+      setSelectedMemberId(memId);
+      if (teamId) {
+        const { fromDate, toDate } = getDateRange(duration, customRange);
+        await fetchMemberAnalysis(teamId, memId, fromDate, toDate);
+      }
+    }
+  };
 
   const handleCustomAnalyze = (from: Date, to: Date) => {
     setCustomRange({
@@ -381,6 +427,7 @@ export default function StatisticScreen() {
 
   const chartData =
     selectedMemberId && memberAnalysis ? memberAnalysis : analysis;
+  const isChartLoading = loading || loadingMemberStats;
 
   return (
     <View style={styles.container}>
@@ -398,137 +445,141 @@ export default function StatisticScreen() {
         />
       </Appbar.Header>
 
-      <ScrollView style={styles.scrollView}>
-        {/* Duration */}
-        <View style={styles.card}>
-          <View style={styles.durationHeader}>
-            <Text style={styles.sectionTitle}>Duration</Text>
-            <TouchableOpacity onPress={() => setIsModalVisible(true)}>
-              <FontAwesome
-                name="calendar"
-                size={20}
-                color={duration === "custom" ? ACCENT : "#49454F"}
-              />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.durationButtons}>
-            {durations.map((d) => (
-              <TouchableOpacity
-                key={d.key}
-                style={[
-                  styles.durationBtn,
-                  duration === d.key && styles.durationBtnActive,
-                ]}
-                onPress={() => setDuration(d.key)}
-              >
-                <Text
-                  style={[
-                    styles.durationBtnText,
-                    duration === d.key && styles.durationBtnTextActive,
-                  ]}
-                >
-                  {d.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Team / Member Analysis */}
-        <View style={styles.card}>
-          <View style={styles.analysisHeader}>
-            <Text style={styles.sectionTitle}>Team's analysis</Text>
-
-            <View style={styles.teamBadge}>
-              <Text style={styles.teamBadgeText}>
-                {selectedMemberId ? selectedMemberName : "Team"}
-              </Text>
-            </View>
-          </View>
-
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={ACCENT} />
-            </View>
-          ) : (
-            <DonutChart data={chartData} />
-          )}
-        </View>
-
-        {/* Members + Inline Search */}
-        <View style={styles.card}>
-          <View style={styles.membersHeader}>
-            <FontAwesome name="users" size={16} color="#49454F" />
-            <Text style={styles.sectionTitle}>Members</Text>
-
-            {/* Optional: nút clear selection */}
-            {selectedMemberId ? (
-              <TouchableOpacity
-                onPress={() => {
-                  setSelectedMemberId(null);
-                  setMemberAnalysis(null);
-                }}
-                style={styles.clearBtn}
-              >
-                <Text style={styles.clearBtnText}>Clear</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          {/* Search bar (inline) */}
-          <View style={styles.searchBox}>
-            <FontAwesome name="search" size={16} color="#777" />
-            <TextInput
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="Search by member name"
-              placeholderTextColor="#999"
-              style={styles.searchInput}
-              autoCorrect={false}
-              autoCapitalize="none"
-            />
-            {searchText.length > 0 ? (
-              <TouchableOpacity onPress={() => setSearchText("")}>
-                <FontAwesome name="times-circle" size={16} color="#777" />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={ACCENT} />
-            </View>
-          ) : filteredMembers.length > 0 ? (
-            filteredMembers.map((member) => {
-              const isSelected = selectedMemberId === member.id;
-
-              return (
-                <MemberItem
-                  key={member.id}
-                  member={member}
-                  isSelected={isSelected}
-                  onPress={() => {
-                    // toggle select
-                    if (isSelected) {
-                      setSelectedMemberId(null);
-                      setMemberAnalysis(null);
-                      return;
-                    }
-
-                    setSelectedMemberId(member.id);
-                    setMemberAnalysis(memberStatsMap[member.id] ?? null);
-                  }}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+        >
+          {/* Duration */}
+          <View style={styles.card}>
+            <View style={styles.durationHeader}>
+              <Text style={styles.sectionTitle}>Duration</Text>
+              <TouchableOpacity onPress={() => setIsModalVisible(true)}>
+                <FontAwesome
+                  name="calendar"
+                  size={20}
+                  color={duration === "custom" ? ACCENT : "#49454F"}
                 />
-              );
-            })
-          ) : (
-            <Text style={{ textAlign: "center", color: "#888", padding: 20 }}>
-              No members found
-            </Text>
-          )}
-        </View>
-      </ScrollView>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.durationButtons}>
+              {durations.map((d) => (
+                <TouchableOpacity
+                  key={d.key}
+                  style={[
+                    styles.durationBtn,
+                    duration === d.key && styles.durationBtnActive,
+                  ]}
+                  onPress={() => setDuration(d.key)}
+                >
+                  <Text
+                    style={[
+                      styles.durationBtnText,
+                      duration === d.key && styles.durationBtnTextActive,
+                    ]}
+                  >
+                    {d.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Team / Member Analysis */}
+          <View style={styles.card}>
+            <View style={styles.analysisHeader}>
+              <Text style={styles.sectionTitle}>
+                {selectedMemberId ? "Member's analysis" : "Team's analysis"}
+              </Text>
+
+              <View style={styles.teamBadge}>
+                <Text style={styles.teamBadgeText}>
+                  {selectedMemberId ? selectedMemberName : "Team"}
+                </Text>
+              </View>
+            </View>
+
+            {isChartLoading ? (
+              <View style={styles.chartLoadingContainer}>
+                <ActivityIndicator size="large" color={ACCENT} />
+              </View>
+            ) : (
+              <DonutChart data={chartData} />
+            )}
+          </View>
+
+          {/* Members + Search */}
+          <View style={styles.card}>
+            <View style={styles.membersHeader}>
+              <FontAwesome name="filter" size={20} color="#444" />
+              <Text style={styles.sectionTitle}>Members</Text>
+
+              {/* Clear Selection Button */}
+              {selectedMemberId ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedMemberId(null);
+                    setMemberAnalysis(null);
+                  }}
+                  style={styles.clearBtn}
+                >
+                  <Text style={styles.clearBtnText}>Clear Selection</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {/* Search bar */}
+            <View style={styles.searchBox}>
+              <FontAwesome name="search" size={16} color="#777" />
+              <TextInput
+                value={searchText}
+                onChangeText={setSearchText}
+                placeholder="Search by member name"
+                placeholderTextColor="#999"
+                style={styles.searchInput}
+                autoCorrect={false}
+                autoCapitalize="none"
+              />
+              {searchText.length > 0 ? (
+                <TouchableOpacity onPress={() => setSearchText("")}>
+                  <FontAwesome name="times-circle" size={16} color="#777" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {/* List */}
+            {loadingMembers ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color={ACCENT} />
+              </View>
+            ) : members.length > 0 ? (
+              members.map((member) => {
+                const isSelected = selectedMemberId === member.userId;
+                return (
+                  <MemberItem
+                    key={member.userId}
+                    member={member}
+                    isSelected={isSelected}
+                    onPress={() => onSelectMember(member.userId)}
+                  />
+                );
+              })
+            ) : (
+              <Text style={{ textAlign: "center", color: "#888", padding: 20 }}>
+                No members found
+              </Text>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <ErrorModal
         visible={errorVisible}
@@ -586,6 +637,11 @@ const styles = StyleSheet.create({
   },
   teamBadgeText: { color: "#fff", fontSize: 12, fontWeight: "600" },
 
+  chartLoadingContainer: {
+    height: 220,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   loadingContainer: { paddingVertical: 40, alignItems: "center" },
 
   // Chart
@@ -619,11 +675,10 @@ const styles = StyleSheet.create({
   membersHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     marginBottom: 12,
   },
   clearBtn: {
-    marginLeft: "auto",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,

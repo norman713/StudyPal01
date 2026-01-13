@@ -9,6 +9,8 @@ import {
   Alert,
   AppState,
   BackHandler,
+  Image,
+  Modal,
   Pressable,
   Text,
   View,
@@ -119,6 +121,8 @@ export default function SessionScreen() {
   const [isBreak, setIsBreak] = useState(false);
 
   const [strictMode, setStrictMode] = useState(false);
+  const [confirmFinishVisible, setConfirmFinishVisible] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   /* =======================
    MUSIC PLAYER
@@ -202,11 +206,6 @@ export default function SessionScreen() {
       );
       setTotalStages(stages);
 
-      // Handle music
-      // If enableBgMusic is true but we don't know WHICH music, we just select the first one as default?
-      // Or we can leave it empty if the user hasn't selected anything locally yet?
-      // Since backend only stores boolean, we might want to default to 'rain' if true and no local music is set.
-      // For now, let's just respect the boolean for "has music" if possible, but the UI requires specific music item.
       setEnableBgMusic(data.enableBgMusic);
 
       if (data.enableBgMusic) {
@@ -387,7 +386,11 @@ export default function SessionScreen() {
       await sessionApi.saveSession(payload);
       console.log("🔥 [SESSION] saveSession success");
 
-      Alert.alert("Success", "Study session saved!");
+      setShowSuccess(true);
+
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 3000);
     } catch (e: any) {
       console.log("🔥 [SESSION] saveSession error:", e);
       if (e.response) {
@@ -593,7 +596,7 @@ export default function SessionScreen() {
 
         {/* FINISH */}
         <Pressable
-          onPress={() => finishSession()}
+          onPress={() => setConfirmFinishVisible(true)}
           className="border-[3px] border-white rounded-full px-8 py-3"
         >
           <Text className="text-white text-[24px] font-bold">
@@ -601,6 +604,20 @@ export default function SessionScreen() {
           </Text>
         </Pressable>
       </View>
+      <QuestionModal
+        visible={confirmFinishVisible}
+        title="Finish session"
+        message="Are you sure you want to finish your study session before timeout?"
+        confirmText="Confirm"
+        cancelText="Cancel"
+        onConfirm={() => {
+          setConfirmFinishVisible(false);
+          finishSession();
+        }}
+        onCancel={() => {
+          setConfirmFinishVisible(false);
+        }}
+      />
 
       <QuestionModal
         visible={confirmStopVisible}
@@ -618,6 +635,44 @@ export default function SessionScreen() {
           router.back();
         }}
       />
+      <Modal
+        visible={showSuccess}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.75)",
+
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <View style={{ alignItems: "center" }}>
+            <Image
+              source={require("@/assets/images/SessionComplete.png")}
+              style={{ width: 180, height: 180 }}
+              resizeMode="contain"
+            />
+            <Text
+              style={{
+                marginTop: 16,
+                color: "white",
+                fontSize: 18,
+                fontWeight: "bold",
+              }}
+            >
+              Session Saved 🎉
+            </Text>
+          </View>
+        </View>
+      </Modal>
 
       {/* SETTINGS */}
       <SessionSettingsModal
@@ -661,11 +716,14 @@ export default function SessionScreen() {
             setBreakSeconds(bSeconds);
             setTotalSeconds(tSeconds);
 
+            setCurrentStage(1);
+            setIsBreak(false);
+            setStudiedAt(null);
+            setIsRunning(false);
+            setSecondsLeft(fSeconds);
+
             const stages = calcStages(tSeconds, fSeconds, bSeconds);
             setTotalStages(stages);
-
-            // Reset timer
-            resetState();
 
             setShowSettings(false);
           } catch (e) {
