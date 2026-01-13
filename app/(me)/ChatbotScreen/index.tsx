@@ -344,9 +344,9 @@ export default function ChatbotScreen() {
       </Text>
 
       {/* CONTEXT */}
-      <View className="flex-row items-center px-2 space-x-2 mb-2">
+      <View className="flex-row items-center mb-2">
         <TouchableOpacity
-          className="bg-neutral-200 px-3 py-1.5 rounded-full"
+          className="bg-[#90717E] px-3 py-1.5 rounded-full"
           onPress={() => {
             if (params.teamId) {
               // Team Context: Search Plan
@@ -370,14 +370,16 @@ export default function ChatbotScreen() {
             }
           }}
         >
-          <Text className="text-xl">＋ Add context</Text>
+          <Text className="text-xl font-normal text-white ">
+            ＋ Add context
+          </Text>
         </TouchableOpacity>
 
         {context && (
-          <View className="bg-neutral-200 px-3 py-1.5 rounded-full flex-row items-center">
+          <View className="bg-neutral-200 mx-2 px-3 py-1.5 rounded-full flex-row items-center">
             <Text className="text-xl mr-2" numberOfLines={1}>
               {context.type === "TASK" ? "Task" : "Plan"}:{" "}
-              {context.title || context.id}
+              {context.id || context.id}
             </Text>
             <TouchableOpacity onPress={() => setContext(null)}>
               <Ionicons name="close-circle" size={20} color="#666" />

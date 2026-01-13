@@ -147,17 +147,6 @@ export default function PlanScreen() {
     });
   };
 
-  // const handleCreatePlan = () => {
-  //   if (!canManage) {
-  //     Alert.alert("Permission", "You are not admin or owner");
-  //     return;
-  //   }
-  //   router.push({
-  //     pathname: "/(team)/plan/planCreate",
-  //     params: { teamId, role, mode: "create" },
-  //   });
-  // };
-
   return (
     <View style={styles.container}>
       <Appbar.Header mode="small" style={{ backgroundColor: "#90717E" }}>

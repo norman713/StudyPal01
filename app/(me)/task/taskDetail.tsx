@@ -392,7 +392,7 @@ export default function TaskDetail() {
                 <Text
                   style={{
                     position: "absolute",
-                    top: -6, // 👈 chỉnh vị trí đè lên outline
+                    top: -6,
                     left: 20,
                     backgroundColor: "#fff",
                     paddingHorizontal: 6,
