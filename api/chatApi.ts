@@ -37,8 +37,6 @@ export interface EditMessageRequest {
   content: string;
 }
 
-
-
 export interface GetMessagesResponse {
     messages: Message[];
     total: number;
@@ -64,56 +62,59 @@ export const chatApi = {
 
     sendMessage: async (
         teamId: string,
-        content: string,
+        content?: string,
+        options?: {
+            mentionType?: "ALL" | "CUSTOM";
+            memberIds?: string[];
+        },
         file?: any
     ): Promise<void> => {
         const formData = new FormData();
 
-        // The backend expects a JSON string for the "request" part
-        // If content is empty/undefined (e.g. file only), send empty object {}
-        const requestObj = (content && content.trim().length > 0) ? { content } : {};
+        const requestObj: any = {};
+
+        if (content && content.trim().length > 0) {
+            requestObj.content = content;
+        }
+
+        if (options?.memberIds?.length) {
+            requestObj.mentionType = options.mentionType;
+            requestObj.memberIds = options.memberIds;
+        }else if (options?.mentionType == "ALL"){
+            requestObj.mentionType = options.mentionType;
+        }
         const requestBody = JSON.stringify(requestObj);
 
         if (Platform.OS === 'web') {
-            // Web: Use Blob to set content type
             const blob = new Blob([requestBody], { type: 'application/json' });
             formData.append("request", blob);
         } else {
-            // React Native: Use the specific object format
             formData.append("request", {
                 string: requestBody,
                 type: "application/json",
             } as any);
         }
 
-        console.log("--- Sending Message Payload ---");
         console.log("Request Part (JSON):", requestBody);
 
         if (file) {
-            // React Native file object standard: { uri, name, type }
-            const fileObj = {
+            formData.append("files", {
                 uri: file.uri,
-                name: file.name || "upload.jpg",
-                type: file.type || "image/jpeg",
-            };
-            console.log("File Part:", fileObj);
-            formData.append("files", fileObj as any);
+                name: file.name ?? "upload.jpg",
+                type: file.type ?? "image/jpeg",
+            } as any);
         } else {
             console.log("File Part: None");
         }
-        console.log("-------------------------------");
 
         try {
             await axiosClient.post(`/teams/${teamId}/messages`, formData, {
                 headers: {
                     "Content-Type": "multipart/form-data",
                 },
-                transformRequest: (data, headers) => {
-                    // React Native specific: Avoid axios serializing FormData
-                    return data;
-                },
             });
             console.log("Message sent successfully!");
+            
         } catch (error: any) {
             console.error("--- Send Message Error ---");
             if (error.response) {
