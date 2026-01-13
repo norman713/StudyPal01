@@ -105,49 +105,6 @@ export default function TaskDetail() {
     return result;
   };
 
-  // Format date input to DD-MM-YYYY format
-  const formatDate = (text: string) => {
-    const raw = text.replace(/\D/g, "").slice(0, 8);
-
-    const dayRaw = raw.slice(0, 2);
-    const monthRaw = raw.slice(2, 4);
-    const yearRaw = raw.slice(4, 8);
-
-    // validate day khi đủ 2 số
-    if (dayRaw.length === 2) {
-      const day = Number(dayRaw);
-      if (day < 1 || day > 31) return "";
-    }
-
-    // validate month khi đủ 2 số
-    if (monthRaw.length === 2) {
-      const month = Number(monthRaw);
-      if (month < 1 || month > 12) return `${dayRaw}-`;
-    }
-
-    let result = dayRaw;
-
-    if (raw.length > 2) {
-      result += "-" + monthRaw;
-    }
-
-    if (raw.length > 4) {
-      result += "-" + yearRaw;
-    }
-
-    // validate full date khi đủ 8 số
-    if (raw.length === 8) {
-      const day = Number(dayRaw);
-      const month = Number(monthRaw);
-      const year = Number(yearRaw);
-
-      const maxDay = dayjs(`${year}-${month}-01`).daysInMonth();
-      if (day > maxDay) return "";
-    }
-
-    return result;
-  };
-
   const fetchTaskDetail = useCallback(async () => {
     if (!taskId) return;
     try {
@@ -242,10 +199,6 @@ export default function TaskDetail() {
   };
 
   //handle save
-
-  const formatDateDisplay = (date: Date) => {
-    return dayjs(date).format("DD/MM/YYYY");
-  };
 
   const handleSave = async () => {
     if (!taskId) return;

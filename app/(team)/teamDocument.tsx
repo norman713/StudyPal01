@@ -345,8 +345,12 @@ export default function DocumentScreen() {
 
                   setFolderName("");
                   setIsCreateModalOpen(false);
-                } catch (e) {
-                  console.error("Create folder failed", e);
+                } catch (e: any) {
+                  const msg =
+                    e?.response?.data?.message || "Failed to create folder";
+
+                  setErrorMessage(msg);
+                  setErrorVisible(true);
                 } finally {
                   setIsCreating(false);
                 }

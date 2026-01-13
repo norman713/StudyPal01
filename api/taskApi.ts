@@ -218,6 +218,17 @@ async recoverTask(
         const data: any = await axiosInstance.delete(url);
         return data;
     },
+    
+    async recoverTaskInPlan(
+  taskId: string
+): Promise<{ success: boolean; message: string }> {
+  const url = `/plans/tasks/${taskId}/recover`;
+
+  const data: { success: boolean; message: string } =
+    await axiosInstance.patch(url);
+
+  return data;
+},
 };
 
 export interface RecurrenceRule {

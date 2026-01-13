@@ -63,9 +63,8 @@ export default function TrashScreen() {
     try {
       setLoading(true);
 
-      // Ví dụ: recover ALL (hoặc bạn đổi logic sau)
       await Promise.all(
-        deletedTasks.map((task) => taskApi.recoverTask(task.id, "CURRENT_ONLY"))
+        deletedTasks.map((task) => taskApi.recoverTaskInPlan(task.id))
       );
 
       setDeletedTasks([]);

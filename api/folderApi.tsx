@@ -188,16 +188,10 @@ const folderApi = {
 
   // POST upload file
   async uploadFile(folderId: string, file: any): Promise<any> {
-    // API requires 'name' in query params as per image
     const fileName = file.name || "file";
-    // We get baseUrl from process.env, need to ensure it's imported or available.
-    // axiosConfig has it but it's local constant. We should probably export it or just use simple logic if possible.
-    // For now, let's try to get it from process.env directly.
     const baseUrl = process.env.EXPO_PUBLIC_API_URL;
     const url = `${baseUrl}/folders/${folderId}/files?name=${encodeURIComponent(fileName)}`;
-
     const formData = new FormData();
-
     // React Native FormData append signature
     formData.append("file", {
       uri: file.uri,
@@ -218,9 +212,22 @@ const folderApi = {
     });
 
     if (!response.ok) {
-      const text = await response.text();
-      console.error("Upload Error Response:", text);
-      throw new Error(`Upload failed: ${response.status} ${text}`);
+      let errorData: any = null;
+
+      try {
+        errorData = await response.json();
+      } catch {
+        const text = await response.text();
+        throw new Error(text || "Upload failed");
+      }
+
+      const err = new Error(errorData?.message || "Upload failed") as any;
+
+      err.statusCode = errorData?.statusCode;
+      err.errorCode = errorData?.errorCode;
+      err.raw = errorData;
+
+      throw err;
     }
 
     return await response.json();

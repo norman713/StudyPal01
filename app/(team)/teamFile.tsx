@@ -168,9 +168,9 @@ export default function FileScreen() {
       // Refresh list
       await fetchFiles();
       setShowUploadModal(false);
-    } catch (e) {
-      console.error("Upload failed", e);
-      setErrorMessage("Failed to upload file");
+    } catch (e: any) {
+      const msg = e?.message || "Upload failed";
+      setErrorMessage(msg);
       setErrorVisible(true);
     } finally {
       setUploading(false);
@@ -286,7 +286,7 @@ export default function FileScreen() {
       setRenaming(true);
       await folderApi.updateFile(editFile.id, newFileName);
       setEditFile(null);
-      await fetchFiles();
+      const res = await fetchFiles();
     } catch (e: any) {
       console.error("Rename failed", e);
       const msg = e?.response?.data?.message
