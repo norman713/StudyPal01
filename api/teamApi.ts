@@ -14,6 +14,19 @@ export interface TeamNotificationSetting {
   teamPlanReminder: boolean;
   chatNotification: boolean;
 }
+export interface TeamMemberTaskStatistic {
+  userId: string;
+  name: string;
+  avatarUrl?: string;
+  completedTaskCount: number;
+}
+
+export interface SearchTeamTaskStatisticsResponse {
+  statistics: TeamMemberTaskStatistic[];
+  total: number;
+  nextCursor?: string | null;
+}
+
 export interface TeamListResponse {
   teams: Team[];
   total: number;
@@ -191,6 +204,26 @@ const teamApi = {
     const res = await axiosInstance.patch(url, data);
     return res as unknown as TeamNotificationSetting;
   },
+  
+  async searchTeamTaskStatistics(
+  teamId: string,
+  payload: {
+    keyword?: string;
+    fromDate: string;
+    toDate: string;
+    cursor?: string;
+    size: number;
+  }
+): Promise<SearchTeamTaskStatisticsResponse> {
+  const url = `/teams/${teamId}/tasks/statistics/search`;
+
+  const data: SearchTeamTaskStatisticsResponse = await axiosInstance.post(
+    url,
+    payload
+  );
+
+  return data;
+},
 
 };
 

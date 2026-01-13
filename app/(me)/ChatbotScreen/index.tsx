@@ -42,7 +42,7 @@ export default function ChatbotScreen() {
     dailyQuota: number;
   } | null>(null); // Store quota data
 
-  const [attachedFile, setAttachedFile] = useState<PickedFile | null>(null);
+  const [attachedFiles, setAttachedFiles] = useState<PickedFile[]>([]);
 
   const mapToUIMessage = (m: ChatbotMessage): UIMessage => ({
     id: m.id,
@@ -68,19 +68,19 @@ export default function ChatbotScreen() {
   const pickFile = async () => {
     const result = await DocumentPicker.getDocumentAsync({
       copyToCacheDirectory: true,
-      multiple: false,
+      multiple: true,
     });
 
     if (result.canceled) return;
 
-    const file = result.assets[0];
-
-    setAttachedFile({
+    const files: PickedFile[] = result.assets.map((file) => ({
       uri: file.uri,
       name: file.name,
       mimeType: file.mimeType,
       size: file.size,
-    });
+    }));
+
+    setAttachedFiles((prev) => [...prev, ...files]);
   };
 
   // Fetch the quota usage and calculate the percentage
@@ -93,62 +93,8 @@ export default function ChatbotScreen() {
     }
   };
 
-  // const handleSend = async () => {
-
-  //   if (!input.trim()) return;
-
-  //   // 🚫 BLOCK nếu đang stream
-  //   if (isStreaming) return;
-
-  //   setIsStreaming(true);
-
-  //   const idempotencyKey = Crypto.randomUUID();
-  //   const prompt = input;
-
-  //   const userId = `${idempotencyKey}-user`;
-  //   const botId = `${idempotencyKey}-bot`;
-
-  //   setMessages((prev) => [
-  //     { id: botId, role: "bot", content: "" },
-  //     { id: userId, role: "user", content: prompt },
-  //     ...prev,
-  //   ]);
-
-  //   setInput("");
-
-  //   sendChatbotSSE({
-  //     payload: { prompt },
-  //     idempotencyKey,
-
-  //     onChunk: (chunk) => {
-  //       setMessages((prev) =>
-  //         prev.map((m) =>
-  //           m.id === botId ? { ...m, content: m.content + chunk } : m
-  //         )
-  //       );
-  //     },
-
-  //     onError: () => {
-  //       setMessages((prev) =>
-  //         prev.map((m) =>
-  //           m.id === botId ? { ...m, content: "❌ Bot error" } : m
-  //         )
-  //       );
-  //       setIsStreaming(false); // 🔓 unlock
-  //     },
-
-  //     onDone: async () => {
-  //       await new Promise((r) => setTimeout(r, 300));
-  //       await fetchQuotaUsage();
-  //       setIsStreaming(false); // 🔓 unlock
-  //     },
-  //   });
-  // };
-
-  // Calculate the usage percentage
-
   const handleSend = async () => {
-    if (!input.trim() && !attachedFile) return;
+    if (!input.trim() && attachedFiles.length === 0) return;
     if (isStreaming) return;
 
     setIsStreaming(true);
@@ -164,39 +110,27 @@ export default function ChatbotScreen() {
       {
         id: userId,
         role: "user",
-        content: attachedFile ? `${prompt}\n📎 ${attachedFile.name}` : prompt,
+        content:
+          attachedFiles.length > 0
+            ? `${prompt}\n${attachedFiles.map((f) => `📎 ${f.name}`).join("\n")}`
+            : prompt,
       },
       ...prev,
     ]);
 
     const payload = { prompt };
 
-    const attachments = attachedFile
-      ? [
-          {
-            uri: attachedFile.uri,
-            name: attachedFile.name,
-            type: attachedFile.mimeType || "application/octet-stream",
-          },
-        ]
-      : undefined;
-
-    console.log("[ChatbotScreen] payload =", payload);
-    console.log(
-      "[ChatbotScreen] attachments =",
-      attachments?.map((f) => ({
-        name: f.name,
-        type: f.type,
-        uri: f.uri,
-      }))
-    );
-    console.log(
-      "[ChatbotScreen] attachments count =",
-      attachments?.length ?? 0
-    );
+    const attachments =
+      attachedFiles.length > 0
+        ? attachedFiles.map((file) => ({
+            uri: file.uri,
+            name: file.name,
+            type: file.mimeType || "application/octet-stream",
+          }))
+        : undefined;
 
     setInput("");
-    setAttachedFile(null);
+    setAttachedFiles([]);
 
     sendChatbotSSE({
       payload,
@@ -221,7 +155,6 @@ export default function ChatbotScreen() {
       },
 
       onDone: async () => {
-        await new Promise((r) => setTimeout(r, 300));
         await fetchQuotaUsage();
         setIsStreaming(false);
       },
@@ -327,18 +260,24 @@ export default function ChatbotScreen() {
           <Text className="text-xl">file.txt</Text>
         </View>
       </View>
-
-      {attachedFile && (
-        <View className="flex-row items-center mx-3 mb-1 px-3 py-1 bg-neutral-100 rounded-lg">
+      {attachedFiles.map((file, index) => (
+        <View
+          key={`${file.uri}-${index}`}
+          className="flex-row items-center mx-3 mb-1 px-3 py-1 bg-neutral-100 rounded-lg"
+        >
           <Text className="flex-1 text-sm" numberOfLines={1}>
-            📎 {attachedFile.name}
+            📎 {file.name}
           </Text>
 
-          <TouchableOpacity onPress={() => setAttachedFile(null)}>
+          <TouchableOpacity
+            onPress={() =>
+              setAttachedFiles((prev) => prev.filter((_, i) => i !== index))
+            }
+          >
             <Ionicons name="close" size={16} color="#666" />
           </TouchableOpacity>
         </View>
-      )}
+      ))}
 
       {/* INPUT */}
       <View className="flex-row items-center bg-white mx-3 mb-3 px-4 py-2 rounded-full">

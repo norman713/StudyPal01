@@ -2,7 +2,7 @@ import ErrorModal from "@/components/modal/error";
 import { FontAwesome } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -58,7 +58,6 @@ function DonutChart({ data }: { data: TeamAnalysis }) {
     { value: data.unfinished, color: "#90717E", label: "Unfinished" },
   ];
 
-  // Tính toán stroke-dasharray và stroke-dashoffset cho mỗi segment
   let accumulatedPercentage = 0;
 
   return (
@@ -146,15 +145,13 @@ function DonutChart({ data }: { data: TeamAnalysis }) {
 function MemberItem({
   member,
   isSelected,
-  onPress,
 }: {
   member: MemberStat;
   isSelected: boolean;
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity
-      onPress={onPress}
+    <View
       style={[
         styles.memberItem,
         isSelected && { borderColor: ACCENT, borderWidth: 2 },
@@ -164,7 +161,9 @@ function MemberItem({
         <Image source={{ uri: member.avatarUrl }} style={styles.memberAvatar} />
       ) : (
         <View style={styles.memberAvatarPlaceholder}>
-          <Text style={styles.memberAvatarText}>{member.name.charAt(0)}</Text>
+          <Text style={styles.memberAvatarText}>
+            {member.name?.charAt(0)?.toUpperCase() ?? "U"}
+          </Text>
         </View>
       )}
 
@@ -176,8 +175,36 @@ function MemberItem({
           tasks
         </Text>
       </View>
-    </TouchableOpacity>
+    </View>
   );
+}
+
+const FORMAT = "YYYY-MM-DD HH:mm:ss";
+
+function getDateRange(
+  duration: Duration,
+  customRange: { from: string; to: string } | null
+) {
+  if (duration === "custom" && customRange) {
+    return {
+      fromDate: customRange.from,
+      toDate: customRange.to,
+    };
+  }
+
+  const daysMap: Record<Exclude<Duration, "custom">, number> = {
+    "1week": 7,
+    "30days": 30,
+    "60days": 60,
+    "90days": 90,
+  };
+
+  const days = daysMap[duration as Exclude<Duration, "custom">] ?? 30;
+
+  return {
+    fromDate: dayjs().subtract(days, "day").format(FORMAT),
+    toDate: dayjs().format(FORMAT),
+  };
 }
 
 /**
@@ -203,45 +230,6 @@ export default function StatisticScreen() {
     null
   );
 
-  const fetchMemberStatistics = async (memberId: string) => {
-    if (!teamId) return;
-
-    try {
-      setLoading(true);
-      const FORMAT = "YYYY-MM-DD HH:mm:ss";
-
-      let fromDate: string;
-      let toDate: string;
-
-      if (duration === "custom" && customRange) {
-        fromDate = customRange.from;
-        toDate = customRange.to;
-      } else {
-        const days = getDurationDays(duration);
-        toDate = dayjs().format(FORMAT);
-        fromDate = dayjs().subtract(days, "day").format(FORMAT);
-      }
-
-      const stats = await teamApi.getTaskStatistics(
-        teamId,
-        fromDate,
-        toDate,
-        memberId
-      );
-
-      setMemberAnalysis({
-        high: stats.high,
-        medium: stats.medium,
-        low: stats.low,
-        unfinished: stats.unfinished,
-      });
-    } catch (e) {
-      console.error("Fetch member statistics failed", e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Custom date range state
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [customRange, setCustomRange] = useState<{
@@ -249,45 +237,28 @@ export default function StatisticScreen() {
     to: string;
   } | null>(null);
 
-  const getDurationDays = (d: Duration) => {
-    switch (d) {
-      case "1week":
-        return 7;
-      case "30days":
-        return 30;
-      case "60days":
-        return 60;
-      case "90days":
-        return 90;
-      default:
-        return 30;
-    }
-  };
-
   // Fetch statistics
-  const fetchStatistics = useCallback(async () => {
-    if (!teamId) return;
+  async function fetchStatistics(
+    teamId: string,
+    fromDate: string,
+    toDate: string
+  ) {
+    console.log("[Statistic] fetch payload:", {
+      teamId,
+      fromDate,
+      toDate,
+    });
+
     setLoading(true);
+
     try {
-      let fromDate: string;
-      let toDate: string;
-      const FORMAT = "YYYY-MM-DD HH:mm:ss";
-
-      if (duration === "custom" && customRange) {
-        fromDate = customRange.from;
-        toDate = customRange.to;
-      } else {
-        const days = getDurationDays(duration);
-        toDate = dayjs().format(FORMAT);
-        fromDate = dayjs().subtract(days, "day").format(FORMAT);
-      }
-
-      // 1. Fetch overall team stats
+      // 1. Team stats
       const teamStats = await teamApi.getTaskStatistics(
         teamId,
         fromDate,
         toDate
       );
+
       setAnalysis({
         high: teamStats.high,
         medium: teamStats.medium,
@@ -295,64 +266,58 @@ export default function StatisticScreen() {
         unfinished: teamStats.unfinished,
       });
 
-      // 2. Fetch members
-      const membersRes = await memberApi.getAll(teamId, undefined, 50); // Fetch up to 50 members
+      // 2. Members
+      const membersRes = await memberApi.getAll(teamId, undefined, 50);
 
-      // 3. Fetch stats for each member
-      const memberStatsPromises = membersRes.members.map(async (member) => {
-        try {
-          const stats = await teamApi.getTaskStatistics(
-            teamId,
-            fromDate,
-            toDate,
-            member.userId
-          );
-          const finishedTasks = (stats.total || 0) - (stats.unfinished || 0);
-          return {
-            id: member.userId,
-            name: member.name,
-            avatarUrl: member.avatarUrl,
-            finishedTasks,
-          } as MemberStat;
-        } catch (e) {
-          console.warn(`Failed to fetch stats for member ${member.userId}`, e);
-          return {
-            id: member.userId,
-            name: member.name,
-            avatarUrl: member.avatarUrl,
-            finishedTasks: 0,
-          } as MemberStat;
-        }
-      });
+      const membersData: MemberStat[] = await Promise.all(
+        membersRes.members.map(async (member) => {
+          try {
+            const stats = await teamApi.getTaskStatistics(
+              teamId,
+              fromDate,
+              toDate,
+              member.userId
+            );
 
-      const membersData = await Promise.all(memberStatsPromises);
-      // Sort members by finished tasks desc
+            return {
+              id: member.userId,
+              name: member.name,
+              avatarUrl: member.avatarUrl,
+              finishedTasks: (stats.total || 0) - (stats.unfinished || 0),
+            };
+          } catch {
+            return {
+              id: member.userId,
+              name: member.name,
+              avatarUrl: member.avatarUrl,
+              finishedTasks: 0,
+            };
+          }
+        })
+      );
+
       membersData.sort((a, b) => b.finishedTasks - a.finishedTasks);
-
       setMembers(membersData);
     } catch (err: any) {
-      const message =
+      setErrorMessage(
         err?.response?.data?.message ||
-        err?.message ||
-        "Failed to load statistics. Please try again.";
-
-      setErrorMessage(message);
+          err?.message ||
+          "Failed to load statistics"
+      );
       setErrorVisible(true);
-      setAnalysis({
-        high: 0,
-        medium: 0,
-        low: 0,
-        unfinished: 0,
-      });
+      setAnalysis({ high: 0, medium: 0, low: 0, unfinished: 0 });
       setMembers([]);
     } finally {
       setLoading(false);
     }
-  }, [teamId, duration, customRange]);
-
+  }
   useEffect(() => {
-    fetchStatistics();
-  }, [fetchStatistics]);
+    if (!teamId) return;
+
+    const { fromDate, toDate } = getDateRange(duration, customRange);
+
+    fetchStatistics(teamId, fromDate, toDate);
+  }, [teamId, duration, customRange]);
 
   const handleCustomAnalyze = (from: Date, to: Date) => {
     const FORMAT = "YYYY-MM-DD HH:mm:ss";
@@ -426,13 +391,7 @@ export default function StatisticScreen() {
         {/* Team Analysis Section */}
         <View style={styles.card}>
           <View style={styles.analysisHeader}>
-            <Text style={styles.sectionTitle}>
-              {selectedMemberId
-                ? `Analysis of ${
-                    members.find((m) => m.id === selectedMemberId)?.name ?? ""
-                  }`
-                : "Team's analysis"}
-            </Text>
+            <Text style={styles.sectionTitle}>Team's analysis</Text>
 
             <View style={styles.teamBadge}>
               <Text style={styles.teamBadgeText}>Team</Text>
@@ -454,10 +413,21 @@ export default function StatisticScreen() {
 
         {/* Members Section */}
         <View style={styles.card}>
-          <View style={styles.membersHeader}>
-            <FontAwesome name="filter" size={16} color="#49454F" />
-            <Text style={styles.sectionTitle}>Members</Text>
-          </View>
+          <TouchableOpacity
+            onPress={() => {
+              router.push({
+                pathname: "/(team)/searchMemberStatistic",
+                params: {
+                  teamId,
+                },
+              });
+            }}
+          >
+            <View style={styles.membersHeader}>
+              <FontAwesome name="filter" size={16} color="#49454F" />
+              <Text style={styles.sectionTitle}>Members</Text>
+            </View>
+          </TouchableOpacity>
 
           {loading ? (
             <View style={styles.loadingContainer}>
@@ -468,17 +438,8 @@ export default function StatisticScreen() {
               <MemberItem
                 key={member.id}
                 member={member}
-                isSelected={selectedMemberId === member.id}
-                onPress={() => {
-                  if (selectedMemberId === member.id) {
-                    // Bỏ chọn → quay về Team
-                    setSelectedMemberId(null);
-                    setMemberAnalysis(null);
-                  } else {
-                    setSelectedMemberId(member.id);
-                    fetchMemberStatistics(member.id);
-                  }
-                }}
+                isSelected={false}
+                onPress={() => {}}
               />
             ))
           ) : (
@@ -632,7 +593,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: ACCENT,
+    backgroundColor: "#6B4EFF",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,

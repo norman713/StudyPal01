@@ -50,8 +50,6 @@ export default function PlanScreen() {
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
 
-  // Fetch plans
-  // Fetch plans
   const fetchPlans = useCallback(async () => {
     if (!teamId) return;
 

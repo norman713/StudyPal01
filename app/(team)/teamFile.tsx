@@ -704,9 +704,6 @@ export default function FileScreen() {
             ) : (
               <View className="px-5 gap-3">
                 <DetailRow label="Name" value={detailFile.name} />
-                <DetailRow label="Extension" value={detailFile.extension} />
-                <DetailRow label="Size" value={detailFile.bytes + " bytes"} />
-                <DetailRow label="Created by" value={detailFile.createdBy} />
                 <DetailRow
                   label="Created at"
                   value={
@@ -715,7 +712,7 @@ export default function FileScreen() {
                       : "-"
                   }
                 />
-                <DetailRow label="Updated by" value={detailFile.updatedBy} />
+                <DetailRow label="Created by" value={detailFile.createdBy} />
                 <DetailRow
                   label="Last updated at"
                   value={
@@ -724,6 +721,8 @@ export default function FileScreen() {
                       : "-"
                   }
                 />
+                <DetailRow label="Updated by" value={detailFile.updatedBy} />
+                <DetailRow label="Size" value={detailFile.bytes + " bytes"} />
               </View>
             )}
           </View>

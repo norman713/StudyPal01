@@ -4,7 +4,14 @@ import dayjs from "dayjs";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import {
+  Alert,
+  AppState,
+  BackHandler,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
 import sessionApi, { SessionSettings } from "../../../api/sessionApi";
 
 import Svg, {
@@ -109,6 +116,8 @@ export default function SessionScreen() {
   const [totalStages, setTotalStages] = useState(1);
   const [isBreak, setIsBreak] = useState(false);
 
+  const [strictMode, setStrictMode] = useState(false);
+
   /* ===== DATA LOADING ===== */
   useEffect(() => {
     fetchSettings();
@@ -171,10 +180,38 @@ export default function SessionScreen() {
      TIMER LOGIC
   ======================= */
   useEffect(() => {
-    if (showSettings) {
-      setIsRunning(false);
-    }
-  }, [showSettings]);
+    if (!strictMode) return;
+
+    const onBackPress = () => {
+      Alert.alert(
+        "Session in progress",
+        "You must finish or stop the session before leaving.",
+        [{ text: "OK" }]
+      );
+      return true;
+    };
+
+    const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+
+    return () => sub.remove();
+  }, [strictMode]);
+
+  useEffect(() => {
+    if (!strictMode) return;
+
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") {
+        Alert.alert(
+          "Session stopped",
+          "You left the app. The session has been stopped."
+        );
+
+        stopTimer();
+      }
+    });
+
+    return () => sub.remove();
+  }, [strictMode]);
 
   /* =======================
      TIMER LOGIC
@@ -270,6 +307,7 @@ export default function SessionScreen() {
 
   const finishSession = async (explicitElapsed?: number) => {
     setIsRunning(false);
+    setStrictMode(false);
     if (!studiedAt) return;
 
     // Use explicit value (natural finish) or calculate (manual finish)
@@ -317,6 +355,7 @@ export default function SessionScreen() {
     if (!isRunning && !studiedAt) {
       // First start
       setStudiedAt(dayjs().format("YYYY-MM-DD HH:mm:ss"));
+      setStrictMode(true);
     }
     setIsRunning((p) => !p);
   };
@@ -328,6 +367,8 @@ export default function SessionScreen() {
       intervalRef.current = null;
     }
     // RESET STATE as per user instruction
+    setStrictMode(false);
+
     resetState();
   };
 
