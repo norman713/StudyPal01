@@ -2,7 +2,7 @@ import taskApi, { PersonalTask, SearchTaskRequest } from "@/api/taskApi";
 import { FontAwesome } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { Appbar, Button, TextInput } from "react-native-paper";
@@ -11,6 +11,13 @@ const addButtonImg = require("../../../../assets/images/Addbutton.png");
 const ACCENT = "#90717E";
 
 export default function SearchTasksScreen() {
+  const params = useLocalSearchParams<{
+    isSelectionMode?: string;
+    returnTo?: string;
+    teamId?: string;
+  }>();
+  const isSelectionMode = params.isSelectionMode === "true";
+
   const [taskName, setTaskName] = useState("");
   // Default dates: today and 7 days from now, or just empty?
   // User example: "2025-12-10 00:00:00"
@@ -213,7 +220,21 @@ export default function SearchTasksScreen() {
               key={t.id}
               task={t}
               onPress={() => {
-                if (t.taskType === "PERSONAL" || t.taskType === "CLONED") {
+                if (isSelectionMode && params.returnTo) {
+                  console.log("[SearchTask] Selecting task:", t.id, t.content);
+                  router.navigate({
+                    pathname: params.returnTo as any,
+                    params: {
+                      contextId: t.id,
+                      contextType: "TASK",
+                      contextTitle: t.content,
+                      teamId: params.teamId,
+                    },
+                  });
+                } else if (
+                  t.taskType === "PERSONAL" ||
+                  t.taskType === "CLONED"
+                ) {
                   router.push({
                     pathname: "/(me)/task/taskDetail",
                     params: { taskId: t.id },

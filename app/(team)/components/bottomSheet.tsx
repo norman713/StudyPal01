@@ -2,7 +2,6 @@
 import SuccessModal from "@/components/modal/success";
 import { Directory, Paths } from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
-
 import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,

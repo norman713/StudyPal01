@@ -138,6 +138,9 @@ async function connectSSE(
   const formData = new FormData();
   const jsonString = JSON.stringify(payload);
 
+  console.log("[ChatbotSSE] Preparing FormData. Payload JSON:", jsonString);
+  console.log("[ChatbotSSE] Attachments count:", attachments?.length ?? 0);
+
   if (Platform.OS === "web") {
     formData.append(
       "request",
@@ -175,6 +178,7 @@ async function connectSSE(
   // 🌐 EXECUTION
   // ===============================
 
+  /* ---------- FILE ATTACHMENTS ---------- */
   if (attachments?.length) {
     for (const file of attachments) {
       if (Platform.OS === "web") {

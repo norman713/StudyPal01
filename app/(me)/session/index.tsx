@@ -1,6 +1,7 @@
 import { FontAwesome6, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 
+import { Audio } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -118,6 +119,56 @@ export default function SessionScreen() {
 
   const [strictMode, setStrictMode] = useState(false);
 
+  /* =======================
+   MUSIC PLAYER
+======================= */
+
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const currentMusicIdRef = useRef<string | null>(null);
+
+  const playMusic = async (music?: MusicItemType) => {
+    if (!music?.url) return;
+
+    // ✅ Nếu đã có sound và đúng bài → resume
+    if (currentMusicIdRef.current === music.id && soundRef.current) {
+      await soundRef.current.playAsync();
+      return;
+    }
+
+    // ❌ Nếu khác bài → stop & recreate
+    if (soundRef.current) {
+      await soundRef.current.stopAsync();
+      await soundRef.current.unloadAsync();
+      soundRef.current = null;
+      currentMusicIdRef.current = null;
+    }
+
+    const { sound } = await Audio.Sound.createAsync(music.url, {
+      isLooping: true,
+      volume: 0.6,
+    });
+
+    soundRef.current = sound;
+    currentMusicIdRef.current = music.id;
+
+    await sound.playAsync();
+  };
+
+  const pauseMusic = async () => {
+    if (soundRef.current) {
+      await soundRef.current.pauseAsync();
+    }
+  };
+  const stopMusic = async () => {
+    if (!soundRef.current) return;
+
+    await soundRef.current.stopAsync();
+    await soundRef.current.unloadAsync();
+
+    soundRef.current = null;
+    currentMusicIdRef.current = null;
+  };
+
   /* ===== DATA LOADING ===== */
   useEffect(() => {
     fetchSettings();
@@ -155,9 +206,16 @@ export default function SessionScreen() {
       // Or we can leave it empty if the user hasn't selected anything locally yet?
       // Since backend only stores boolean, we might want to default to 'rain' if true and no local music is set.
       // For now, let's just respect the boolean for "has music" if possible, but the UI requires specific music item.
+      setEnableBgMusic(data.enableBgMusic);
+
       if (data.enableBgMusic) {
-        // Default to Rain if enabled but we don't know what
-        setMusics([{ id: "rain", title: "🌧 Rain sound", url: "rain.mp3" }]);
+        setMusics([
+          {
+            id: "rain",
+            title: "🌧 Rain sound",
+            url: require("@/assets/sound/rain.mp3"),
+          },
+        ]);
       } else {
         setMusics([]);
       }
@@ -171,6 +229,7 @@ export default function SessionScreen() {
   const [secondsLeft, setSecondsLeft] = useState(FOCUS_SECONDS);
 
   const [isRunning, setIsRunning] = useState(false);
+  const [enableBgMusic, setEnableBgMusic] = useState(false);
 
   /* ===== UI ===== */
   const [showSettings, setShowSettings] = useState(false);
@@ -247,18 +306,14 @@ export default function SessionScreen() {
         intervalRef.current = null;
       }
     };
-  }, [isRunning, isBreak, currentStage]); // Add dependencies to handle stage switching correctly
+  }, [isRunning, isBreak, currentStage]);
 
   const handleTimerComplete = () => {
-    // Current timer finished
     if (isBreak) {
-      // Break finished
       if (currentStage >= totalStages) {
-        // All stages done
         const totalRun = totalStages * (focusSeconds + breakSeconds);
         finishSession(totalRun);
       } else {
-        // Next stage
         setCurrentStage((s) => s + 1);
         setIsBreak(false);
         setSecondsLeft(focusSeconds);
@@ -366,7 +421,7 @@ export default function SessionScreen() {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    // RESET STATE as per user instruction
+
     setStrictMode(false);
 
     resetState();
@@ -393,10 +448,23 @@ export default function SessionScreen() {
      MUSIC
   ======================= */
 
-  const currentVideoId =
-    musics.length > 0 ? extractYoutubeId(musics[0].url) : null;
+  const hasMusic = enableBgMusic;
+  /* =======================
+   MUSIC CONTROLLER
+======================= */
 
-  const hasMusic = Boolean(currentVideoId);
+  useEffect(() => {
+    if (!enableBgMusic) {
+      stopMusic();
+      return;
+    }
+
+    if (isRunning) {
+      playMusic(musics[0]);
+    } else {
+      pauseMusic();
+    }
+  }, [isRunning, enableBgMusic, musics]);
 
   return (
     <LinearGradient
@@ -414,11 +482,7 @@ export default function SessionScreen() {
       </View>
 
       {/* CONTENT */}
-      <View
-        className={`flex-1 items-center ${
-          hasMusic ? "justify-start" : "justify-center"
-        }`}
-      >
+      <View className="flex-1 items-center justify-center">
         {/* RING */}
         <View className="mb-6">
           <Svg width={SIZE} height={SIZE}>

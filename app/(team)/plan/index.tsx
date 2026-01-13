@@ -3,7 +3,7 @@ import ChatBotSection from "@/app/(me)/task/components/Chatbot";
 import dayjs from "dayjs";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { Alert, FlatList, StyleSheet, View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
 import { Appbar } from "react-native-paper";
 import PlanHeader from "./components/PlanScreen/Header";
 import PlanList from "./components/PlanScreen/PlanList";
@@ -147,16 +147,16 @@ export default function PlanScreen() {
     });
   };
 
-  const handleCreatePlan = () => {
-    if (!canManage) {
-      Alert.alert("Permission", "You are not admin or owner");
-      return;
-    }
-    router.push({
-      pathname: "/(team)/plan/planCreate",
-      params: { teamId, role, mode: "create" },
-    });
-  };
+  // const handleCreatePlan = () => {
+  //   if (!canManage) {
+  //     Alert.alert("Permission", "You are not admin or owner");
+  //     return;
+  //   }
+  //   router.push({
+  //     pathname: "/(team)/plan/planCreate",
+  //     params: { teamId, role, mode: "create" },
+  //   });
+  // };
 
   return (
     <View style={styles.container}>
@@ -186,7 +186,7 @@ export default function PlanScreen() {
                 onMonthChange={handleMonthChange}
               />
 
-              <ChatBotSection />
+              <ChatBotSection teamId={teamId} />
 
               <PlanList
                 plans={plans}

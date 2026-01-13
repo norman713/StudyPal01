@@ -28,10 +28,19 @@ const today = new Date();
  * Search Plan Screen
  */
 export default function PlanScreen() {
-  const { teamId, role: roleParam } = useLocalSearchParams<{
+  const {
+    teamId,
+    role: roleParam,
+    isSelectionMode: isSelectionModeParam,
+    returnTo,
+  } = useLocalSearchParams<{
     teamId: string;
     role: Role;
+    isSelectionMode?: string;
+    returnTo?: string;
   }>();
+
+  const isSelectionMode = isSelectionModeParam === "true";
 
   // Role permissions
   const role: Role = (roleParam as Role) || "MEMBER";
@@ -101,6 +110,20 @@ export default function PlanScreen() {
   };
 
   const handlePlanPress = (plan: Plan) => {
+    if (isSelectionMode && returnTo) {
+      console.log("[SearchPlan] Selecting plan:", plan.id, plan.title);
+      router.navigate({
+        pathname: returnTo as any,
+        params: {
+          contextId: plan.id,
+          contextType: "PLAN",
+          contextTitle: plan.title,
+          teamId,
+        },
+      });
+      return;
+    }
+
     router.push({
       pathname: "/(team)/plan/planDetail",
       params: {

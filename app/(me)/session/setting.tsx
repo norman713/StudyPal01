@@ -12,7 +12,7 @@ import { TextInput } from "react-native-paper";
 export type MusicItemType = {
   id: string;
   title: string;
-  url: string;
+  url: any;
 };
 
 export type SessionSettingData = {
@@ -33,23 +33,24 @@ const AVAILABLE_MUSICS: MusicItemType[] = [
   {
     id: "rain",
     title: "🌧 Rain sound",
-    url: "rain.mp3",
+    url: require("@/assets/sound/rain.mp3"),
   },
   {
     id: "forest",
     title: "🌲 Forest ambience",
-    url: "forest.mp3",
+    url: require("@/assets/sound/forest.mp3"),
   },
   {
     id: "lofi",
-    title: "🎧 Lofi chill",
-    url: "lofi.mp3",
+    title: "🎧 Soft wave",
+    url: require("@/assets/sound/softWave.mp3"),
   },
 ];
+
 const NO_MUSIC_OPTION: MusicItemType = {
   id: "none",
   title: "🔇 No background music",
-  url: "",
+  url: null,
 };
 
 /* =======================
