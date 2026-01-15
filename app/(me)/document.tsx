@@ -16,6 +16,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { formatBytes } from "@/utils/formatFile";
 
 /* =======================
    TYPES
@@ -220,7 +221,7 @@ export default function DocumentScreen() {
               <Text className="text-[15px] text-[#0F0C0D] mt-2 text-center">
                 {isUsageLoading
                   ? "Loading storage info..."
-                  : `${usedGB.toFixed(2)}GB has been used out of a total of ${totalGB.toFixed(
+                  : `${formatBytes(usageUsed)} has been used out of a total of ${totalGB.toFixed(
                       2
                     )}GB`}
               </Text>
@@ -522,7 +523,7 @@ export default function DocumentScreen() {
                 />
                 <DetailRow
                   label="Size"
-                  value={`${(detailFolder.bytes / 1024 / 1024).toFixed(2)} MB`}
+                  value={`${formatBytes(detailFolder.bytes)}`}
                 />
                 <DetailRow
                   label="File count"

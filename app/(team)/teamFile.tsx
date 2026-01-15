@@ -8,6 +8,7 @@ import * as FileSystemLegacy from "expo-file-system/legacy";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import * as Sharing from "expo-sharing";
 import React, { useState } from "react";
+import { formatBytes } from "@/utils/formatFile";
 import {
   ActivityIndicator,
   Alert,
@@ -722,7 +723,7 @@ export default function FileScreen() {
                   }
                 />
                 <DetailRow label="Updated by" value={detailFile.updatedBy} />
-                <DetailRow label="Size" value={detailFile.bytes + " bytes"} />
+                <DetailRow label="Size" value={formatBytes(detailFile.bytes)} />
               </View>
             )}
           </View>
