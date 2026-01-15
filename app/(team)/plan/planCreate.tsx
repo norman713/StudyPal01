@@ -252,7 +252,7 @@ export default function PlanCreateScreen() {
       <Appbar.Header mode="small" style={{ backgroundColor: ACCENT }}>
         <Appbar.BackAction color="#fff" onPress={() => router.back()} />
         <Appbar.Content
-          title={isEditMode ? "Create Plan" : "Create Plan"}
+          title="Add new plan"
           titleStyle={{ color: "#fff", fontSize: 18, fontWeight: "600" }}
         />
         <Appbar.Action

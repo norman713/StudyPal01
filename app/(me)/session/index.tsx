@@ -237,30 +237,13 @@ export default function SessionScreen() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /* =======================
-     TIMER LOGIC
+     STRICT MODE LOGIC
   ======================= */
   useEffect(() => {
     if (!strictMode) return;
 
-    const onBackPress = () => {
-      Alert.alert(
-        "Session in progress",
-        "You must finish or stop the session before leaving.",
-        [{ text: "OK" }]
-      );
-      return true;
-    };
-
-    const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
-
-    return () => sub.remove();
-  }, [strictMode]);
-
-  useEffect(() => {
-    if (!strictMode) return;
-
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state !== "active") {
+    const appStateListener = AppState.addEventListener("change", (state) => {
+      if (state === "background" || state === "inactive") {
         Alert.alert(
           "Session in progress",
           "You must finish the study session before leaving the app."
@@ -268,7 +251,25 @@ export default function SessionScreen() {
       }
     });
 
-    return () => sub.remove();
+    const onBackPress = () => {
+      Alert.alert(
+        "Session in progress",
+        "You must finish or stop the session before leaving.",
+        [{ text: "OK" }]
+      );
+      return true; // Ngăn không cho thoát ứng dụng
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      onBackPress
+    );
+
+    // Dọn dẹp khi component bị hủy hoặc strictMode thay đổi
+    return () => {
+      appStateListener.remove();
+      backHandler.remove();
+    };
   }, [strictMode]);
 
   /* =======================

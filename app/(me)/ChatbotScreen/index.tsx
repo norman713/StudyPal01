@@ -379,7 +379,6 @@ export default function ChatbotScreen() {
         {context && (
           <View className="bg-neutral-200 mx-2 px-3 py-1.5 rounded-full flex-row items-center">
             <Text className="text-xl mr-2" numberOfLines={1}>
-              {context.type === "TASK" ? "Task" : "Plan"}:{" "}
               {context.title || context.id}
             </Text>
             <TouchableOpacity onPress={() => setContext(null)}>

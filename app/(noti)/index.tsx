@@ -1,4 +1,5 @@
 import ErrorModal from "@/components/modal/error";
+import { useUnreadNotification } from "@/context/unreadNotificationContext";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import React, { useEffect, useState } from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
@@ -6,7 +7,6 @@ import { Checkbox, IconButton } from "react-native-paper";
 import notificationApi, {
   NotificationItem as ApiNotification,
 } from "../../api/notiApi";
-import { useUnreadNotification } from "@/context/unreadNotificationContext";
 
 interface NotificationItem extends ApiNotification {
   type: "expired" | "overdue";
@@ -30,7 +30,7 @@ export default function NotificationPage() {
   useEffect(() => {
     if (unreadNotificationCount === 0) return;
     fetchNotifications();
-  }, [unreadNotificationCount])
+  }, [unreadNotificationCount]);
 
   const fetchNotifications = async () => {
     try {
@@ -172,11 +172,11 @@ export default function NotificationPage() {
             if (!config) return null;
 
             const date = new Date(n.createdAt).toLocaleString("en-GB", {
+              hour: "2-digit",
+              minute: "2-digit",
               day: "2-digit",
               month: "short",
               year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
             });
 
             return (

@@ -9,10 +9,11 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { Appbar, Text } from "react-native-paper";
+import { Appbar } from "react-native-paper";
 
 import EditPlanCard from "@/components/modal/editPlanCard";
 import ErrorModal from "@/components/modal/error";
@@ -63,7 +64,6 @@ export default function PlanDetailScreen() {
   // Fetch data
   const fetchPlanDetail = useCallback(async () => {
     if (!teamId || !planId) return;
-
     try {
       setLoading(true);
       // New API returns Plan object with embedded tasks
@@ -162,10 +162,9 @@ export default function PlanDetailScreen() {
         {/* Recover / History – always visible */}
         <Pressable
           onPress={() => {
-            // Navigate to planHistory page
             router.push({
-              pathname: "/(team)/plan/planHistory", // Add the correct path for the history page
-              params: { teamId, planId }, // Pass relevant parameters if needed
+              pathname: "/(team)/plan/planHistory",
+              params: { teamId, planId },
             });
           }}
           style={{ marginRight: 16 }}
@@ -211,7 +210,7 @@ export default function PlanDetailScreen() {
           </View>
 
           {/* Stats */}
-          <View style={styles.statsRow}>
+          <View className="flex flex-row">
             <StatItem
               label="Start date"
               value={formatTime(plan.startDate)}
@@ -330,10 +329,12 @@ function StatItem({
   subValue?: string;
 }) {
   return (
-    <View style={styles.statItem}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
-      {subValue && <Text style={styles.statValue}>{subValue}</Text>}
+    <View className="flex-1 items-center">
+      <Text className="font-medium text-[#B8C6B6] text-sm">{label}</Text>
+      <Text className="font-medium text-[#90717E] text-lg">{value}</Text>
+      {subValue && (
+        <Text className=" font-medium text-[#90717E] text-lg">{subValue}</Text>
+      )}
     </View>
   );
 }
@@ -411,8 +412,6 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#F8F6F7",
     margin: 16,
-    marginBottom: 0,
-    borderRadius: 12,
     padding: 16,
   },
 
@@ -426,12 +425,6 @@ const styles = StyleSheet.create({
   planCode: { fontSize: 12, color: "#92AAA5", fontWeight: "700" },
   planName: { fontSize: 18, fontWeight: "700", color: "#0F0C0D", marginTop: 2 },
   planDesc: { fontSize: 14, color: "#0F0C0D", marginTop: 4, lineHeight: 20 },
-
-  // Stats
-  statsRow: { flexDirection: "row", justifyContent: "space-between" },
-  statItem: { flex: 1, alignItems: "center" },
-  statLabel: { fontSize: 12, color: "#B8C6B6" },
-  statValue: { fontSize: 16, color: ACCENT, fontWeight: "500" },
 
   // Tasks Header
   tasksHeader: {

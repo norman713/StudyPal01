@@ -98,7 +98,7 @@ export default function TaskItem({
       <View style={[styles.colorBar, { backgroundColor: priorityColor }]} />
 
       {/* Task Info */}
-      <View style={styles.info}>
+      <View className="flex-1">
         <Text style={styles.name}>{task.content}</Text>
         <Text className="font-normal text-[12px]">
           {formatDate(task.startDate)} - {formatDate(task.dueDate)}
@@ -178,9 +178,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginRight: 12,
   },
-  info: {
-    flex: 1,
-  },
   name: {
     fontSize: 16,
     fontWeight: "600",
@@ -206,7 +203,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: ACCENT,
+    backgroundColor: "#6B4EFF",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 6,

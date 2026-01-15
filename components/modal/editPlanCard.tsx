@@ -55,7 +55,7 @@ const EditPlanCard: React.FC<EditPlanCardProps> = ({
             value={planName}
             onChangeText={(text) => setPlanName(text)}
             mode="outlined"
-            theme={{ roundness: 10 }}
+            theme={{ roundness: 10, colors: { background: "#FFFFFF" } }}
             style={styles.input}
           />
 
@@ -66,7 +66,7 @@ const EditPlanCard: React.FC<EditPlanCardProps> = ({
             multiline
             numberOfLines={6}
             mode="outlined"
-            theme={{ roundness: 20 }}
+            theme={{ roundness: 20, colors: { background: "#FFFFFF" } }}
             style={[styles.input, styles.descriptionInput]}
           />
 
