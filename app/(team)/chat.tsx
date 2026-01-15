@@ -667,8 +667,12 @@ export default function TeamChatScreen() {
     try {
       await chatApi.editMessage(editingMessage.id, editText);
       setEditingMessage(null);
-    } catch (err) {
-      Alert.alert("Error", "Failed to edit message");
+    } catch (err:any) {
+      if(err?.response?.data?.message){
+        Alert.alert("Edit message failed.", err?.response?.data?.message);  
+      }else{
+        Alert.alert("Error", "Cannot edit message.");
+      }
     }
   };
 

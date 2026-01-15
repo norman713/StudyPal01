@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
   },
   taskId: {
     fontSize: 16,
-    fontFamily: "Poppins_600SemiBold",
+    fontFamily: "PoppinsSemiBold",
     color: "#0F0C0D",
   },
   checkButton: {

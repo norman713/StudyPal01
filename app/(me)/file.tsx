@@ -23,6 +23,7 @@ import {
 } from "react-native";
 import { Appbar } from "react-native-paper";
 import { WebView } from "react-native-webview";
+import { formatBytes } from "@/utils/formatFile";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
@@ -761,7 +762,7 @@ export default function FileScreen() {
                       : "-"
                   }
                 />
-                <DetailRow label="Size" value={detailFile.bytes + " bytes"} />
+                <DetailRow label="Size" value={formatBytes(detailFile.bytes)} />
               </View>
             )}
           </View>
