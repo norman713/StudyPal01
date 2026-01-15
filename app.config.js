@@ -1,0 +1,61 @@
+export default ({ config }) => ({
+  ...config,
+  expo: {
+    name: "StudyPal",
+    slug: "StudyPal",
+    version: "1.0.0",
+    orientation: "portrait",
+    icon: "./assets/images/AppIcon.png",
+    scheme: "studypal",
+    userInterfaceStyle: "automatic",
+    newArchEnabled: true,
+    ios: {
+      supportsTablet: true,
+    },
+    android: {
+      package: "com.nitb.StudyPal",
+      googleServicesFile:
+        process.env.GOOGLE_SERVICES_JSON ??
+        "./android/app/google-services.json",
+    },
+    splash: {
+      image: "./assets/images/background.png",
+      resizeMode: "contain",
+      backgroundColor: "#90717E",
+    },
+    web: {
+      output: "static",
+      favicon: "./assets/images/favicon.png",
+      bundler: "metro",
+    },
+    plugins: [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          android: {
+            usesCleartextTraffic: true,
+          },
+        },
+      ],
+    ],
+    experiments: {
+      typedRoutes: true,
+      reactCompiler: true,
+    },
+    extra: {
+      router: {},
+      eas: {
+        projectId: "f2e9d807-9163-43b7-b492-dff588b69d17",
+      },
+    },
+    owner: "norman7132",
+    runtimeVersion: {
+      policy: "appVersion",
+    },
+    updates: {
+      url: "https://u.expo.dev/f2e9d807-9163-43b7-b492-dff588b69d17",
+    },
+  },
+});

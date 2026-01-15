@@ -1,4 +1,8 @@
+import { NotificationListener } from "@/components/notificationListener";
+import { NotificationBanner } from "@/components/ui/notificationbanner";
 import { AuthProvider } from "@/context/auth";
+import { InAppNotificationProvider } from "@/context/inAppNotificationContext";
+import { NotificationProvider } from "@/context/notificationContext";
 import { UnreadNotificationProvider } from "@/context/unreadNotificationContext";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
@@ -26,17 +30,23 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <UnreadNotificationProvider>
-      <PaperProvider>
-        <Stack
-          screenOptions={{ headerShown: false }}
-          initialRouteName="(auth)/landing"
-        >
-          <Stack.Screen name="(auth)/landing" />
-          <Stack.Screen name="(auth)/login" />
-        </Stack>
-      </PaperProvider>
-      </UnreadNotificationProvider>
+      <NotificationProvider>
+        <InAppNotificationProvider>
+          <UnreadNotificationProvider>
+            <PaperProvider>
+              <NotificationListener />
+              <Stack
+                screenOptions={{ headerShown: false }}
+                initialRouteName="(auth)/landing"
+              >
+                <Stack.Screen name="(auth)/landing" />
+                <Stack.Screen name="(auth)/login" />
+              </Stack>
+              <NotificationBanner />
+            </PaperProvider>
+          </UnreadNotificationProvider>
+        </InAppNotificationProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

@@ -58,6 +58,11 @@ const authApi = {
     const body={email, newPassword};
     return axiosInstance.post(url, body);
   },
+  gglogin(provider = "GOOGLE",accessToken: string): Promise<LoginResponse> {
+    const url = "/auth/prov";
+    const body = { provider, accessToken };
+    return axiosInstance.post(url, body);
+  },
 
 
 }
