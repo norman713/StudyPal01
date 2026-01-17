@@ -1,6 +1,6 @@
 📚 StudyPal
 
-StudyPal is a mobile application built with Expo (React Native) to support users in managing study plans, tasks, and real-time interactions in a simple and user-friendly way.
+StudyPal is a mobile application built with Expo (React Native) designed to help users organize study plans, manage tasks, and collaborate through real-time interactions in a simple and user-friendly experience.
 
 🚀 Tech Stack
 
@@ -12,13 +12,13 @@ UI: React Native Paper, NativeWind (Tailwind CSS)
 
 API Communication: Axios
 
-Real-time: WebSocket, Server-Sent Events (SSE)
+Real-time Communication: WebSocket, Server-Sent Events (SSE)
 
 State & Storage: Secure token handling, local storage
 
 Utilities: Day.js
 
-✨ Key Features
+✨ Features
 
 User authentication and session management
 
@@ -26,21 +26,22 @@ Study plan and task management
 
 Real-time chat and message streaming
 
-User mentions and interactive collaboration
+User mentions for collaborative interaction
 
 Push notifications for reminders and events
 
-Clean, responsive, and user-centered UI
+Clean, responsive, and user-centered interface
 
 🛠️ Getting Started
+Install dependencies
 
-1. Install dependencies
-   npm install
+npm install
 
-2. Start the development server
-   npx expo start
+Start the development server
 
-You can run the app on:
+npx expo start
+
+You can run the application on:
 
 Android Emulator
 
@@ -51,31 +52,30 @@ Expo Go
 Development Build
 
 📂 Project Structure
-app/
-├─ (auth)/ # Authentication screens
-├─ (team)/ # Team, plan, and task flows
-├─ (me)/ # User-related features
-├─ components/ # Reusable UI components
-├─ hooks/ # Custom hooks
-└─ utils/ # Helpers and utilities
 
-The project uses Expo Router with file-based routing for better scalability and maintainability.
+app/
+├─ (auth)/ Authentication screens
+├─ (team)/ Team, plan, and task flows
+├─ (me)/ User-related features
+├─ components/ Reusable UI components
+├─ hooks/ Custom hooks
+└─ utils/ Helper functions and utilities
+
+This project uses Expo Router with file-based routing to ensure scalability and maintainability.
 
 ♻️ Reset Project
 
-If you want a clean start:
-
 npm run reset-project
 
-This will move the example code to app-example/ and generate a fresh app/ directory.
+This command moves the starter code to app-example/ and creates a fresh app/ directory for development.
 
 📖 Learn More
 
-Expo Documentation
+Expo Documentation: https://docs.expo.dev/
 
-Expo Router
+Expo Router: https://docs.expo.dev/router/introduction/
 
-React Native
+React Native: https://reactnative.dev/
 
 🤝 Contributing
 
@@ -84,4 +84,4 @@ Feel free to fork the repository and submit a pull request.
 
 📄 License
 
-This project is for learning and development purposes.
+This project is intended for learning and development purposes.
