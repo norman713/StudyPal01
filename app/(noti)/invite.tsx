@@ -1,4 +1,5 @@
 import inviteApi, { Invitation } from "@/api/inviteApi";
+import { useUnreadNotification } from "@/context/unreadNotificationContext";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -14,10 +15,16 @@ export default function InvitationPage() {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null); // store ID of item being processed
+  const { clearUnread, unreadNotificationCount } = useUnreadNotification();
 
   useEffect(() => {
     fetchInvitations();
   }, []);
+
+  useEffect(() => {
+    if (unreadNotificationCount == 0) return;
+    fetchInvitations();
+  }, [unreadNotificationCount]);
 
   const fetchInvitations = async () => {
     try {
@@ -42,6 +49,7 @@ export default function InvitationPage() {
         "Success",
         accept ? "Invitation accepted" : "Invitation declined"
       );
+      clearUnread(1);
     } catch (err: any) {
       console.error("Reply error:", err);
       Alert.alert("Error", "Failed to process invitation");

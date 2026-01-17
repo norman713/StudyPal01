@@ -7,9 +7,16 @@ export function NotificationListener() {
 
   useEffect(() => {
     const unsubscribe = messaging().onMessage((msg) => {
+      // showMessage({
+      //   title: msg.notification?.title,
+      //   body: msg.notification?.body,
+      // });
+
       showMessage({
         title: msg.notification?.title,
         body: msg.notification?.body,
+        type: msg.data?.type as any,
+        id: msg.data?.id as any,
       });
     });
 

@@ -1,50 +1,87 @@
-# Welcome to your Expo app 👋
+📚 StudyPal
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+StudyPal is a mobile application built with Expo (React Native) to support users in managing study plans, tasks, and real-time interactions in a simple and user-friendly way.
 
-## Get started
+🚀 Tech Stack
+
+Framework: Expo (React Native)
+
+Navigation: Expo Router (file-based routing)
+
+UI: React Native Paper, NativeWind (Tailwind CSS)
+
+API Communication: Axios
+
+Real-time: WebSocket, Server-Sent Events (SSE)
+
+State & Storage: Secure token handling, local storage
+
+Utilities: Day.js
+
+✨ Key Features
+
+User authentication and session management
+
+Study plan and task management
+
+Real-time chat and message streaming
+
+User mentions and interactive collaboration
+
+Push notifications for reminders and events
+
+Clean, responsive, and user-centered UI
+
+🛠️ Getting Started
 
 1. Install dependencies
-
-   ```bash
    npm install
-   ```
 
-2. Start the app
-
-   ```bash
+2. Start the development server
    npx expo start
-   ```
 
-In the output, you'll find options to open the app in a
+You can run the app on:
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Android Emulator
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+iOS Simulator
 
-## Get a fresh project
+Expo Go
 
-When you're ready, run:
+Development Build
 
-```bash
+📂 Project Structure
+app/
+├─ (auth)/ # Authentication screens
+├─ (team)/ # Team, plan, and task flows
+├─ (me)/ # User-related features
+├─ components/ # Reusable UI components
+├─ hooks/ # Custom hooks
+└─ utils/ # Helpers and utilities
+
+The project uses Expo Router with file-based routing for better scalability and maintainability.
+
+♻️ Reset Project
+
+If you want a clean start:
+
 npm run reset-project
-```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+This will move the example code to app-example/ and generate a fresh app/ directory.
 
-## Learn more
+📖 Learn More
 
-To learn more about developing your project with Expo, look at the following resources:
+Expo Documentation
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Expo Router
 
-## Join the community
+React Native
 
-Join our community of developers creating universal apps.
+🤝 Contributing
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Contributions, issues, and feature requests are welcome.
+Feel free to fork the repository and submit a pull request.
+
+📄 License
+
+This project is for learning and development purposes.

@@ -3,6 +3,8 @@ import React, { createContext, useContext, useState } from "react";
 type InAppMessage = {
   title?: string;
   body?: string;
+  type?: "INVITATION" | "TEAM" | "CHAT" | "PLAN" | "TASK";
+  id?: string;
 };
 
 type InAppNotificationContextType = {

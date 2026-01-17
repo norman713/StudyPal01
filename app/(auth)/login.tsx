@@ -239,6 +239,7 @@ export default function LoginPage() {
         setErrorMessage("Can't get user idToken");
       }
     } catch (err: any) {
+      console.log("ERRRRR:", err);
       setShowError(true);
       setErrorMessage(err?.response?.data?.message);
     } finally {
